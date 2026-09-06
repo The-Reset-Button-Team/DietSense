@@ -1,4 +1,4 @@
-﻿# DietSense — Adaptive AI Meal Planning for Obesity Prevention
+# DietSense — Adaptive AI Meal Planning for Obesity Prevention
 
 > Evidence-based, explainable, personalized meal planning powered by USDA/ICMR-NIN nutrition data, Scikit-learn, and the Gemini API.
 
@@ -7,6 +7,19 @@
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)]()
 
 ---
+
+## 📊 Visual Documentation
+
+| Diagram | Description |
+|---------|-------------|
+| [🗂️ Entity Relationship Diagram](docs/er_diagram.html) | All 11 PostgreSQL tables, columns, data types, FK links — click any table to highlight relationships |
+| [⚡ Architectural Pipeline](docs/pipeline.html) | Full data flow: USDA/ICMR-NIN → ETL → DB → Safety Gate → ML Scoring → SHAP → Gemini → UI → Feedback |
+| [🧑‍💻 Tech Stack & Team Roles](docs/tech_stack.html) | 4-member domain ownership, all technologies, scoring formula bar chart |
+| [📅 20-Week Roadmap](docs/roadmap.html) | All 10 phases with deliverables, timeline, lead owners |
+
+> Open HTML files in a browser. GitHub renders them via Pages or clone + open locally.
+
+
 
 ## 🎯 Project Goal
 

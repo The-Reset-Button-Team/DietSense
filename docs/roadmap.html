@@ -1,0 +1,155 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased">
+<div class="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden">
+  <div class="px-5 py-3 border-b border-[var(--border)]">
+    <h2 class="font-semibold text-[var(--foreground)] text-base">DietSense — 20-Week Implementation Roadmap</h2>
+    <p class="text-[var(--muted-foreground)] text-xs mt-0.5">10-phase execution schedule · from plan.pdf</p>
+  </div>
+
+  <div class="p-5 space-y-2">
+
+    <!-- Phase 1 -->
+    <div class="flex items-start gap-3 rounded-xl border border-emerald-500 bg-emerald-950 bg-opacity-20 p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-emerald-400">Phase 1</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 1–2</span>
+        <span class="mt-1 block text-xs bg-emerald-600 text-white rounded-full px-2 py-0.5">✅ Done</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Requirements &amp; Specs</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Repo structure · DB schema (11 tables) · Git workflows · Architecture docs · Scoring formula scaffold · 6 tests passing</p>
+        <div class="flex gap-1 mt-1 flex-wrap">
+          <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">All Members</span>
+          <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">50 files</span>
+          <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">2544 lines</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phase 2 -->
+    <div class="flex items-start gap-3 rounded-xl border border-amber-400 bg-amber-950 bg-opacity-20 p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-amber-400">Phase 2</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 3–4</span>
+        <span class="mt-1 block text-xs bg-amber-500 text-white rounded-full px-2 py-0.5">🔜 Next</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Data Extraction &amp; ETL</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Ingest USDA FoodData Central CSV + ICMR-NIN IFCT 2017 PDF · Normalize to per 100g · Deduplicate · Load into PostgreSQL foods table</p>
+        <div class="flex gap-1 mt-1 flex-wrap">
+          <span class="text-xs bg-amber-900 text-amber-200 px-1.5 py-0.5 rounded">Member 4 lead</span>
+          <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">scripts/etl_usda.py</span>
+          <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">scripts/etl_ifct.py</span>
+          <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">scripts/load_db.py</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Phases 3-10 -->
+    <div id="phases-rest" class="space-y-2">
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-sky-400">Phase 3</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 5–6</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Database &amp; Auth Setup</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Deploy Supabase PostgreSQL · Run schema.sql · Configure Row-Level Security (RLS) · Supabase Auth setup</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">Member 2 lead</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-sky-400">Phase 4</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 7–8</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Backend API Foundation</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">FastAPI endpoints: /auth · /foods · /recipes · /progress · JWT middleware · Pydantic schemas</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">Member 2 lead</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-sky-400">Phase 5</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 9–10</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Frontend UI Foundation</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Next.js pages · Tailwind components · Onboarding wizard · Dashboard · API integration hooks</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">Member 1 lead</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-violet-400">Phase 6</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 11–12</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Rule-Based Rec Engine</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Hard constraint safety gate · Multi-factor scoring (0.30/0.20/0.20/0.15/0.10/0.05) · Candidate ranking</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">Member 3 lead</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-violet-400">Phase 7</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 13–14</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Adaptive Feedback Loop</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Post-meal evaluation routes · Dynamic preference weight updates · Ridge Regression re-training</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">Members 2 &amp; 3</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-fuchsia-400">Phase 8</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 15–16</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">XAI &amp; Gemini Integration</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">SHAP LinearExplainer · Feature attribution → prose · Gemini API structured prompts · Rule 1 enforcement</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">Member 3 lead</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-emerald-400">Phase 9</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 17–18</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">End-to-End System Sync</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Next.js ↔ FastAPI integration · Integration testing · Bug fixes across all 4 domains</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">All Members</span>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 rounded-xl border border-[var(--border)] p-3">
+      <div class="flex-none w-20 text-center">
+        <span class="block text-xs font-bold text-emerald-400">Phase 10</span>
+        <span class="block text-xs text-[var(--muted-foreground)]">Weeks 19–20</span>
+      </div>
+      <div class="flex-1">
+        <p class="text-sm font-semibold text-[var(--foreground)]">Deployment &amp; Evaluation</p>
+        <p class="text-xs text-[var(--muted-foreground)] mt-0.5">Deploy: Vercel (FE) + Render/Railway (BE) · User testing · Measure Precision@K and NDCG</p>
+        <span class="text-xs bg-[var(--sidebar)] px-1.5 py-0.5 rounded text-[var(--muted-foreground)]">All Members</span>
+      </div>
+    </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>
