@@ -1,332 +1,556 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
-    svg line { transition: stroke 0.2s, stroke-width 0.2s; }
-    .table-box { transition: filter 0.2s; }
-    .table-box:hover { filter: brightness(1.08); cursor: pointer; }
-    .table-box.active rect.header { stroke: #f59e0b; stroke-width: 2.5; }
-    .table-box.dimmed { opacity: 0.22; }
-    .rel-line { transition: opacity 0.2s; }
-    .rel-line.dimmed { opacity: 0.06; }
-    .rel-line.highlight { stroke: #f59e0b !important; stroke-width: 2.5 !important; opacity: 1 !important; }
+    .tbl-card {
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+    .tbl-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px -5px rgba(88, 24, 37, 0.12), 0 4px 10px -2px rgba(29, 78, 216, 0.08);
+    }
+    .tbl-card.active {
+      ring: 2.5px solid #1d4ed8;
+      box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.18), 0 12px 28px -6px rgba(88, 24, 37, 0.15);
+    }
+    .tbl-card.dimmed {
+      opacity: 0.28;
+      filter: grayscale(0.65);
+    }
+    .domain-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .filter-btn.active {
+      background-color: #581825;
+      color: #ffffff;
+      border-color: #581825;
+    }
   </style>
 </head>
-<body class="bg-transparent text-[var(--foreground)] antialiased">
-<div class="bg-[var(--card)] border border-[var(--border)] rounded-xl shadow-sm overflow-hidden">
-  <!-- Header -->
-  <div class="px-5 py-3 border-b border-[var(--border)] flex items-center justify-between">
+<body class="bg-transparent text-slate-800 antialiased p-2 sm:p-4">
+
+<!-- Main Canvas: Cream / Porcelain Base with Burgundy & Cobalt accents -->
+<div class="relative overflow-hidden rounded-3xl border border-[#e8ded3] bg-[#faf7f2] p-5 sm:p-8 shadow-xl text-slate-800">
+
+  <!-- Ambient Light Orbs -->
+  <div class="absolute -top-24 -right-16 w-96 h-96 bg-[#dbeafe]/60 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-24 -left-16 w-96 h-96 bg-[#fce7f3]/40 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- Header & Domain Filters -->
+  <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#e9dfd5]">
     <div>
-      <h2 class="font-semibold text-[var(--foreground)] text-base">DietSense — Entity Relationship Diagram</h2>
-      <p class="text-[var(--muted-foreground)] text-xs mt-0.5">11 tables · Click a table to highlight its relationships</p>
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-medium tracking-wide mb-2 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-[#581825] animate-pulse"></span>
+        <span>DietSense · Relational Database Architecture (11 Tables)</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-serif text-[#421018] tracking-tight">
+        Entity Relationship <span class="text-[#1d4ed8] font-sans font-normal">Architecture</span>
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-600 mt-0.5 font-light">
+        Organized by 4 core functional domains. Click any table to inspect fields and isolate foreign key linkages.
+      </p>
     </div>
-    <div class="flex gap-3 text-xs text-[var(--muted-foreground)]">
-      <span class="flex items-center gap-1"><span class="inline-block w-3 h-1 bg-amber-400 rounded"></span> FK link</span>
-      <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-sm bg-emerald-500"></span> PK</span>
-      <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-sm bg-sky-400"></span> FK</span>
+
+    <!-- Interactive Domain Filter Buttons -->
+    <div class="flex flex-wrap gap-1.5 text-xs">
+      <button onclick="filterDomain('all')" id="btn-all" class="filter-btn active px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium transition-all shadow-sm">
+        🌐 All Tables (11)
+      </button>
+      <button onclick="filterDomain('user')" id="btn-user" class="filter-btn px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        👤 User & Safety (3)
+      </button>
+      <button onclick="filterDomain('food')" id="btn-food" class="filter-btn px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        🥗 Food & Recipes (3)
+      </button>
+      <button onclick="filterDomain('plan')" id="btn-plan" class="filter-btn px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        📅 Meal Engine & Adaptive (4)
+      </button>
+      <button onclick="filterDomain('ai')" id="btn-ai" class="filter-btn px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        🤖 AI Audit Log (1)
+      </button>
     </div>
   </div>
 
-  <!-- SVG Canvas (scrollable) -->
-  <div class="overflow-auto" style="max-height:680px;">
-  <svg id="erSvg" width="1260" height="1020" xmlns="http://www.w3.org/2000/svg" style="font-family:inherit;font-size:11px;">
-
-    <!-- ── Relationship lines (drawn under tables) ── -->
-    <g id="lines">
-      <!-- users → dietary_restrictions -->
-      <line class="rel-line" data-from="users" data-to="dietary_restrictions" x1="220" y1="140" x2="220" y2="280" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- users → preference_weights -->
-      <line class="rel-line" data-from="users" data-to="preference_weights" x1="60" y1="160" x2="60" y2="700" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="preference_weights" x1="60" y1="700" x2="110" y2="700" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- users → meal_plans -->
-      <line class="rel-line" data-from="users" data-to="meal_plans" x1="400" y1="140" x2="570" y2="140" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="meal_plans" x1="570" y1="140" x2="570" y2="20" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="meal_plans" x1="570" y1="20" x2="680" y2="20" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="meal_plans" x1="680" y1="20" x2="680" y2="50" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- users → progress_logs -->
-      <line class="rel-line" data-from="users" data-to="progress_logs" x1="400" y1="100" x2="440" y2="100" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="progress_logs" x1="440" y1="100" x2="440" y2="680" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="progress_logs" x1="440" y1="680" x2="470" y2="680" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- users → ai_interaction_logs -->
-      <line class="rel-line" data-from="users" data-to="ai_interaction_logs" x1="400" y1="120" x2="460" y2="120" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="ai_interaction_logs" x1="460" y1="120" x2="460" y2="850" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="ai_interaction_logs" x1="460" y1="850" x2="480" y2="850" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- users → user_feedback -->
-      <line class="rel-line" data-from="users" data-to="user_feedback" x1="200" y1="160" x2="200" y2="590" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="users" data-to="user_feedback" x1="200" y1="590" x2="470" y2="590" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- meal_plans → meal_plan_items -->
-      <line class="rel-line" data-from="meal_plans" data-to="meal_plan_items" x1="860" y1="120" x2="860" y2="310" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- recipes → meal_plan_items -->
-      <line class="rel-line" data-from="recipes" data-to="meal_plan_items" x1="1040" y1="300" x2="1040" y2="360" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- meal_plan_items → user_feedback -->
-      <line class="rel-line" data-from="meal_plan_items" data-to="user_feedback" x1="800" y1="420" x2="800" y2="590" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="meal_plan_items" data-to="user_feedback" x1="800" y1="590" x2="740" y2="590" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- recipes → recipe_ingredients -->
-      <line class="rel-line" data-from="recipes" data-to="recipe_ingredients" x1="960" y1="280" x2="900" y2="280" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="recipes" data-to="recipe_ingredients" x1="900" y1="280" x2="900" y2="470" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <line class="rel-line" data-from="recipes" data-to="recipe_ingredients" x1="900" y1="470" x2="860" y2="470" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-      <!-- foods → recipe_ingredients -->
-      <line class="rel-line" data-from="foods" data-to="recipe_ingredients" x1="680" y1="500" x2="720" y2="500" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="5,3"/>
-    </g>
-
-    <!-- ════════════════════════════════════════════════
-         TABLE COMPONENTS
-         Each table: group.table-box, rect.header (colored), text rows
-    ═════════════════════════════════════════════════ -->
-
-    <!-- ── users ─────────────────────────────────────────────── -->
-    <g class="table-box" id="tbl-users" onclick="selectTable('users')">
-      <rect x="40" y="50" width="360" height="120" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="40" y="50" width="360" height="30" rx="8" fill="#4f46e5" stroke="none"/>
-      <rect x="40" y="68" width="360" height="12" fill="#4f46e5"/>
-      <text x="220" y="71" text-anchor="middle" fill="white" font-weight="700" font-size="12">users</text>
-      <!-- rows -->
-      <text x="56" y="97" fill="#10b981" font-size="10">🔑 id</text><text x="220" y="97" fill="var(--muted-foreground)" font-size="10">UUID (PK, Supabase Auth UID)</text>
-      <line x1="48" y1="101" x2="392" y2="101" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="114" fill="var(--foreground)" font-size="10">email</text><text x="220" y="114" fill="var(--muted-foreground)" font-size="10">TEXT UNIQUE NOT NULL</text>
-      <line x1="48" y1="118" x2="392" y2="118" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="131" fill="var(--foreground)" font-size="10">age, gender, height_cm, weight_kg</text><text x="300" y="131" fill="var(--muted-foreground)" font-size="10">profile fields</text>
-      <line x1="48" y1="135" x2="392" y2="135" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="148" fill="var(--foreground)" font-size="10">goal, activity_level</text><text x="220" y="148" fill="var(--muted-foreground)" font-size="10">ENUM types</text>
-      <line x1="48" y1="152" x2="392" y2="152" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="165" fill="var(--foreground)" font-size="10">daily_calorie_target</text><text x="220" y="165" fill="var(--muted-foreground)" font-size="10">INTEGER (Harris-Benedict)</text>
-    </g>
-
-    <!-- ── dietary_restrictions ──────────────────────────────── -->
-    <g class="table-box" id="tbl-dietary_restrictions" onclick="selectTable('dietary_restrictions')">
-      <rect x="40" y="280" width="360" height="115" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="40" y="280" width="360" height="30" rx="8" fill="#dc2626" stroke="none"/>
-      <rect x="40" y="298" width="360" height="12" fill="#dc2626"/>
-      <text x="220" y="301" text-anchor="middle" fill="white" font-weight="700" font-size="12">dietary_restrictions  ⚠ Safety Gate</text>
-      <text x="56" y="326" fill="#10b981" font-size="10">🔑 id</text><text x="220" y="326" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="48" y1="330" x2="392" y2="330" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="343" fill="#38bdf8" font-size="10">🔗 user_id</text><text x="220" y="343" fill="var(--muted-foreground)" font-size="10">UUID → users.id (CASCADE)</text>
-      <line x1="48" y1="347" x2="392" y2="347" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="360" fill="var(--foreground)" font-size="10">is_vegetarian, is_vegan, is_halal…</text><text x="300" y="360" fill="var(--muted-foreground)" font-size="10">BOOLEAN flags</text>
-      <line x1="48" y1="364" x2="392" y2="364" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="56" y="377" fill="var(--foreground)" font-size="10">allergen_flags</text><text x="220" y="377" fill="var(--muted-foreground)" font-size="10">TEXT[] — checked BEFORE scoring</text>
-    </g>
-
-    <!-- ── preference_weights ────────────────────────────────── -->
-    <g class="table-box" id="tbl-preference_weights" onclick="selectTable('preference_weights')">
-      <rect x="110" y="680" width="330" height="115" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="110" y="680" width="330" height="30" rx="8" fill="#7c3aed" stroke="none"/>
-      <rect x="110" y="698" width="330" height="12" fill="#7c3aed"/>
-      <text x="275" y="701" text-anchor="middle" fill="white" font-weight="700" font-size="12">preference_weights</text>
-      <text x="126" y="727" fill="#10b981" font-size="10">🔑 id</text><text x="270" y="727" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="118" y1="731" x2="432" y2="731" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="126" y="744" fill="#38bdf8" font-size="10">🔗 user_id</text><text x="270" y="744" fill="var(--muted-foreground)" font-size="10">UUID → users.id UNIQUE</text>
-      <line x1="118" y1="748" x2="432" y2="748" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="126" y="761" fill="var(--foreground)" font-size="10">cuisine_scores</text><text x="270" y="761" fill="var(--muted-foreground)" font-size="10">JSONB {"indian":0.8, …}</text>
-      <line x1="118" y1="765" x2="432" y2="765" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="126" y="778" fill="var(--foreground)" font-size="10">ingredient_scores, disliked_ingredients</text><text x="350" y="778" fill="var(--muted-foreground)" font-size="10">JSONB / TEXT[]</text>
-    </g>
-
-    <!-- ── meal_plans ─────────────────────────────────────────── -->
-    <g class="table-box" id="tbl-meal_plans" onclick="selectTable('meal_plans')">
-      <rect x="640" y="50" width="340" height="115" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="640" y="50" width="340" height="30" rx="8" fill="#0891b2" stroke="none"/>
-      <rect x="640" y="68" width="340" height="12" fill="#0891b2"/>
-      <text x="810" y="71" text-anchor="middle" fill="white" font-weight="700" font-size="12">meal_plans</text>
-      <text x="656" y="97" fill="#10b981" font-size="10">🔑 id</text><text x="810" y="97" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="648" y1="101" x2="972" y2="101" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="656" y="114" fill="#38bdf8" font-size="10">🔗 user_id</text><text x="810" y="114" fill="var(--muted-foreground)" font-size="10">UUID → users.id</text>
-      <line x1="648" y1="118" x2="972" y2="118" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="656" y="131" fill="var(--foreground)" font-size="10">plan_date</text><text x="810" y="131" fill="var(--muted-foreground)" font-size="10">DATE (UNIQUE with user_id)</text>
-      <line x1="648" y1="135" x2="972" y2="135" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="656" y="148" fill="var(--foreground)" font-size="10">total_calories_target / actual</text><text x="850" y="148" fill="var(--muted-foreground)" font-size="10">INTEGER</text>
-      <line x1="648" y1="152" x2="972" y2="152" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="656" y="165" fill="var(--foreground)" font-size="10">plan_status</text><text x="810" y="165" fill="var(--muted-foreground)" font-size="10">ENUM: generated/accepted/modified/completed</text>
-    </g>
-
-    <!-- ── meal_plan_items ────────────────────────────────────── -->
-    <g class="table-box" id="tbl-meal_plan_items" onclick="selectTable('meal_plan_items')">
-      <rect x="720" y="310" width="340" height="115" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="720" y="310" width="340" height="30" rx="8" fill="#0891b2" stroke="none"/>
-      <rect x="720" y="328" width="340" height="12" fill="#0891b2"/>
-      <text x="890" y="331" text-anchor="middle" fill="white" font-weight="700" font-size="12">meal_plan_items</text>
-      <text x="736" y="357" fill="#10b981" font-size="10">🔑 id</text><text x="890" y="357" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="728" y1="361" x2="1052" y2="361" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="374" fill="#38bdf8" font-size="10">🔗 meal_plan_id</text><text x="890" y="374" fill="var(--muted-foreground)" font-size="10">INT → meal_plans.id</text>
-      <line x1="728" y1="378" x2="1052" y2="378" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="391" fill="#38bdf8" font-size="10">🔗 recipe_id</text><text x="890" y="391" fill="var(--muted-foreground)" font-size="10">INT → recipes.id</text>
-      <line x1="728" y1="395" x2="1052" y2="395" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="408" fill="var(--foreground)" font-size="10">meal_type, serving_multiplier</text><text x="900" y="408" fill="var(--muted-foreground)" font-size="10">ENUM / NUMERIC</text>
-      <line x1="728" y1="412" x2="1052" y2="412" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="425" fill="var(--foreground)" font-size="10">score_breakdown</text><text x="890" y="425" fill="#f59e0b" font-size="10">JSONB (SHAP scores)</text>
-    </g>
-
-    <!-- ── user_feedback ──────────────────────────────────────── -->
-    <g class="table-box" id="tbl-user_feedback" onclick="selectTable('user_feedback')">
-      <rect x="470" y="560" width="330" height="115" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="470" y="560" width="330" height="30" rx="8" fill="#ea580c" stroke="none"/>
-      <rect x="470" y="578" width="330" height="12" fill="#ea580c"/>
-      <text x="635" y="581" text-anchor="middle" fill="white" font-weight="700" font-size="12">user_feedback</text>
-      <text x="486" y="607" fill="#10b981" font-size="10">🔑 id</text><text x="635" y="607" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="478" y1="611" x2="792" y2="611" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="624" fill="#38bdf8" font-size="10">🔗 meal_plan_item_id</text><text x="635" y="624" fill="var(--muted-foreground)" font-size="10">INT → meal_plan_items.id</text>
-      <line x1="478" y1="628" x2="792" y2="628" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="641" fill="#38bdf8" font-size="10">🔗 user_id</text><text x="635" y="641" fill="var(--muted-foreground)" font-size="10">UUID → users.id</text>
-      <line x1="478" y1="645" x2="792" y2="645" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="658" fill="var(--foreground)" font-size="10">rating</text><text x="635" y="658" fill="var(--muted-foreground)" font-size="10">SMALLINT 1–5 → drives re-ranking</text>
-      <line x1="478" y1="662" x2="792" y2="662" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="675" fill="var(--foreground)" font-size="10">liked_aspects, disliked_aspects, notes</text>
-    </g>
-
-    <!-- ── recipes ────────────────────────────────────────────── -->
-    <g class="table-box" id="tbl-recipes" onclick="selectTable('recipes')">
-      <rect x="960" y="200" width="290" height="140" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="960" y="200" width="290" height="30" rx="8" fill="#16a34a" stroke="none"/>
-      <rect x="960" y="218" width="290" height="12" fill="#16a34a"/>
-      <text x="1105" y="221" text-anchor="middle" fill="white" font-weight="700" font-size="12">recipes</text>
-      <text x="976" y="247" fill="#10b981" font-size="10">🔑 id</text><text x="1105" y="247" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="968" y1="251" x2="1242" y2="251" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="976" y="264" fill="var(--foreground)" font-size="10">name, cuisine_type, meal_type</text><text x="1150" y="264" fill="var(--muted-foreground)" font-size="10">TEXT / ENUM</text>
-      <line x1="968" y1="268" x2="1242" y2="268" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="976" y="281" fill="var(--foreground)" font-size="10">prep_time, cook_time</text><text x="1105" y="281" fill="var(--muted-foreground)" font-size="10">SMALLINT mins</text>
-      <line x1="968" y1="285" x2="1242" y2="285" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="976" y="298" fill="var(--foreground)" font-size="10">calories_per_serving</text><text x="1105" y="298" fill="var(--muted-foreground)" font-size="10">NUMERIC (aggregated)</text>
-      <line x1="968" y1="302" x2="1242" y2="302" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="976" y="315" fill="var(--foreground)" font-size="10">protein, carbs, fat, fiber per serving</text><text x="1180" y="315" fill="var(--muted-foreground)" font-size="10">NUMERIC g</text>
-      <line x1="968" y1="319" x2="1242" y2="319" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="976" y="332" fill="var(--foreground)" font-size="10">is_vegetarian, is_vegan, allergen_flags</text><text x="1200" y="332" fill="var(--muted-foreground)" font-size="10">BOOL / TEXT[]</text>
-    </g>
-
-    <!-- ── recipe_ingredients ─────────────────────────────────── -->
-    <g class="table-box" id="tbl-recipe_ingredients" onclick="selectTable('recipe_ingredients')">
-      <rect x="720" y="440" width="290" height="100" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="720" y="440" width="290" height="30" rx="8" fill="#16a34a" stroke="none"/>
-      <rect x="720" y="458" width="290" height="12" fill="#16a34a"/>
-      <text x="865" y="461" text-anchor="middle" fill="white" font-weight="700" font-size="12">recipe_ingredients</text>
-      <text x="736" y="487" fill="#10b981" font-size="10">🔑 id</text><text x="865" y="487" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="728" y1="491" x2="1002" y2="491" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="504" fill="#38bdf8" font-size="10">🔗 recipe_id</text><text x="865" y="504" fill="var(--muted-foreground)" font-size="10">INT → recipes.id (CASCADE)</text>
-      <line x1="728" y1="508" x2="1002" y2="508" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="521" fill="#38bdf8" font-size="10">🔗 food_id</text><text x="865" y="521" fill="var(--muted-foreground)" font-size="10">INT → foods.id (RESTRICT)</text>
-      <line x1="728" y1="525" x2="1002" y2="525" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="736" y="538" fill="var(--foreground)" font-size="10">quantity_grams</text><text x="865" y="538" fill="var(--muted-foreground)" font-size="10">NUMERIC(8,2) > 0</text>
-    </g>
-
-    <!-- ── foods ──────────────────────────────────────────────── -->
-    <g class="table-box" id="tbl-foods" onclick="selectTable('foods')">
-      <rect x="470" y="400" width="230" height="175" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="470" y="400" width="230" height="30" rx="8" fill="#b45309" stroke="none"/>
-      <rect x="470" y="418" width="230" height="12" fill="#b45309"/>
-      <text x="585" y="421" text-anchor="middle" fill="white" font-weight="700" font-size="12">foods  (USDA/ICMR-NIN)</text>
-      <text x="486" y="447" fill="#10b981" font-size="10">🔑 id</text><text x="585" y="447" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="478" y1="451" x2="692" y2="451" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="464" fill="var(--foreground)" font-size="10">name, name_local</text><text x="590" y="464" fill="var(--muted-foreground)" font-size="10">TEXT</text>
-      <line x1="478" y1="468" x2="692" y2="468" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="481" fill="var(--foreground)" font-size="10">data_source</text><text x="590" y="481" fill="var(--muted-foreground)" font-size="10">ENUM: USDA / ICMR_NIN</text>
-      <line x1="478" y1="485" x2="692" y2="485" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="498" fill="var(--foreground)" font-size="10">calories_kcal (per 100g)</text><text x="620" y="498" fill="var(--muted-foreground)" font-size="10">NUMERIC</text>
-      <line x1="478" y1="502" x2="692" y2="502" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="515" fill="var(--foreground)" font-size="10">protein, carbs, fat, fiber, sugar…</text>
-      <line x1="478" y1="519" x2="692" y2="519" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="532" fill="var(--foreground)" font-size="10">vit_A/B12/C/D, iron, calcium, zinc…</text><text x="640" y="532" fill="var(--muted-foreground)" font-size="10">micros</text>
-      <line x1="478" y1="536" x2="692" y2="536" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="549" fill="var(--foreground)" font-size="10">allergen_flags</text><text x="590" y="549" fill="#dc2626" font-size="10">TEXT[] (safety)</text>
-      <line x1="478" y1="553" x2="692" y2="553" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="566" fill="var(--foreground)" font-size="10">is_vegetarian, is_vegan, is_halal</text>
-    </g>
-
-    <!-- ── progress_logs ─────────────────────────────────────── -->
-    <g class="table-box" id="tbl-progress_logs" onclick="selectTable('progress_logs')">
-      <rect x="470" y="650" width="290" height="115" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="470" y="650" width="290" height="30" rx="8" fill="#0d9488" stroke="none"/>
-      <rect x="470" y="668" width="290" height="12" fill="#0d9488"/>
-      <text x="615" y="671" text-anchor="middle" fill="white" font-weight="700" font-size="12">progress_logs</text>
-      <text x="486" y="697" fill="#10b981" font-size="10">🔑 id</text><text x="615" y="697" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="478" y1="701" x2="752" y2="701" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="714" fill="#38bdf8" font-size="10">🔗 user_id</text><text x="615" y="714" fill="var(--muted-foreground)" font-size="10">UUID → users.id</text>
-      <line x1="478" y1="718" x2="752" y2="718" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="731" fill="var(--foreground)" font-size="10">log_date, weight_kg</text><text x="615" y="731" fill="var(--muted-foreground)" font-size="10">DATE / NUMERIC</text>
-      <line x1="478" y1="735" x2="752" y2="735" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="748" fill="var(--foreground)" font-size="10">calories_consumed, calories_target</text><text x="690" y="748" fill="var(--muted-foreground)" font-size="10">INT</text>
-      <line x1="478" y1="752" x2="752" y2="752" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="486" y="765" fill="var(--foreground)" font-size="10">adherence_score</text><text x="615" y="765" fill="var(--muted-foreground)" font-size="10">NUMERIC 0–1</text>
-    </g>
-
-    <!-- ── ai_interaction_logs ────────────────────────────────── -->
-    <g class="table-box" id="tbl-ai_interaction_logs" onclick="selectTable('ai_interaction_logs')">
-      <rect x="480" y="820" width="340" height="130" rx="8" fill="var(--card)" stroke="var(--border)" stroke-width="1.2"/>
-      <rect class="header" x="480" y="820" width="340" height="30" rx="8" fill="#6b21a8" stroke="none"/>
-      <rect x="480" y="838" width="340" height="12" fill="#6b21a8"/>
-      <text x="650" y="841" text-anchor="middle" fill="white" font-weight="700" font-size="12">ai_interaction_logs  🔒 Rule 1</text>
-      <text x="496" y="867" fill="#10b981" font-size="10">🔑 id</text><text x="650" y="867" fill="var(--muted-foreground)" font-size="10">SERIAL PK</text>
-      <line x1="488" y1="871" x2="812" y2="871" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="496" y="884" fill="#38bdf8" font-size="10">🔗 user_id</text><text x="650" y="884" fill="var(--muted-foreground)" font-size="10">UUID → users.id (SET NULL)</text>
-      <line x1="488" y1="888" x2="812" y2="888" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="496" y="901" fill="var(--foreground)" font-size="10">interaction_type</text><text x="650" y="901" fill="var(--muted-foreground)" font-size="10">TEXT (meal_explanation / chat)</text>
-      <line x1="488" y1="905" x2="812" y2="905" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="496" y="918" fill="var(--foreground)" font-size="10">prompt_context</text><text x="650" y="918" fill="#f59e0b" font-size="10">JSONB (facts from DB only)</text>
-      <line x1="488" y1="922" x2="812" y2="922" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="496" y="935" fill="var(--foreground)" font-size="10">gemini_response</text><text x="650" y="935" fill="#dc2626" font-size="10">TEXT — NL only, never writes to foods</text>
-      <line x1="488" y1="939" x2="812" y2="939" stroke="var(--border)" stroke-width="0.5"/>
-      <text x="496" y="952" fill="var(--foreground)" font-size="10">model_name, prompt_tokens, latency_ms</text>
-    </g>
-
-  </svg>
+  <!-- Dynamic Live Inspector Alert -->
+  <div id="inspectorBox" class="relative z-10 my-4 p-4 rounded-2xl bg-white border border-[#bfdbfe] shadow-sm flex items-start gap-3.5 transition-all">
+    <span class="text-2xl mt-0.5">💡</span>
+    <div class="text-xs">
+      <p id="inspectorTitle" class="font-bold text-[#1d4ed8] text-sm">Interactive Inspector Active</p>
+      <p id="inspectorDesc" class="text-slate-600 font-light mt-0.5">
+        Click any card below to isolate its parent/child relationships and see exact constraints (Primary Keys, Foreign Keys, and Cascade rules).
+      </p>
+    </div>
   </div>
 
-  <!-- Footer legend -->
-  <div class="px-5 py-2 border-t border-[var(--border)] flex flex-wrap gap-4 text-xs text-[var(--muted-foreground)]">
-    <span>🔑 Primary Key</span>
-    <span>🔗 Foreign Key</span>
-    <span>⚠ Safety Gate runs BEFORE scoring</span>
-    <span>🔒 LLM audit log — read-only from Gemini's perspective</span>
-    <span>Click any table to highlight its FK relationships</span>
+  <!-- 4-Domain Grid Layout -->
+  <div class="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-5 my-3">
+
+    <!-- ════════ DOMAIN 1: USER & SAFETY ════════ -->
+    <div class="space-y-3.5 domain-group" data-domain="user">
+      <div class="flex items-center gap-2 pb-1 border-b border-[#e9dfd5]">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#1d4ed8]"></span>
+        <h3 class="domain-badge text-[#1d4ed8]">Domain 1: User &amp; Safety</h3>
+      </div>
+
+      <!-- Table: users -->
+      <div id="card-users" onclick="selectTable('users')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#eff6ff] border-b border-[#bfdbfe] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#1d4ed8] text-sm">users</span>
+          <span class="text-[10px] bg-white text-[#1d4ed8] border border-[#bfdbfe] font-semibold px-2 py-0.5 rounded-full">Core Profile</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">UUID (Supabase Auth)</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>email</span><span class="text-[10px] text-slate-400 font-mono">TEXT UNIQUE</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>full_name, age, gender</span><span class="text-[10px] text-slate-400 font-mono">Profile</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>height_cm, weight_kg</span><span class="text-[10px] text-slate-400 font-mono">Biometrics</span>
+          </div>
+          <div class="flex justify-between items-center text-[#581825] font-medium">
+            <span>goal, activity_level</span><span class="text-[10px] text-slate-400 font-mono">ENUM</span>
+          </div>
+          <div class="flex justify-between items-center bg-[#faf7f2] p-1.5 rounded-lg border border-[#e2d6c9] text-[#421018] font-bold text-[11px]">
+            <span>daily_calorie_target</span><span>Calculated</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: dietary_restrictions -->
+      <div id="card-dietary_restrictions" onclick="selectTable('dietary_restrictions')" class="tbl-card rounded-2xl bg-white border-2 border-[#581825]/40 overflow-hidden shadow-sm">
+        <div class="bg-[#fdf2f4] border-b border-[#fbcfe8] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#581825] text-sm">dietary_restrictions</span>
+          <span class="text-[10px] bg-[#581825] text-white font-bold px-2 py-0.5 rounded-full">🛡️ Safety Gate</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 user_id</span><span class="text-[10px] text-slate-400 font-mono">UUID → users.id</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>is_veg, is_vegan, is_halal</span><span class="text-[10px] text-slate-400 font-mono">BOOLEAN</span>
+          </div>
+          <div class="p-2 rounded-xl bg-[#fdf2f4] border border-[#fbcfe8] text-[#581825] font-semibold text-[11px]">
+            <span>allergen_flags: TEXT[]</span>
+            <p class="text-[10px] font-normal text-slate-600 mt-0.5">Filter runs BEFORE scoring</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: progress_logs -->
+      <div id="card-progress_logs" onclick="selectTable('progress_logs')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#f0f9ff] border-b border-[#bae6fd] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#0369a1] text-sm">progress_logs</span>
+          <span class="text-[10px] bg-white text-[#0369a1] border border-[#bae6fd] font-semibold px-2 py-0.5 rounded-full">Daily Tracking</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 user_id</span><span class="text-[10px] text-slate-400 font-mono">UUID → users.id</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>log_date, weight_kg</span><span class="text-[10px] text-slate-400 font-mono">DATE / NUMERIC</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>calories_consumed</span><span class="text-[10px] text-slate-400 font-mono">INT</span>
+          </div>
+          <div class="flex justify-between items-center text-[#15803d] font-medium">
+            <span>adherence_score</span><span class="text-[10px] text-slate-400 font-mono">0.0 to 1.0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ DOMAIN 2: FOOD & RECIPES ════════ -->
+    <div class="space-y-3.5 domain-group" data-domain="food">
+      <div class="flex items-center gap-2 pb-1 border-b border-[#e9dfd5]">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#15803d]"></span>
+        <h3 class="domain-badge text-[#15803d]">Domain 2: Food &amp; Recipes</h3>
+      </div>
+
+      <!-- Table: foods -->
+      <div id="card-foods" onclick="selectTable('foods')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#f0fdf4] border-b border-[#bbf7d0] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#15803d] text-sm">foods</span>
+          <span class="text-[10px] bg-[#15803d] text-white font-bold px-2 py-0.5 rounded-full">USDA / ICMR-NIN</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>name, name_local</span><span class="text-[10px] text-slate-400 font-mono">TEXT</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>data_source, external_id</span><span class="text-[10px] text-slate-400 font-mono">ENUM / Code</span>
+          </div>
+          <div class="p-2 rounded-xl bg-[#faf7f2] border border-[#e2d6c9] space-y-1 text-slate-700">
+            <div class="flex justify-between font-bold text-[#421018]">
+              <span>calories_kcal</span><span>per 100g</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-slate-600">
+              <span>protein, carbs, fat, fiber, sugar</span>
+            </div>
+            <div class="flex justify-between text-[10px] text-slate-500">
+              <span>vit_A, vit_C, iron, calcium, sodium...</span>
+            </div>
+          </div>
+          <div class="flex justify-between items-center text-[#581825] font-medium">
+            <span>allergen_flags</span><span class="text-[10px] text-slate-400 font-mono">TEXT[]</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: recipe_ingredients -->
+      <div id="card-recipe_ingredients" onclick="selectTable('recipe_ingredients')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#f0fdf4] border-b border-[#bbf7d0] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#15803d] text-sm">recipe_ingredients</span>
+          <span class="text-[10px] bg-white text-[#15803d] border border-[#bbf7d0] font-semibold px-2 py-0.5 rounded-full">Junction (N:M)</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 recipe_id</span><span class="text-[10px] text-slate-400 font-mono">INT → recipes (CASCADE)</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 food_id</span><span class="text-[10px] text-slate-400 font-mono">INT → foods (RESTRICT)</span>
+          </div>
+          <div class="flex justify-between items-center text-[#421018] font-bold">
+            <span>quantity_grams</span><span class="text-[10px] text-slate-400 font-mono">NUMERIC > 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: recipes -->
+      <div id="card-recipes" onclick="selectTable('recipes')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#f0fdf4] border-b border-[#bbf7d0] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#15803d] text-sm">recipes</span>
+          <span class="text-[10px] bg-white text-[#15803d] border border-[#bbf7d0] font-semibold px-2 py-0.5 rounded-full">Composite Meals</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>name, cuisine_type</span><span class="text-[10px] text-slate-400 font-mono">TEXT / ENUM</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>meal_type, prep_time</span><span class="text-[10px] text-slate-400 font-mono">Breakfast/Lunch...</span>
+          </div>
+          <div class="p-2 rounded-xl bg-[#faf7f2] border border-[#e2d6c9] space-y-1 text-slate-700">
+            <div class="flex justify-between font-bold text-[#421018]">
+              <span>calories_per_serving</span><span>Aggregated</span>
+            </div>
+            <div class="flex justify-between text-[11px] text-slate-600">
+              <span>protein, carbs, fat, fiber per serving</span>
+            </div>
+          </div>
+          <div class="flex justify-between items-center text-[#581825] font-medium">
+            <span>allergen_flags</span><span class="text-[10px] text-slate-400 font-mono">Union of foods</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ DOMAIN 3: MEAL PLANS & ADAPTIVE FEEDBACK ════════ -->
+    <div class="space-y-3.5 domain-group" data-domain="plan">
+      <div class="flex items-center gap-2 pb-1 border-b border-[#e9dfd5]">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#581825]"></span>
+        <h3 class="domain-badge text-[#581825]">Domain 3: Meal Engine &amp; Feedback</h3>
+      </div>
+
+      <!-- Table: meal_plans -->
+      <div id="card-meal_plans" onclick="selectTable('meal_plans')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#fdf2f4] border-b border-[#fbcfe8] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#581825] text-sm">meal_plans</span>
+          <span class="text-[10px] bg-white text-[#581825] border border-[#fbcfe8] font-semibold px-2 py-0.5 rounded-full">Daily Plan</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 user_id</span><span class="text-[10px] text-slate-400 font-mono">UUID → users.id</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>plan_date</span><span class="text-[10px] text-slate-400 font-mono">DATE (UNIQUE/User)</span>
+          </div>
+          <div class="flex justify-between items-center text-[#421018] font-bold">
+            <span>total_calories_target/actual</span><span>INT</span>
+          </div>
+          <div class="flex justify-between items-center text-[#581825] font-medium">
+            <span>plan_status</span><span class="text-[10px] text-slate-400 font-mono">ENUM</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: meal_plan_items -->
+      <div id="card-meal_plan_items" onclick="selectTable('meal_plan_items')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#fdf2f4] border-b border-[#fbcfe8] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#581825] text-sm">meal_plan_items</span>
+          <span class="text-[10px] bg-[#581825] text-white font-bold px-2 py-0.5 rounded-full">Meal Slots</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 meal_plan_id</span><span class="text-[10px] text-slate-400 font-mono">INT → meal_plans</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 recipe_id</span><span class="text-[10px] text-slate-400 font-mono">INT → recipes</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>meal_type, multiplier</span><span class="text-[10px] text-slate-400 font-mono">ENUM / NUM</span>
+          </div>
+          <div class="p-2 rounded-xl bg-[#eff6ff] border border-[#bfdbfe] text-[#1d4ed8] font-semibold text-[11px]">
+            <span>score_breakdown: JSONB</span>
+            <p class="text-[10px] font-normal text-slate-600 mt-0.5">SHAP attribution &amp; weights</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: user_feedback -->
+      <div id="card-user_feedback" onclick="selectTable('user_feedback')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#fff7ed] border-b border-[#fed7aa] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#c2410c] text-sm">user_feedback</span>
+          <span class="text-[10px] bg-white text-[#c2410c] border border-[#fed7aa] font-semibold px-2 py-0.5 rounded-full">Adaptive Signal</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 meal_plan_item_id</span><span class="text-[10px] text-slate-400 font-mono">INT → item.id</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 user_id</span><span class="text-[10px] text-slate-400 font-mono">UUID → users.id</span>
+          </div>
+          <div class="flex justify-between items-center text-[#c2410c] font-bold">
+            <span>rating</span><span>SMALLINT (1–5)</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>liked/disliked_aspects</span><span class="text-[10px] text-slate-400 font-mono">TEXT[]</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table: preference_weights -->
+      <div id="card-preference_weights" onclick="selectTable('preference_weights')" class="tbl-card rounded-2xl bg-white border border-[#e8ded3] overflow-hidden shadow-sm">
+        <div class="bg-[#faf5ff] border-b border-[#e9d5ff] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#7e22ce] text-sm">preference_weights</span>
+          <span class="text-[10px] bg-[#7e22ce] text-white font-bold px-2 py-0.5 rounded-full">Ridge Model</span>
+        </div>
+        <div class="p-3.5 space-y-1.5 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 user_id</span><span class="text-[10px] text-slate-400 font-mono">UUID → users.id</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>cuisine_scores</span><span class="text-[10px] text-slate-400 font-mono">JSONB vector</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>ingredient_scores</span><span class="text-[10px] text-slate-400 font-mono">JSONB vector</span>
+          </div>
+          <div class="flex justify-between items-center text-[#7e22ce] font-medium">
+            <span>last_trained_at</span><span class="text-[10px] text-slate-400 font-mono">TIMESTAMPTZ</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ════════ DOMAIN 4: AUDIT SAFETY & EXPLAINABLE AI ════════ -->
+    <div class="space-y-3.5 domain-group" data-domain="ai">
+      <div class="flex items-center gap-2 pb-1 border-b border-[#e9dfd5]">
+        <span class="w-2.5 h-2.5 rounded-full bg-[#7e22ce]"></span>
+        <h3 class="domain-badge text-[#7e22ce]">Domain 4: AI Audit Log</h3>
+      </div>
+
+      <!-- Table: ai_interaction_logs -->
+      <div id="card-ai_interaction_logs" onclick="selectTable('ai_interaction_logs')" class="tbl-card rounded-2xl bg-white border-2 border-[#7e22ce]/40 overflow-hidden shadow-sm">
+        <div class="bg-[#faf5ff] border-b border-[#e9d5ff] px-4 py-2.5 flex items-center justify-between">
+          <span class="font-serif font-bold text-[#7e22ce] text-sm">ai_interaction_logs</span>
+          <span class="text-[10px] bg-[#7e22ce] text-white font-bold px-2 py-0.5 rounded-full">🔒 Rule 1 Log</span>
+        </div>
+        <div class="p-3.5 space-y-2 text-xs">
+          <div class="flex justify-between items-center text-[#15803d] font-semibold">
+            <span>🔑 id</span><span class="text-[10px] text-slate-400 font-mono">SERIAL PK</span>
+          </div>
+          <div class="flex justify-between items-center text-[#1d4ed8] font-medium">
+            <span>🔗 user_id</span><span class="text-[10px] text-slate-400 font-mono">UUID → users (SET NULL)</span>
+          </div>
+          <div class="flex justify-between items-center text-slate-700">
+            <span>interaction_type</span><span class="text-[10px] text-slate-400 font-mono">chat / recipe_format</span>
+          </div>
+          <div class="p-2 rounded-xl bg-[#eff6ff] border border-[#bfdbfe] text-[#1d4ed8] font-semibold text-[11px]">
+            <span>prompt_context: JSONB</span>
+            <p class="text-[10px] font-normal text-slate-600 mt-0.5">Facts from DB only (never hallucinated)</p>
+          </div>
+          <div class="p-2 rounded-xl bg-[#fdf2f4] border border-[#fbcfe8] text-[#581825] font-semibold text-[11px]">
+            <span>gemini_response: TEXT</span>
+            <p class="text-[10px] font-normal text-slate-600 mt-0.5">NL only · Read-only audit trail</p>
+          </div>
+          <div class="flex justify-between items-center text-slate-500 text-[10px]">
+            <span>model_name, latency_ms, tokens</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Architecture Rule Summary Box -->
+      <div class="rounded-2xl bg-[#faf7f2] p-4 border border-[#e2d6c9] space-y-2 text-xs">
+        <p class="font-serif font-bold text-[#421018]">Two Ironclad Rules:</p>
+        <div class="flex items-start gap-1.5 text-slate-600">
+          <span class="text-[#581825] font-bold">1.</span>
+          <span>LLM never writes or modifies nutrition facts in <code class="bg-white px-1 py-0.5 rounded border border-[#d8c8b8] text-[10px]">foods</code> or <code class="bg-white px-1 py-0.5 rounded border border-[#d8c8b8] text-[10px]">recipes</code>.</span>
+        </div>
+        <div class="flex items-start gap-1.5 text-slate-600">
+          <span class="text-[#581825] font-bold">2.</span>
+          <span>Safety Gate runs on <code class="bg-white px-1 py-0.5 rounded border border-[#d8c8b8] text-[10px]">dietary_restrictions</code> before ML scoring begins.</span>
+        </div>
+      </div>
+    </div>
+
   </div>
+
+  <!-- Legend Footer -->
+  <div class="relative z-10 mt-6 pt-4 border-t border-[#e9dfd5] flex flex-wrap items-center justify-between text-xs text-slate-600 font-light gap-3">
+    <div class="flex items-center gap-4 flex-wrap">
+      <span class="flex items-center gap-1.5"><span class="text-[#15803d] font-bold">🔑</span> Primary Key</span>
+      <span class="flex items-center gap-1.5"><span class="text-[#1d4ed8] font-bold">🔗</span> Foreign Key Link</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#581825]"></span> Safety Gate Constraint</span>
+      <span class="flex items-center gap-1.5"><span class="inline-block w-2.5 h-2.5 rounded-full bg-[#7e22ce]"></span> AI Audit Sandbox</span>
+    </div>
+    <span class="text-[#581825] font-serif font-medium">PostgreSQL Relational Safety · 100% ACID Compliant</span>
+  </div>
+
 </div>
 
 <script>
-  let active = null;
+  let selectedTable = null;
 
-  const relations = {
-    users: ['dietary_restrictions','preference_weights','meal_plans','progress_logs','ai_interaction_logs','user_feedback'],
-    dietary_restrictions: ['users'],
-    preference_weights: ['users'],
-    meal_plans: ['users','meal_plan_items'],
-    meal_plan_items: ['meal_plans','recipes','user_feedback'],
-    user_feedback: ['meal_plan_items','users'],
-    recipes: ['meal_plan_items','recipe_ingredients'],
-    recipe_ingredients: ['recipes','foods'],
-    foods: ['recipe_ingredients'],
-    progress_logs: ['users'],
-    ai_interaction_logs: ['users'],
+  const tableMetadata = {
+    users: {
+      name: "users (Central Profile Entity)",
+      desc: "Stores user biometrics (height, weight, age), calculated daily calorie targets, and goals (Cut vs Maintain). Primary parent for 5 child tables.",
+      related: ["dietary_restrictions", "progress_logs", "meal_plans", "user_feedback", "preference_weights", "ai_interaction_logs"]
+    },
+    dietary_restrictions: {
+      name: "dietary_restrictions (Hard Safety Gate)",
+      desc: "Stores allergen flags (nuts, dairy, shellfish) and dietary preferences (vegetarian, vegan, halal). Queried BEFORE recommendation scoring to guarantee safety.",
+      related: ["users"]
+    },
+    progress_logs: {
+      name: "progress_logs (Daily Adherence & Weight)",
+      desc: "Logs daily weigh-ins, calorie intake adherence scores (0.0 to 1.0), and user notes to render progress charts.",
+      related: ["users"]
+    },
+    foods: {
+      name: "foods (Authoritative Nutrition Store)",
+      desc: "Populated exclusively by ETL from USDA FoodData Central and ICMR-NIN IFCT 2017. Contains raw macros and micronutrients per 100g. LLM never writes here.",
+      related: ["recipe_ingredients"]
+    },
+    recipe_ingredients: {
+      name: "recipe_ingredients (Composite Junction)",
+      desc: "Maps recipes to their constituent raw foods with exact gram quantities. Ensures referential integrity when food nutrition values update.",
+      related: ["recipes", "foods"]
+    },
+    recipes: {
+      name: "recipes (Cooked Meals & Macro Aggregates)",
+      desc: "Stores composite meals with aggregated per-serving calories, protein, carbs, and fat. Allergen flags represent the union of all ingredient flags.",
+      related: ["recipe_ingredients", "meal_plan_items"]
+    },
+    meal_plans: {
+      name: "meal_plans (Daily Plan Container)",
+      desc: "Represents a generated daily meal schedule for a user on a given calendar date with total calorie targets and plan status.",
+      related: ["users", "meal_plan_items"]
+    },
+    meal_plan_items: {
+      name: "meal_plan_items (Meal Slots & SHAP Breakdown)",
+      desc: "Individual meal slots (Breakfast, Lunch, Dinner, Snack). Stores exact serving multiplier and full JSONB SHAP recommendation score breakdown.",
+      related: ["meal_plans", "recipes", "user_feedback"]
+    },
+    user_feedback: {
+      name: "user_feedback (Adaptive Signal)",
+      desc: "Stores post-meal 1–5 star ratings, liked/disliked aspects, and notes. Directly feeds the adaptive re-ranking engine.",
+      related: ["meal_plan_items", "users", "preference_weights"]
+    },
+    preference_weights: {
+      name: "preference_weights (Adaptive Ridge Model Vector)",
+      desc: "Per-user adaptive weight vectors (JSONB) for cuisines and ingredients. Updated by Scikit-learn Ridge Regression following user feedback.",
+      related: ["users", "user_feedback"]
+    },
+    ai_interaction_logs: {
+      name: "ai_interaction_logs (Audit Trail)",
+      desc: "Logs all Gemini API prompts, structured contexts (facts from DB only), responses, and token costs. Strictly read-only audit log.",
+      related: ["users"]
+    }
   };
 
-  function selectTable(id) {
-    const allTables = document.querySelectorAll('.table-box');
-    const allLines = document.querySelectorAll('.rel-line');
-
-    if (active === id) {
-      // deselect
-      active = null;
-      allTables.forEach(t => { t.classList.remove('active','dimmed'); });
-      allLines.forEach(l => { l.classList.remove('highlight','dimmed'); });
+  function selectTable(tblId) {
+    const allCards = document.querySelectorAll('.tbl-card');
+    
+    if (selectedTable === tblId) {
+      // Deselect
+      selectedTable = null;
+      allCards.forEach(c => c.classList.remove('active', 'dimmed'));
+      document.getElementById('inspectorTitle').innerText = "Interactive Inspector Active";
+      document.getElementById('inspectorDesc').innerText = "Click any card below to isolate its parent/child relationships and see exact constraints (Primary Keys, Foreign Keys, and Cascade rules).";
       return;
     }
-    active = id;
 
-    const connected = new Set(relations[id] || []);
-    connected.add(id);
+    selectedTable = tblId;
+    const meta = tableMetadata[tblId];
+    const relatedSet = new Set(meta.related);
+    relatedSet.add(tblId);
 
-    allTables.forEach(t => {
-      const tid = t.id.replace('tbl-','');
-      t.classList.remove('active','dimmed');
-      if (tid === id) t.classList.add('active');
-      else if (!connected.has(tid)) t.classList.add('dimmed');
+    allCards.forEach(c => {
+      const id = c.id.replace('card-', '');
+      c.classList.remove('active', 'dimmed');
+      if (id === tblId) {
+        c.classList.add('active');
+      } else if (!relatedSet.has(id)) {
+        c.classList.add('dimmed');
+      }
     });
 
-    allLines.forEach(l => {
-      const from = l.dataset.from, to = l.dataset.to;
-      l.classList.remove('highlight','dimmed');
-      if ((from === id || to === id)) l.classList.add('highlight');
-      else l.classList.add('dimmed');
+    document.getElementById('inspectorTitle').innerText = "📍 " + meta.name;
+    document.getElementById('inspectorDesc').innerHTML = meta.desc + " <br><strong class='text-slate-800 font-semibold mt-1 inline-block'>Direct Connections:</strong> " + meta.related.map(r => "<code class='bg-[#eff6ff] text-[#1d4ed8] px-1.5 py-0.5 rounded text-[11px] font-mono mr-1'>" + r + "</code>").join("");
+  }
+
+  function filterDomain(domain) {
+    const allBtns = document.querySelectorAll('.filter-btn');
+    allBtns.forEach(b => b.classList.remove('active'));
+    document.getElementById('btn-' + domain).classList.add('active');
+
+    const groups = document.querySelectorAll('.domain-group');
+    groups.forEach(g => {
+      if (domain === 'all' || g.dataset.domain === domain) {
+        g.style.display = 'block';
+      } else {
+        g.style.display = 'none';
+      }
     });
   }
 </script>
+
 </body>
 </html>
