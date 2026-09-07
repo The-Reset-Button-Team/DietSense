@@ -1,0 +1,191 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DietSense — IEEE System Architecture Diagram</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&family=Inter:wght@400;500;600;700&display=swap');
+    .ieee-paper {
+      font-family: 'Times New Roman', Times, serif;
+    }
+    .ieee-sans {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    .ieee-box {
+      border: 1.5px solid #1e293b;
+      background-color: #ffffff;
+      transition: all 0.15s ease-in-out;
+    }
+    .ieee-box:hover {
+      background-color: #f8fafc;
+      border-color: #0f172a;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900 p-3 sm:p-6 antialiased ieee-paper">
+
+<div class="max-w-5xl mx-auto bg-white p-6 sm:p-10 border border-slate-300 shadow-md">
+  
+  <!-- IEEE Paper Header -->
+  <div class="text-center pb-6 border-b border-slate-300">
+    <p class="text-xs uppercase tracking-widest text-slate-500 font-bold mb-1">IEEE System Architecture Specification</p>
+    <h1 class="text-2xl sm:text-3xl font-bold text-slate-900">
+      DietSense: A Multimodal, Safety-Gated Hybrid ML Diet Planning Architecture
+    </h1>
+    <p class="text-sm text-slate-600 mt-2 italic">
+      The-Reset-Button-Team &bull; Personalized Metabolic &amp; Solo-Cook Nutrition Engine
+    </p>
+  </div>
+
+  <!-- Abstract Summary -->
+  <div class="my-5 p-4 bg-slate-50 border-l-4 border-slate-800 text-xs sm:text-sm leading-relaxed text-slate-700">
+    <strong>Abstract</strong>—DietSense is an end-to-end intelligent dietary decision support system designed for solo living. The architecture decomposes meal planning into five sequential stages: (I) User biometrics and multimodal grocery inventory extraction, (II) Pre-scoring hard safety constraint gating against authoritative databases (USDA FoodData &amp; ICMR-NIN), (III) Six-factor hybrid recommendation scoring with SHAP explainability, (IV) Dynamic proportional macronutrient validation, and (V) Adaptive closed-loop preference learning via Ridge Regression.
+  </div>
+
+  <!-- Main Block Diagram (IEEE Style) -->
+  <div class="my-6 border border-slate-800 p-4 sm:p-6 bg-white">
+    <div class="text-center font-bold text-xs uppercase tracking-wider text-slate-700 mb-4 pb-2 border-b border-slate-200">
+      FIG. 1. End-to-End System Block Diagram (Sequential Pipeline Architecture)
+    </div>
+
+    <!-- 5 Horizontal / Vertical Layers -->
+    <div class="space-y-4 ieee-sans">
+
+      <!-- LAYER 1 -->
+      <div class="p-3.5 ieee-box rounded-lg">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+          <span class="text-xs font-bold text-slate-900 tracking-wide">LAYER 1: DATA INGESTION &amp; USER ACQUISITION</span>
+          <span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-semibold">Inputs</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-slate-700">
+          <div class="p-2 border border-slate-200 bg-slate-50 rounded">
+            <strong>1.1 Biometrics &amp; Goal</strong><br/>
+            Weight, Height, Age, Biological Sex, Activity Level, Target Goal (Cut/Maintain/Surplus).
+          </div>
+          <div class="p-2 border border-slate-200 bg-slate-50 rounded">
+            <strong>1.2 Solo Routine Matrix</strong><br/>
+            Meal Frequency (2, 3, 4, 5 slots), Weekday Effort Profile (Low &lt;12m, Moderate 25m).
+          </div>
+          <div class="p-2 border border-slate-200 bg-slate-50 rounded">
+            <strong>1.3 Vision OCR Ingestion</strong><br/>
+            Multimodal OCR on receipt slips, digital delivery PDFs (Blinkit/Zepto), &amp; fridge images.
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector Arrow -->
+      <div class="text-center text-slate-600 font-bold text-sm my-0.5">&darr; [Structured Inputs &amp; In-Stock Inventory]</div>
+
+      <!-- LAYER 2 -->
+      <div class="p-3.5 ieee-box rounded-lg">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+          <span class="text-xs font-bold text-slate-900 tracking-wide">LAYER 2: KNOWLEDGE BASE &amp; HARD SAFETY GATE</span>
+          <span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-semibold">Deterministic Filter</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs text-slate-700">
+          <div class="p-2 border border-slate-200 bg-slate-50 rounded">
+            <strong>2.1 Verified Nutrition DB (Rule 1)</strong><br/>
+            8,788 USDA FoodData + 528 ICMR-NIN IFCT foods. No LLM hallucination of macro/calorie values.
+          </div>
+          <div class="p-2 border border-slate-200 bg-slate-50 rounded">
+            <strong>2.2 Hard Safety Gate (Rule 2)</strong><br/>
+            SQL pre-filtering for allergens (nuts, dairy), vegetarian, gluten-free, &amp; medical contraindications.
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector Arrow -->
+      <div class="text-center text-slate-600 font-bold text-sm my-0.5">&darr; [Safe Candidate Recipes &amp; Calorie Bounds]</div>
+
+      <!-- LAYER 3 -->
+      <div class="p-3.5 ieee-box rounded-lg bg-slate-50/50">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+          <span class="text-xs font-bold text-slate-900 tracking-wide">LAYER 3: CORE ALGORITHMIC &amp; HYBRID ML ENGINE</span>
+          <span class="text-[10px] bg-slate-900 text-white px-2 py-0.5 rounded font-mono font-semibold">Core Processing</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs text-slate-700">
+          <div class="p-2 border border-slate-200 bg-white rounded">
+            <strong>3.1 Metabolic Target Calc</strong><br/>
+            Mifflin-St Jeor BMR &times; Activity &plusmn; Deficit.<br/>
+            <code>Target = max(1200, TDEE - 400)</code>
+          </div>
+          <div class="p-2 border border-slate-200 bg-white rounded">
+            <strong>3.2 6-Factor Hybrid Scorer</strong><br/>
+            <code>Score = &Sigma; w_i &middot; s_i</code><br/>
+            Macro (0.30), Goal (0.20), Pref (0.20), Feedback (0.15), Div (0.10), Prep (0.05).
+          </div>
+          <div class="p-2 border border-slate-200 bg-white rounded">
+            <strong>3.3 Dynamic 100% Validator</strong><br/>
+            Proportionally distributes calories, carbs (50%), protein (20%), fats (30%) across active slots.
+          </div>
+        </div>
+      </div>
+
+      <!-- Connector Arrow -->
+      <div class="text-center text-slate-600 font-bold text-sm my-0.5">&darr; [Optimized Daily Meal Plan &amp; SHAP Attributions]</div>
+
+      <!-- LAYER 4 & 5 -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <!-- LAYER 4 -->
+        <div class="p-3.5 ieee-box rounded-lg">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+            <span class="text-xs font-bold text-slate-900 tracking-wide">LAYER 4: HINGLISH EXECUTION &amp; UI</span>
+            <span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-semibold">Output</span>
+          </div>
+          <ul class="text-xs text-slate-700 space-y-1">
+            <li>&bull; <strong>Pantry Matching</strong>: 100% In-Stock vs missing flags.</li>
+            <li>&bull; <strong>1-Person Portion Guide</strong>: Metric &amp; kitchen spoons.</li>
+            <li>&bull; <strong>Hinglish Steps</strong>: Clear cooking guidance with heat levels &amp; single-pan cleanup hacks.</li>
+          </ul>
+        </div>
+
+        <!-- LAYER 5 -->
+        <div class="p-3.5 ieee-box rounded-lg">
+          <div class="flex items-center justify-between border-b border-slate-200 pb-1.5 mb-2">
+            <span class="text-xs font-bold text-slate-900 tracking-wide">LAYER 5: ADAPTIVE FEEDBACK LOOP</span>
+            <span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono font-semibold">Learning</span>
+          </div>
+          <ul class="text-xs text-slate-700 space-y-1">
+            <li>&bull; <strong>Post-Meal Rating</strong>: 1 to 5 stars + feedback tags.</li>
+            <li>&bull; <strong>Ridge Regression</strong>: Updates <code>preference_weights</code> vector in PostgreSQL.</li>
+            <li>&bull; <strong>Feedback Loop</strong>: Re-ranks future candidate dishes.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Figure Caption -->
+    <div class="mt-4 pt-3 border-t border-slate-200 text-center text-xs text-slate-600 italic">
+      Fig. 1. Layered Architectural Flow of the DietSense Decision Engine. Data moves strictly top-to-bottom with closed-loop feedback from Layer 5 back to Layer 3.
+    </div>
+  </div>
+
+  <!-- Mathematical Formulations Section -->
+  <div class="mt-6 pt-4 border-t border-slate-300">
+    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-900 mb-2">Mathematical Formulations</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs ieee-sans">
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+        <strong>1. Energy Expenditure (Mifflin-St Jeor):</strong><br/>
+        <div class="font-mono text-[11px] my-1 text-slate-800">
+          BMR = 10&middot;W + 6.25&middot;H - 5&middot;A + (Male ? +5 : -161)<br/>
+          TDEE = BMR &times; ActivityMultiplier<br/>
+          Target = max(1200, TDEE - 400) [Cut]
+        </div>
+      </div>
+      <div class="p-3 bg-slate-50 border border-slate-200 rounded">
+        <strong>2. Recommendation Objective Function:</strong><br/>
+        <div class="font-mono text-[11px] my-1 text-slate-800">
+          Score(r) = 0.30&middot;S_macro + 0.20&middot;S_goal + 0.20&middot;S_pref + 0.15&middot;S_fb + 0.10&middot;S_div + 0.05&middot;S_prep<br/>
+          &forall; S_i &isin; [0, 1], &Sigma; w_i = 1.0
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

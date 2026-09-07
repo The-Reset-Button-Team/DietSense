@@ -5,23 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
   <style>
-    @keyframes subtleFloat {
-      0%, 100% { transform: translateY(0px); }
-      50% { transform: translateY(-4px); }
-    }
     @keyframes glowPulse {
       0%, 100% { opacity: 0.35; transform: scale(1); }
       50% { opacity: 0.55; transform: scale(1.06); }
     }
-    .glow-bg {
-      animation: glowPulse 7s ease-in-out infinite;
-    }
-    .card-hover {
-      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
-    }
+    .glow-bg { animation: glowPulse 7s ease-in-out infinite; }
+    .card-hover { transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1); }
     .card-hover:hover {
       transform: translateY(-2px);
-      box-shadow: 0 12px 28px -6px rgba(88, 24, 37, 0.08), 0 4px 12px -2px rgba(37, 99, 235, 0.06);
+      box-shadow: 0 10px 24px -5px rgba(88, 24, 37, 0.08), 0 4px 10px -2px rgba(29, 78, 216, 0.06);
     }
     .tab-btn.active {
       background-color: #581825;
@@ -29,358 +21,228 @@
       border-color: #581825;
       box-shadow: 0 2px 8px rgba(88, 24, 37, 0.25);
     }
-    input[type=range] {
-      accent-color: #1d4ed8;
-    }
   </style>
 </head>
-<body class="bg-transparent text-slate-800 antialiased p-2 sm:p-4">
+<body class="bg-[#f5f0e8] text-slate-800 antialiased p-3 sm:p-6 lg:p-8 flex justify-center">
 
-<!-- Main Canvas: Cream / Warm Porcelain with Burgundy & Blue accents -->
-<div class="relative overflow-hidden rounded-3xl border border-[#e8ded3] bg-[#faf7f2] p-5 sm:p-8 shadow-xl text-slate-800">
+<!-- Main Aligned Container: Cream / Porcelain Base -->
+<div class="relative w-full max-w-5xl overflow-hidden rounded-3xl border border-[#e8ded3] bg-[#faf7f2] p-5 sm:p-8 shadow-xl text-slate-800">
 
   <!-- Ambient Light Orbs -->
-  <div class="absolute -top-24 -right-16 w-96 h-96 bg-[#dbeafe]/70 rounded-full blur-3xl pointer-events-none glow-bg"></div>
-  <div class="absolute -bottom-24 -left-16 w-96 h-96 bg-[#fce7f3]/50 rounded-full blur-3xl pointer-events-none glow-bg" style="animation-delay: 3.5s;"></div>
-  <div class="absolute top-1/3 left-1/2 -translate-x-1/2 w-80 h-80 bg-[#e0e7ff]/40 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -top-28 -right-20 w-96 h-96 bg-[#dbeafe]/60 rounded-full blur-3xl pointer-events-none glow-bg"></div>
+  <div class="absolute -bottom-28 -left-20 w-96 h-96 bg-[#fce7f3]/50 rounded-full blur-3xl pointer-events-none glow-bg"></div>
 
   <!-- Header Section -->
   <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-[#e9dfd5]">
     <div>
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-medium tracking-wide mb-2.5 shadow-sm">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-semibold tracking-wide mb-2.5 shadow-sm">
         <span class="w-2 h-2 rounded-full bg-[#581825] animate-pulse"></span>
-        <span>DietSense Atmos · Personal Profile & Metabolic Studio</span>
+        <span>DietSense Atmos · Whole Day Meal Planning Engine</span>
       </div>
       <h1 class="text-2xl sm:text-3xl font-serif text-[#421018] tracking-tight">
-        Namaste, <span id="headerName" class="text-[#1d4ed8] font-sans font-normal">Aarav</span>
+        Namaste, <span class="text-[#1d4ed8] font-sans font-normal">arvykrane</span>
       </h1>
-      <p class="text-sm text-slate-600 mt-1 font-light max-w-xl">
-        Adjust your weight, height, activity level, and goal (Cut vs Maintain). Your targets update dynamically using validated metabolic equations.
+      <p class="text-sm text-slate-600 mt-1 font-light max-w-xl leading-relaxed">
+        Here is your complete 5-stage daily nutrition plan, calculated from USDA &amp; ICMR-NIN datasets.
       </p>
     </div>
 
-    <!-- Live Calculated Calorie Target Pill -->
-    <div class="flex items-center gap-4 bg-white/90 border border-[#e2d6c9] rounded-2xl p-3.5 px-5 shadow-sm backdrop-blur-md">
-      <div class="relative flex items-center justify-center">
-        <svg class="w-13 h-13 transform -rotate-90" viewBox="0 0 48 48">
-          <circle cx="24" cy="24" r="20" stroke="#f1e9df" stroke-width="4.5" fill="transparent"/>
-          <circle id="goalRing" cx="24" cy="24" r="20" stroke="#1d4ed8" stroke-width="4.5" stroke-dasharray="125.6" stroke-dashoffset="37.6" stroke-linecap="round" fill="transparent"/>
-        </svg>
-        <span id="goalPercent" class="absolute text-xs font-bold text-[#1d4ed8]">70%</span>
+    <!-- Perfectly Aligned Dynamic Target Card -->
+    <div class="flex items-center gap-3.5 bg-white/95 border border-[#e2d6c9] rounded-2xl p-3.5 px-5 shadow-sm backdrop-blur-md shrink-0">
+      <div class="w-12 h-12 rounded-xl bg-[#eff6ff] border border-[#bfdbfe] flex items-center justify-center text-2xl shrink-0">
+        🔥
       </div>
       <div>
-        <p id="goalLabel" class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Goal: Cut (-400 kcal)</p>
-        <p class="text-base text-[#421018] font-serif font-semibold"><span id="targetCalories">1,820</span> <span class="text-xs font-sans text-slate-500 font-normal">kcal/day</span></p>
+        <p class="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Goal: Cut (-400 kcal)</p>
+        <p class="text-lg text-[#421018] font-serif font-bold">1,820 <span class="text-xs font-sans text-slate-500 font-normal">kcal / day</span></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 Macro Breakdown Cards -->
+  <div class="relative z-10 grid grid-cols-2 sm:grid-cols-4 gap-3.5 my-6">
+    <div class="card-hover rounded-2xl bg-white/95 p-4 border border-[#e8ded3] shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-center text-xs mb-1.5">
+        <span class="font-medium text-slate-700">Carbohydrates</span>
+        <span class="text-[11px] font-bold text-[#1d4ed8] bg-[#eff6ff] px-2 py-0.5 rounded-full">50%</span>
+      </div>
+      <p class="text-xl font-bold text-[#421018]">228g <span class="text-xs text-slate-400 font-normal">daily</span></p>
+      <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
+        <div class="bg-gradient-to-r from-[#2563eb] to-[#60a5fa] h-full rounded-full" style="width: 75%;"></div>
+      </div>
+    </div>
+
+    <div class="card-hover rounded-2xl bg-white/95 p-4 border border-[#e8ded3] shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-center text-xs mb-1.5">
+        <span class="font-medium text-slate-700">Protein</span>
+        <span class="text-[11px] font-bold text-[#581825] bg-[#fdf2f4] px-2 py-0.5 rounded-full">Plant-Rich</span>
+      </div>
+      <p class="text-xl font-bold text-[#421018]">91g <span class="text-xs text-slate-400 font-normal">daily</span></p>
+      <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
+        <div class="bg-gradient-to-r from-[#581825] to-[#801b2e] h-full rounded-full" style="width: 70%;"></div>
+      </div>
+    </div>
+
+    <div class="card-hover rounded-2xl bg-white/95 p-4 border border-[#e8ded3] shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-center text-xs mb-1.5">
+        <span class="font-medium text-slate-700">Healthy Fats</span>
+        <span class="text-[11px] font-bold text-[#0369a1] bg-[#f0f9ff] px-2 py-0.5 rounded-full">Unsaturated</span>
+      </div>
+      <p class="text-xl font-bold text-[#421018]">61g <span class="text-xs text-slate-400 font-normal">daily</span></p>
+      <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
+        <div class="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] h-full rounded-full" style="width: 65%;"></div>
+      </div>
+    </div>
+
+    <div class="card-hover rounded-2xl bg-white/95 p-4 border border-[#e8ded3] shadow-sm flex flex-col justify-between">
+      <div class="flex justify-between items-center text-xs mb-1.5">
+        <span class="font-medium text-slate-700">Dietary Fibre</span>
+        <span class="text-[11px] font-bold text-[#15803d] bg-[#f0fdf4] px-2 py-0.5 rounded-full">WHO Met ✓</span>
+      </div>
+      <p class="text-xl font-bold text-[#15803d]">32g <span class="text-xs text-slate-400 font-normal">/ ≥25g</span></p>
+      <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
+        <div class="bg-[#15803d] h-full rounded-full" style="width: 100%;"></div>
       </div>
     </div>
   </div>
 
   <!-- Tab Buttons -->
-  <div class="relative z-10 flex gap-2 my-5 pb-1 overflow-x-auto text-xs">
-    <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn active px-4 py-2 rounded-xl border border-[#d8c8b8] font-medium transition-all">
-      👤 My Profile & Goal (Cut / Maintain)
+  <div class="relative z-10 flex gap-2 pb-4 overflow-x-auto text-xs">
+    <button onclick="switchTab('today')" id="tab-today" class="tab-btn active px-4 py-2.5 rounded-xl border font-semibold transition-all shadow-sm">
+      🥣 Whole Day Meal Plan (5 Stages)
     </button>
-    <button onclick="switchTab('today')" id="tab-today" class="tab-btn px-4 py-2 rounded-xl border border-[#d8c8b8] bg-white/80 text-slate-600 hover:text-[#581825] font-medium transition-all">
-      🥣 Daily Meal Plan
+    <button onclick="switchTab('profile')" id="tab-profile" class="tab-btn px-4 py-2.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-600 hover:text-[#581825] font-semibold transition-all shadow-sm">
+      👤 Personal Biometrics &amp; Goal Studio
     </button>
-    <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2 rounded-xl border border-[#d8c8b8] bg-white/80 text-slate-600 hover:text-[#581825] font-medium transition-all">
+    <button onclick="switchTab('swap')" id="tab-swap" class="tab-btn px-4 py-2.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-600 hover:text-[#581825] font-semibold transition-all shadow-sm">
       ✨ Mindful Swap
     </button>
-    <button onclick="switchTab('safety')" id="tab-safety" class="tab-btn px-4 py-2 rounded-xl border border-[#d8c8b8] bg-white/80 text-slate-600 hover:text-[#581825] font-medium transition-all">
+    <button onclick="switchTab('safety')" id="tab-safety" class="tab-btn px-4 py-2.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-600 hover:text-[#581825] font-semibold transition-all shadow-sm">
       🛡️ Safety Shield
     </button>
   </div>
 
-  <!-- Content: Personal Profile & Goal Studio -->
-  <div id="content-profile" class="relative z-10 space-y-4">
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      
-      <!-- Column 1 & 2: Sliders & Selectors -->
-      <div class="md:col-span-2 rounded-2xl bg-white p-5 border border-[#e8ded3] shadow-sm space-y-4">
-        <h3 class="text-base font-serif text-[#421018] flex items-center justify-between">
-          <span>Personal Biometrics &amp; Activity</span>
-          <span class="text-xs font-sans text-slate-400 font-normal">Mifflin-St Jeor Formula</span>
-        </h3>
-
-        <!-- Goal Selection (Cut vs Maintain vs Gain) -->
+  <!-- TAB 1: WHOLE DAY MEAL PLAN (5 Slots) -->
+  <div id="content-today" class="relative z-10 space-y-4">
+    
+    <!-- 1. Early Morning -->
+    <div class="card-hover rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#0284c7] shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-[#f0f9ff] border border-[#bae6fd] flex items-center justify-center text-2xl shrink-0">☀️</div>
         <div>
-          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Target Goal</label>
-          <div class="grid grid-cols-3 gap-2">
-            <button type="button" onclick="setGoal('lose_weight')" id="goal-cut" class="py-2.5 px-3 rounded-xl border-2 border-[#1d4ed8] bg-[#eff6ff] text-[#1d4ed8] text-xs font-bold transition-all text-center">
-              🔥 Cut (Fat Loss)<br><span class="text-[10px] font-normal text-slate-500">-400 kcal deficit</span>
-            </button>
-            <button type="button" onclick="setGoal('maintain_weight')" id="goal-maintain" class="py-2.5 px-3 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 text-xs font-medium hover:border-[#581825] transition-all text-center">
-              ⚖️ Maintain<br><span class="text-[10px] font-normal text-slate-500">TDEE Balance</span>
-            </button>
-            <button type="button" onclick="setGoal('gain_weight')" id="goal-gain" class="py-2.5 px-3 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 text-xs font-medium hover:border-[#581825] transition-all text-center">
-              💪 Lean Gain<br><span class="text-[10px] font-normal text-slate-500">+300 kcal surplus</span>
-            </button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-[#0284c7] font-bold">1. Early Morning · 7:00 AM</span>
+            <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full border border-[#bfdbfe] font-semibold">Hydration &amp; Prebiotic</span>
           </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-          <!-- Weight Slider -->
-          <div class="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e2d6c9]">
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-xs font-medium text-slate-700">Body Weight</span>
-              <span id="valWeight" class="text-sm font-bold text-[#421018]">75 kg</span>
-            </div>
-            <input type="range" id="inputWeight" min="40" max="150" value="75" step="0.5" class="w-full cursor-pointer" oninput="recalcProfile()">
-            <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-              <span>40 kg</span>
-              <span>150 kg</span>
-            </div>
-          </div>
-
-          <!-- Height Slider -->
-          <div class="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e2d6c9]">
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-xs font-medium text-slate-700">Height</span>
-              <span id="valHeight" class="text-sm font-bold text-[#421018]">175 cm</span>
-            </div>
-            <input type="range" id="inputHeight" min="130" max="210" value="175" step="1" class="w-full cursor-pointer" oninput="recalcProfile()">
-            <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-              <span>130 cm</span>
-              <span>210 cm</span>
-            </div>
-          </div>
-
-          <!-- Age Slider -->
-          <div class="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e2d6c9]">
-            <div class="flex justify-between items-center mb-1.5">
-              <span class="text-xs font-medium text-slate-700">Age</span>
-              <span id="valAge" class="text-sm font-bold text-[#421018]">26 yrs</span>
-            </div>
-            <input type="range" id="inputAge" min="15" max="80" value="26" step="1" class="w-full cursor-pointer" oninput="recalcProfile()">
-            <div class="flex justify-between text-[10px] text-slate-400 mt-1">
-              <span>15 yrs</span>
-              <span>80 yrs</span>
-            </div>
-          </div>
-
-          <!-- Gender & Activity Level -->
-          <div class="p-3.5 rounded-xl bg-[#faf7f2] border border-[#e2d6c9] space-y-2">
-            <div>
-              <label class="block text-xs font-medium text-slate-700 mb-1">Biological Profile</label>
-              <select id="inputGender" onchange="recalcProfile()" class="w-full bg-white border border-[#d8c8b8] rounded-lg px-2.5 py-1 text-xs text-slate-800 focus:outline-none focus:border-[#1d4ed8]">
-                <option value="male">Male (Standard Metabolic Coeff)</option>
-                <option value="female">Female (Standard Metabolic Coeff)</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Activity Level Selector -->
-        <div>
-          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">Daily Activity Level</label>
-          <select id="inputActivity" onchange="recalcProfile()" class="w-full bg-[#faf7f2] border border-[#d8c8b8] rounded-xl px-3.5 py-2.5 text-xs text-slate-800 font-medium focus:outline-none focus:border-[#1d4ed8]">
-            <option value="1.2">Sedentary (Desk job, little to no exercise) · 1.2x</option>
-            <option value="1.375" selected>Lightly Active (Light exercise / walking 1-3 days/wk) · 1.375x</option>
-            <option value="1.55">Moderately Active (Moderate workout 3-5 days/wk) · 1.55x</option>
-            <option value="1.725">Very Active (Heavy training 6-7 days/wk) · 1.725x</option>
-            <option value="1.9">Extra Active (Physical labor or athlete 2x/day) · 1.9x</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Column 3: Live Metabolic Breakdown Card -->
-      <div class="rounded-2xl bg-white p-5 border border-[#e8ded3] shadow-sm flex flex-col justify-between space-y-4">
-        <div>
-          <div class="flex items-center gap-2 mb-1">
-            <span class="w-2 h-2 rounded-full bg-[#1d4ed8]"></span>
-            <h4 class="text-xs uppercase tracking-wider font-semibold text-slate-500">Calculated Metabolism</h4>
-          </div>
-          <p class="text-xl font-serif text-[#421018] font-bold" id="bmrDisplay">1,720 kcal <span class="text-xs font-sans text-slate-400 font-normal">BMR</span></p>
-          <p class="text-xs text-slate-500 font-light mt-0.5">Energy burned at complete rest.</p>
-        </div>
-
-        <div class="space-y-3 pt-3 border-t border-slate-100">
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-slate-600">Maintenance (TDEE)</span>
-            <span id="tdeeDisplay" class="font-bold text-slate-800">2,365 kcal</span>
-          </div>
-          <div class="flex justify-between items-center text-xs">
-            <span class="text-slate-600">Goal Adjustment</span>
-            <span id="adjDisplay" class="font-bold text-[#1d4ed8]">-400 kcal</span>
-          </div>
-          <div class="p-3 rounded-xl bg-[#eff6ff] border border-[#bfdbfe]">
-            <div class="flex justify-between items-center text-xs">
-              <span class="font-bold text-[#1d4ed8]">Daily Target</span>
-              <span id="targetDisplay" class="text-base font-serif font-bold text-[#421018]">1,965 kcal</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Macro Breakdown in Grams -->
-        <div class="pt-3 border-t border-slate-100 space-y-2 text-xs">
-          <p class="font-semibold text-slate-700 text-[11px] uppercase tracking-wider">Suggested Macro Split (WHO)</p>
-          <div class="flex justify-between text-slate-600">
-            <span>Carbs (50%)</span>
-            <span id="gramCarbs" class="font-medium text-slate-800">245g</span>
-          </div>
-          <div class="flex justify-between text-slate-600">
-            <span>Protein (20%)</span>
-            <span id="gramProtein" class="font-medium text-[#581825]">98g</span>
-          </div>
-          <div class="flex justify-between text-slate-600">
-            <span>Fats (30%)</span>
-            <span id="gramFats" class="font-medium text-[#0369a1]">65g</span>
+          <h3 class="text-base font-serif text-[#421018] mt-1 font-semibold">Warm Ajwain-Jeera Water &amp; 5 Soaked Almonds</h3>
+          <p class="text-xs text-slate-600 font-light mt-0.5">Awakens digestion with zero refined sugars. Soaked almonds deliver vitamin E and healthy fats.</p>
+          <div class="flex gap-3 text-xs text-slate-500 mt-2 font-medium">
+            <span>🔥 90 kcal</span><span>·</span><span>💪 3g Protein</span><span>·</span><span>🌾 4g Carbs</span><span>·</span><span>🥑 7g Fat</span>
           </div>
         </div>
       </div>
-
-    </div>
-  </div>
-
-  <!-- Content: Daily Meal Plan (Tab 2) -->
-  <div id="content-today" class="relative z-10 hidden space-y-3">
-    <!-- Macro Summary Ribbons -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-      <div class="card-hover rounded-2xl bg-white/95 p-3.5 border border-[#e8ded3] shadow-sm">
-        <div class="flex justify-between items-center text-xs text-slate-500 mb-1">
-          <span class="font-medium text-slate-700">Carbohydrates</span>
-          <span class="text-[11px] font-semibold text-[#1d4ed8] bg-[#eff6ff] px-1.5 py-0.5 rounded">50%</span>
-        </div>
-        <p class="text-lg font-semibold text-[#421018]">185g <span class="text-xs text-slate-400 font-normal">/ 245g</span></p>
-        <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
-          <div class="bg-gradient-to-r from-[#2563eb] to-[#60a5fa] h-full rounded-full" style="width: 75%;"></div>
-        </div>
-      </div>
-      <div class="card-hover rounded-2xl bg-white/95 p-3.5 border border-[#e8ded3] shadow-sm">
-        <div class="flex justify-between items-center text-xs text-slate-500 mb-1">
-          <span class="font-medium text-slate-700">Protein</span>
-          <span class="text-[11px] font-semibold text-[#581825] bg-[#fdf2f4] px-1.5 py-0.5 rounded">Plant-rich</span>
-        </div>
-        <p class="text-lg font-semibold text-[#421018]">68g <span class="text-xs text-slate-400 font-normal">/ 98g</span></p>
-        <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
-          <div class="bg-gradient-to-r from-[#581825] to-[#801b2e] h-full rounded-full" style="width: 70%;"></div>
-        </div>
-      </div>
-      <div class="card-hover rounded-2xl bg-white/95 p-3.5 border border-[#e8ded3] shadow-sm">
-        <div class="flex justify-between items-center text-xs text-slate-500 mb-1">
-          <span class="font-medium text-slate-700">Healthy Fats</span>
-          <span class="text-[11px] font-semibold text-[#0369a1] bg-[#f0f9ff] px-1.5 py-0.5 rounded">Unsaturated</span>
-        </div>
-        <p class="text-lg font-semibold text-[#421018]">42g <span class="text-xs text-slate-400 font-normal">/ 65g</span></p>
-        <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
-          <div class="bg-gradient-to-r from-[#0284c7] to-[#38bdf8] h-full rounded-full" style="width: 65%;"></div>
-        </div>
-      </div>
-      <div class="card-hover rounded-2xl bg-white/95 p-3.5 border border-[#e8ded3] shadow-sm">
-        <div class="flex justify-between items-center text-xs text-slate-500 mb-1">
-          <span class="font-medium text-slate-700">Dietary Fibre</span>
-          <span class="text-[11px] font-semibold text-[#15803d] bg-[#f0fdf4] px-1.5 py-0.5 rounded">WHO Met ✓</span>
-        </div>
-        <p class="text-lg font-semibold text-[#15803d]">28g <span class="text-xs text-slate-400 font-normal">/ ≥25g</span></p>
-        <div class="w-full bg-[#f1e9df] rounded-full h-1.5 mt-2.5 overflow-hidden">
-          <div class="bg-[#15803d] h-full rounded-full" style="width: 100%;"></div>
-        </div>
+      <div class="text-right shrink-0">
+        <span class="px-3 py-1.5 rounded-xl bg-[#15803d] text-white text-xs font-semibold shadow-sm inline-block">Enjoyed ✓</span>
       </div>
     </div>
 
-    <!-- Breakfast -->
-    <div class="card-hover rounded-2xl bg-white p-4.5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#1d4ed8] shadow-sm">
-      <div class="flex items-start gap-3.5">
-        <div class="w-12 h-12 rounded-2xl bg-[#eff6ff] border border-[#bfdbfe] flex items-center justify-center text-xl shrink-0">🥣</div>
+    <!-- 2. Breakfast -->
+    <div class="card-hover rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#1d4ed8] shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-[#eff6ff] border border-[#bfdbfe] flex items-center justify-center text-2xl shrink-0">🥣</div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="text-[11px] uppercase tracking-wider text-[#1d4ed8] font-bold">Breakfast · 8:30 AM</span>
-            <span class="text-[10px] bg-[#f8fafc] text-slate-600 px-2 py-0.5 rounded-full border border-slate-200">ICMR-NIN Sourced</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-[#1d4ed8] font-bold">2. Breakfast · 8:30 AM</span>
+            <span class="text-[10px] bg-[#f8fafc] text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">ICMR-NIN Sourced</span>
           </div>
-          <h3 class="text-base font-serif text-[#421018] mt-0.5">Spiced Oats & Moong Dal Porridge with Crushed Walnuts</h3>
-          <p class="text-xs text-slate-600 font-light mt-0.5">Rich unrefined complex carbohydrates and prebiotic fibre for lasting morning energy.</p>
+          <h3 class="text-base font-serif text-[#421018] mt-1 font-semibold">Moong Dal &amp; Rolled Oats Chilla with Mint Raita</h3>
+          <p class="text-xs text-slate-600 font-light mt-0.5">High in bioavailable protein and soluble dietary fibre. Sustains calm morning focus.</p>
+          <div class="flex gap-3 text-xs text-slate-500 mt-2 font-medium">
+            <span>🔥 455 kcal</span><span>·</span><span>💪 18g Protein</span><span>·</span><span>🌾 55g Carbs</span><span>·</span><span>🥑 11g Fat</span><span>·</span><span>🌿 9g Fibre</span>
+          </div>
         </div>
       </div>
-      <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-        <div class="text-right">
-          <p class="text-sm font-semibold text-[#421018]">380 <span class="text-xs font-normal text-slate-400">kcal</span></p>
-          <p class="text-[11px] text-[#1d4ed8] font-medium">14g protein · 8g fibre</p>
-        </div>
-        <button class="px-3 py-1.5 rounded-xl bg-[#581825] hover:bg-[#722230] text-white text-xs font-medium transition-all shadow-sm">Enjoyed ✓</button>
+      <div class="text-right shrink-0">
+        <span class="px-3 py-1.5 rounded-xl bg-[#15803d] text-white text-xs font-semibold shadow-sm inline-block">Enjoyed ✓</span>
       </div>
     </div>
 
-    <!-- Lunch -->
-    <div class="card-hover rounded-2xl bg-white p-4.5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#581825] shadow-sm">
-      <div class="flex items-start gap-3.5">
-        <div class="w-12 h-12 rounded-2xl bg-[#fdf2f4] border border-[#fbcfe8] flex items-center justify-center text-xl shrink-0">🥗</div>
+    <!-- 3. Lunch -->
+    <div class="card-hover rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#581825] shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-[#fdf2f4] border border-[#fbcfe8] flex items-center justify-center text-2xl shrink-0">🍛</div>
         <div>
-          <div class="flex items-center gap-2">
-            <span class="text-[11px] uppercase tracking-wider text-[#581825] font-bold">Lunch · 1:15 PM</span>
-            <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full border border-[#bfdbfe] font-medium">SHAP Score: 0.94</span>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-[#581825] font-bold">3. Lunch · 1:15 PM</span>
+            <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full border border-[#bfdbfe] font-semibold">SHAP Score: 0.95</span>
           </div>
-          <h3 class="text-base font-serif text-[#421018] mt-0.5">Brown Rice Bowl with Palak Dal & Sautéed Paneer</h3>
-          <p class="text-xs text-slate-600 font-light mt-0.5">High bioavailable iron and plant calcium. Seasoned lightly with cold-pressed mustard oil.</p>
+          <h3 class="text-base font-serif text-[#421018] mt-1 font-semibold">Brown Rice &amp; Jowar Roti with Palak Dal &amp; Sautéed Paneer</h3>
+          <p class="text-xs text-slate-600 font-light mt-0.5">Nutrient-dense main meal with iron-rich spinach, complex carbohydrates, and paneer protein.</p>
+          <div class="flex gap-3 text-xs text-slate-500 mt-2 font-medium">
+            <span>🔥 635 kcal</span><span>·</span><span>💪 32g Protein</span><span>·</span><span>🌾 82g Carbs</span><span>·</span><span>🥑 18g Fat</span><span>·</span><span>🌿 12g Fibre</span>
+          </div>
         </div>
       </div>
-      <div class="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-        <div class="text-right">
-          <p class="text-sm font-semibold text-[#421018]">560 <span class="text-xs font-normal text-slate-400">kcal</span></p>
-          <p class="text-[11px] text-[#1d4ed8] font-medium">26g protein · 11g fibre</p>
-        </div>
-        <button class="px-3 py-1.5 rounded-xl bg-[#581825] hover:bg-[#722230] text-white text-xs font-medium transition-all shadow-sm">Enjoyed ✓</button>
+      <div class="text-right shrink-0">
+        <button class="px-4 py-2 rounded-xl bg-[#581825] hover:bg-[#722230] text-white text-xs font-semibold transition-all shadow-sm">Mark Eaten</button>
       </div>
     </div>
-  </div>
 
-  <!-- Content: Swap (Tab 3) -->
-  <div id="content-swap" class="relative z-10 hidden space-y-4">
-    <div class="rounded-2xl bg-white p-5 border border-[#e8ded3] shadow-sm">
-      <div class="flex items-center gap-3 mb-3">
-        <span class="text-2xl">🔄</span>
+    <!-- 4. Evening Snack -->
+    <div class="card-hover rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#d97706] shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-[#fffbeb] border border-[#fde68a] flex items-center justify-center text-2xl shrink-0">🍵</div>
         <div>
-          <h3 class="text-base font-serif text-[#421018]">Mindful Swap Generator</h3>
-          <p class="text-xs text-slate-500 font-light">Swap candidates preserve your exact Cut/Maintain deficit while keeping micronutrients optimal:</p>
-        </div>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
-        <div class="p-4 rounded-xl bg-[#faf7f2] border border-[#e2d6c9]">
-          <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe] px-2 py-0.5 rounded-full font-bold">96% Macro Match</span>
-          <h4 class="text-sm font-semibold text-[#421018] mt-2">Grilled Tofu Veggie Wrap</h4>
-          <p class="text-xs text-slate-600 mt-1 font-light">Whole wheat roti base, steamed capsicum, mint yogurt drizzle.</p>
-          <div class="flex items-center justify-between mt-3 text-xs">
-            <span class="text-slate-700 font-medium">355 kcal · 18g Protein</span>
-            <button class="px-3 py-1 rounded-lg bg-[#581825] hover:bg-[#722230] text-white font-medium text-[11px] transition-all">Select</button>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-[#d97706] font-bold">4. Evening Pause · 5:00 PM</span>
+            <span class="text-[10px] bg-[#f8fafc] text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">Zero Added Sugar</span>
           </div>
-        </div>
-        <div class="p-4 rounded-xl bg-[#faf7f2] border border-[#e2d6c9]">
-          <span class="text-[10px] bg-[#f0f9ff] text-[#0284c7] border border-[#bae6fd] px-2 py-0.5 rounded-full font-bold">91% Macro Match</span>
-          <h4 class="text-sm font-semibold text-[#421018] mt-2">Lentil Quinoa Broth Bowl</h4>
-          <p class="text-xs text-slate-600 mt-1 font-light">Warm cumin broth, roasted cumin seeds, crushed flaxseed topping.</p>
-          <div class="flex items-center justify-between mt-3 text-xs">
-            <span class="text-slate-700 font-medium">330 kcal · 15g Protein</span>
-            <button class="px-3 py-1 rounded-lg bg-white border border-[#d8c8b8] hover:bg-[#f3eae0] text-[#581825] font-medium text-[11px] transition-all">Select</button>
+          <h3 class="text-base font-serif text-[#421018] mt-1 font-semibold">Roasted Spiced Makhana &amp; Green Cardamom Infusion</h3>
+          <p class="text-xs text-slate-600 font-light mt-0.5">Light, crunchy snack loaded with magnesium and antioxidants for evening vitality.</p>
+          <div class="flex gap-3 text-xs text-slate-500 mt-2 font-medium">
+            <span>🔥 180 kcal</span><span>·</span><span>💪 5g Protein</span><span>·</span><span>🌾 22g Carbs</span><span>·</span><span>🥑 4g Fat</span><span>·</span><span>🌿 3g Fibre</span>
           </div>
         </div>
       </div>
+      <div class="text-right shrink-0">
+        <button class="px-4 py-2 rounded-xl bg-white border border-[#d8c8b8] hover:bg-[#f3eae0] text-[#581825] text-xs font-semibold transition-all">Mark Eaten</button>
+      </div>
     </div>
-  </div>
 
-  <!-- Content: Safety (Tab 4) -->
-  <div id="content-safety" class="relative z-10 hidden space-y-4">
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div class="rounded-2xl bg-white p-4.5 border border-[#e8ded3] border-l-4 border-l-[#581825] shadow-sm">
-        <h4 class="text-sm font-serif text-[#421018] flex items-center gap-2">
-          <span>🚫</span> Active Safety Shield
-        </h4>
-        <div class="flex flex-wrap gap-1.5 mt-2.5">
-          <span class="px-2.5 py-1 rounded-lg bg-[#fdf2f4] text-[#581825] border border-[#fbcfe8] text-xs font-medium">Tree Nuts / Peanuts (Blocked)</span>
-          <span class="px-2.5 py-1 rounded-lg bg-[#eff6ff] text-[#1d4ed8] border border-[#bfdbfe] text-xs font-medium">Vegetarian</span>
+    <!-- 5. Restorative Dinner -->
+    <div class="card-hover rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-l-4 border-l-[#4f46e5] shadow-sm">
+      <div class="flex items-start gap-4">
+        <div class="w-12 h-12 rounded-2xl bg-[#eef2ff] border border-[#c7d2fe] flex items-center justify-center text-2xl shrink-0">🍲</div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-xs uppercase tracking-wider text-[#4f46e5] font-bold">5. Restorative Dinner · 8:00 PM</span>
+            <span class="text-[10px] bg-[#fdf2f4] text-[#581825] px-2 py-0.5 rounded-full border border-[#fbcfe8] font-semibold">Light Digestion</span>
+          </div>
+          <h3 class="text-base font-serif text-[#421018] mt-1 font-semibold">Steamed Mixed Vegetable &amp; Foxtail Millet Khichdi</h3>
+          <p class="text-xs text-slate-600 font-light mt-0.5">Gentle, low-sodium evening meal with gut-soothing millets to support restorative sleep.</p>
+          <div class="flex gap-3 text-xs text-slate-500 mt-2 font-medium">
+            <span>🔥 460 kcal</span><span>·</span><span>💪 20g Protein</span><span>·</span><span>🌾 65g Carbs</span><span>·</span><span>🥑 12g Fat</span><span>·</span><span>🌿 8g Fibre</span>
+          </div>
         </div>
-        <p class="text-[11px] text-slate-500 mt-2 font-light">Rule 2: Allergen filter blocks unsafe recipes before the scoring engine calculates macro compatibility.</p>
       </div>
-
-      <div class="rounded-2xl bg-white p-4.5 border border-[#e8ded3] border-l-4 border-l-[#1d4ed8] shadow-sm">
-        <h4 class="text-sm font-serif text-[#421018] flex items-center gap-2">
-          <span>🌿</span> WHO 2026 Dietary Compliance
-        </h4>
-        <ul class="text-xs text-slate-600 space-y-1.5 mt-2 font-light">
-          <li class="flex items-center gap-2"><span class="text-[#15803d] font-bold">✓</span> Free Sugars: &lt; 4% total energy</li>
-          <li class="flex items-center gap-2"><span class="text-[#15803d] font-bold">✓</span> Salt / Sodium: 3.8g / day (Target &lt; 5.0g)</li>
-          <li class="flex items-center gap-2"><span class="text-[#15803d] font-bold">✓</span> Fresh Vegetables &amp; Fruit: 480g / day (Target ≥ 400g)</li>
-        </ul>
+      <div class="text-right shrink-0">
+        <button class="px-4 py-2 rounded-xl bg-white border border-[#d8c8b8] hover:bg-[#f3eae0] text-[#581825] text-xs font-semibold transition-all">Upcoming</button>
       </div>
     </div>
+
+    <!-- Summary Box -->
+    <div class="p-4 rounded-2xl bg-white border border-[#e8ded3] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-sm mt-2">
+      <div class="flex items-center gap-2 text-slate-700">
+        <span class="text-base">🎯</span>
+        <span><strong>Total Planned:</strong> 1,820 kcal (100% matched to your Cut target)</span>
+      </div>
+      <div class="flex gap-4 font-semibold">
+        <span class="text-[#1d4ed8]">Carbs: 228g</span>
+        <span class="text-[#581825]">Protein: 91g</span>
+        <span class="text-[#0369a1]">Fats: 61g</span>
+      </div>
+    </div>
+
   </div>
 
   <!-- Footer -->
@@ -392,80 +254,8 @@
 </div>
 
 <script>
-  let currentGoal = 'lose_weight';
-
-  function setGoal(goal) {
-    currentGoal = goal;
-    const btns = {
-      'lose_weight': 'goal-cut',
-      'maintain_weight': 'goal-maintain',
-      'gain_weight': 'goal-gain'
-    };
-    for (const [key, btnId] of Object.entries(btns)) {
-      const btn = document.getElementById(btnId);
-      if (key === goal) {
-        btn.className = "py-2.5 px-3 rounded-xl border-2 border-[#1d4ed8] bg-[#eff6ff] text-[#1d4ed8] text-xs font-bold transition-all text-center";
-      } else {
-        btn.className = "py-2.5 px-3 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 text-xs font-medium hover:border-[#581825] transition-all text-center";
-      }
-    }
-    recalcProfile();
-  }
-
-  function recalcProfile() {
-    const weight = parseFloat(document.getElementById('inputWeight').value);
-    const height = parseFloat(document.getElementById('inputHeight').value);
-    const age = parseFloat(document.getElementById('inputAge').value);
-    const gender = document.getElementById('inputGender').value;
-    const activity = parseFloat(document.getElementById('inputActivity').value);
-
-    document.getElementById('valWeight').innerText = weight + " kg";
-    document.getElementById('valHeight').innerText = height + " cm";
-    document.getElementById('valAge').innerText = age + " yrs";
-
-    // Mifflin-St Jeor Equation
-    let bmr = (10 * weight) + (6.25 * height) - (5 * age);
-    if (gender === 'male') {
-      bmr += 5;
-    } else {
-      bmr -= 161;
-    }
-    bmr = Math.round(bmr);
-
-    const tdee = Math.round(bmr * activity);
-    let target = tdee;
-    let adjText = "0 kcal (Balance)";
-    let goalLabelText = "Goal: Maintain (TDEE)";
-
-    if (currentGoal === 'lose_weight') {
-      target = Math.max(1200, tdee - 400);
-      adjText = "-400 kcal (Deficit)";
-      goalLabelText = "Goal: Cut (-400 kcal)";
-    } else if (currentGoal === 'gain_weight') {
-      target = tdee + 300;
-      adjText = "+300 kcal (Surplus)";
-      goalLabelText = "Goal: Lean Gain (+300 kcal)";
-    }
-
-    document.getElementById('bmrDisplay').innerHTML = bmr.toLocaleString() + ' kcal <span class="text-xs font-sans text-slate-400 font-normal">BMR</span>';
-    document.getElementById('tdeeDisplay').innerText = tdee.toLocaleString() + ' kcal';
-    document.getElementById('adjDisplay').innerText = adjText;
-    document.getElementById('targetDisplay').innerText = target.toLocaleString() + ' kcal';
-    document.getElementById('targetCalories').innerText = target.toLocaleString();
-    document.getElementById('goalLabel').innerText = goalLabelText;
-
-    // Macro grams: Carbs 50% (4 kcal/g), Protein 20% (4 kcal/g), Fat 30% (9 kcal/g)
-    const carbsGrams = Math.round((target * 0.50) / 4);
-    const proteinGrams = Math.round((target * 0.20) / 4);
-    const fatGrams = Math.round((target * 0.30) / 9);
-
-    document.getElementById('gramCarbs').innerText = carbsGrams + 'g';
-    document.getElementById('gramProtein').innerText = proteinGrams + 'g';
-    document.getElementById('gramFats').innerText = fatGrams + 'g';
-  }
-
   function switchTab(tabId) {
-    const tabs = ['profile', 'today', 'swap', 'safety'];
+    const tabs = ['today', 'profile', 'swap', 'safety'];
     tabs.forEach(t => {
       document.getElementById('content-' + t).classList.add('hidden');
       document.getElementById('tab-' + t).classList.remove('active');
@@ -473,9 +263,6 @@
     document.getElementById('content-' + tabId).classList.remove('hidden');
     document.getElementById('tab-' + tabId).classList.add('active');
   }
-
-  // Initial calculation on load
-  recalcProfile();
 </script>
 
 </body>

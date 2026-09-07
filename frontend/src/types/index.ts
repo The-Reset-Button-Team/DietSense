@@ -1,4 +1,4 @@
-﻿/**
+/**
  * DietSense — Shared TypeScript types
  *
  * These interfaces mirror the PostgreSQL schema (backend/db/schema.sql).
@@ -78,12 +78,24 @@ export interface RecipeIngredient {
   quantity_grams: number;
 }
 
+export type EffortLevel = "low" | "moderate" | "high";
+export type MealSlotId = "early_morning" | "breakfast" | "lunch" | "evening_snack" | "dinner";
+export type MealFrequency = "2_meals" | "3_meals" | "4_meals" | "5_meals" | "custom";
+
+export interface RecipeIngredientDetail {
+  name: string;
+  quantity: string;
+  grams?: number;
+  notes?: string;
+}
+
 export interface Recipe {
   id: number;
   name: string;
   description?: string;
   cuisine_type: CuisineType;
   meal_type: MealType;
+  effort_level: EffortLevel;
   prep_time_mins: number;
   cook_time_mins: number;
   serving_size_g: number;
@@ -95,12 +107,49 @@ export interface Recipe {
   fat_per_serving_g: number;
   fiber_per_serving_g: number;
   sodium_per_serving_mg: number;
+  // Detailed recipe instructions & solo tips
+  prep_steps: string[];
+  ingredients_detail: RecipeIngredientDetail[];
+  solo_cook_tips?: string[];
   // Flags
   is_vegetarian: boolean;
   is_vegan: boolean;
   is_gluten_free: boolean;
   allergen_flags: string[];
   ingredients: RecipeIngredient[];
+}
+
+export interface RecipeData {
+  id: number;
+  name: string;
+  slotId: "early_morning" | "breakfast" | "lunch" | "evening_snack" | "dinner";
+  slotLabel: string;
+  timeSlot: string;
+  icon: string;
+  badge: string;
+  cuisine: string;
+  effortLevel: EffortLevel;
+  prepTimeMins: number;
+  cookTimeMins: number;
+  baseCaloriesPct: number;
+  baseProteinPct: number;
+  baseCarbsPct: number;
+  baseFatPct: number;
+  baseFibreG: number;
+  tagline: string;
+  description: string;
+  requiredPantryItems: string[];
+  ingredients: { name: string; quantity: string; grams: number; note?: string }[];
+  steps: string[];
+  soloHacks: string[];
+}
+
+export interface PantryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: string;
+  inStock: boolean;
 }
 
 // ─── Meal Plans ──────────────────────────────────────────────────────────────

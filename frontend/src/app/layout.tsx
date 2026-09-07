@@ -1,5 +1,7 @@
-﻿import type { Metadata } from "next";
+import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/context/AuthContext";
+import { AtmosphereShader } from "@/components/shader/AtmosphereShader";
 
 export const metadata: Metadata = {
   title: "DietSense — Adaptive AI Meal Planning",
@@ -14,8 +16,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50 font-sans antialiased">
-        {children}
+      <body className="min-h-screen bg-[#faf7f2] font-sans antialiased relative overflow-x-hidden selection:bg-[#581825] selection:text-white">
+        <AuthProvider>
+          <AtmosphereShader />
+          {children}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -1,0 +1,372 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DietSense — End-to-End System & User Journey Map</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .map-card {
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+    .map-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 28px -5px rgba(88, 24, 37, 0.15), 0 6px 14px -2px rgba(29, 78, 216, 0.1);
+    }
+    .map-card.active {
+      outline: 2.5px solid #1d4ed8;
+      box-shadow: 0 0 0 4px rgba(29, 78, 216, 0.18), 0 14px 30px -6px rgba(88, 24, 37, 0.18);
+    }
+    .map-card.dimmed {
+      opacity: 0.25;
+      filter: grayscale(0.7);
+    }
+    @keyframes flow {
+      0% { stroke-dashoffset: 24; }
+      100% { stroke-dashoffset: 0; }
+    }
+    .flow-line {
+      stroke-dasharray: 6 4;
+      animation: flow 1.2s linear infinite;
+    }
+  </style>
+</head>
+<body class="bg-transparent text-slate-800 antialiased p-2 sm:p-4 font-sans">
+
+<div class="relative overflow-hidden rounded-3xl border border-[#e8ded3] bg-[#faf7f2] p-5 sm:p-8 shadow-xl text-slate-800 max-w-7xl mx-auto">
+  
+  <!-- Ambient Atmospheric Lights -->
+  <div class="absolute -top-24 -right-16 w-96 h-96 bg-[#dbeafe]/60 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-24 -left-16 w-96 h-96 bg-[#fce7f3]/40 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- Header & Subsystem Filters -->
+  <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4 pb-5 border-b border-[#e9dfd5]">
+    <div>
+      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-medium tracking-wide mb-2 shadow-sm">
+        <span class="w-2 h-2 rounded-full bg-[#581825] animate-pulse inline-block"></span>
+        <span>DietSense Atmos · Complete System &amp; Dataflow Map</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-serif text-[#421018] tracking-tight">
+        System &amp; User Journey <span class="text-[#1d4ed8] font-sans font-normal">Architecture Map</span>
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-600 mt-0.5 font-light">
+        Comprehensive end-to-end blueprint: from biometrics &amp; grocery OCR to safety gating, ML scoring, dynamic validation, and Hinglish cooking execution.
+      </p>
+    </div>
+
+    <!-- Subsystem Selector -->
+    <div class="flex flex-wrap gap-1.5 text-xs">
+      <button onclick="filterLayer('all')" id="btn-all" class="px-3 py-1.5 rounded-xl border border-[#581825] bg-[#581825] text-white font-medium shadow-sm transition-all">
+        🌐 Full Map (All Layers)
+      </button>
+      <button onclick="filterLayer('input')" id="btn-input" class="px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        👤 User &amp; Solo Routine
+      </button>
+      <button onclick="filterLayer('pantry')" id="btn-pantry" class="px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        🛒 Grocery &amp; AI Scanner
+      </button>
+      <button onclick="filterLayer('engine')" id="btn-engine" class="px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        🧠 Safety &amp; ML Engine
+      </button>
+      <button onclick="filterLayer('kitchen')" id="btn-kitchen" class="px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all">
+        🍳 Hinglish Kitchen Execution
+      </button>
+    </div>
+  </div>
+
+  <!-- Live Dynamic Node Inspector -->
+  <div id="inspector" class="relative z-10 my-4 p-4 rounded-2xl bg-white border border-[#bfdbfe] shadow-sm flex items-start gap-3.5 transition-all">
+    <span class="text-2xl mt-0.5">🗺️</span>
+    <div class="text-xs">
+      <p id="insp-title" class="font-bold text-[#1d4ed8] text-sm">Interactive Architecture Map Active</p>
+      <p id="insp-desc" class="text-slate-600 font-light mt-0.5">
+        Click any stage block or component node below to inspect its data inputs, outputs, mathematical equations, and connected subsystems.
+      </p>
+    </div>
+  </div>
+
+  <!-- ════════ 5-STAGE PIPELINE MAP ════════ -->
+  <div class="relative z-10 grid grid-cols-1 md:grid-cols-5 gap-4 my-5">
+
+    <!-- STAGE 1: USER & BIOMETRICS -->
+    <div class="layer-node space-y-3" data-layer="input">
+      <div class="flex items-center gap-2 pb-1.5 border-b border-[#e9dfd5]">
+        <span class="w-3 h-3 rounded-full bg-[#1d4ed8] flex items-center justify-center text-[9px] text-white font-bold">1</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#1d4ed8]">Biometrics &amp; Routine</h3>
+      </div>
+
+      <div onclick="inspect('mifflin')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#1d4ed8] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Mifflin-St Jeor Engine</span>
+          <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full font-semibold">BMR / TDEE</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Weight, Height, Age, Biological Profile &amp; Activity Level. Target = TDEE ± Goal Deficit (Max 1200 floor).
+        </p>
+      </div>
+
+      <div onclick="inspect('solo_routine')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#1d4ed8] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Solo Cook Routine</span>
+          <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">1-Serving</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Meal Frequency (2/3/4/5 slots or custom) + Weekday effort matrix (Low effort BF &lt;12m, Moderate lunch 25m).
+        </p>
+      </div>
+    </div>
+
+    <!-- STAGE 2: GROCERY & PANTRY AI -->
+    <div class="layer-node space-y-3" data-layer="pantry">
+      <div class="flex items-center gap-2 pb-1.5 border-b border-[#e9dfd5]">
+        <span class="w-3 h-3 rounded-full bg-[#059669] flex items-center justify-center text-[9px] text-white font-bold">2</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#059669]">AI Grocery &amp; Pantry</h3>
+      </div>
+
+      <div onclick="inspect('ocr_scanner')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#059669] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Multimodal OCR Scanner</span>
+          <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Vision AI</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Scans physical grocery receipts, Blinkit/Zepto PDF bills, or fridge snapshot images into structured items.
+        </p>
+      </div>
+
+      <div onclick="inspect('pantry_matcher')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#059669] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Pantry-to-Plate Engine</span>
+          <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full font-semibold">Stock Match</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Categorizes pantry items (Pulses, Dairy, Veggies, Spices) &amp; computes Recipe Match % (100% In-Stock vs Missing).
+        </p>
+      </div>
+    </div>
+
+    <!-- STAGE 3: DATA & SAFETY GATE -->
+    <div class="layer-node space-y-3" data-layer="engine">
+      <div class="flex items-center gap-2 pb-1.5 border-b border-[#e9dfd5]">
+        <span class="w-3 h-3 rounded-full bg-[#581825] flex items-center justify-center text-[9px] text-white font-bold">3</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#581825]">Safety Shield &amp; Data</h3>
+      </div>
+
+      <div onclick="inspect('data_sources')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#581825] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Authoritative Data</span>
+          <span class="text-[10px] bg-[#fdf2f4] text-[#581825] px-2 py-0.5 rounded-full font-semibold">ICMR / USDA</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          USDA FoodData Central + ICMR-NIN (IFCT 2017). LLM never writes or alters calorie/macro facts (Rule 1).
+        </p>
+      </div>
+
+      <div onclick="inspect('safety_gate')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#581825] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Hard Safety Gate</span>
+          <span class="text-[10px] bg-rose-50 text-rose-700 px-2 py-0.5 rounded-full font-semibold">Rule 2 (Pre-Filter)</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Allergen flags (tree nuts, dairy), vegetarian, gluten-free, medical constraints filtered BEFORE any scoring.
+        </p>
+      </div>
+    </div>
+
+    <!-- STAGE 4: ML SCORING & VALIDATION -->
+    <div class="layer-node space-y-3" data-layer="engine">
+      <div class="flex items-center gap-2 pb-1.5 border-b border-[#e9dfd5]">
+        <span class="w-3 h-3 rounded-full bg-[#7c3aed] flex items-center justify-center text-[9px] text-white font-bold">4</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#7c3aed]">ML Scoring &amp; Validation</h3>
+      </div>
+
+      <div onclick="inspect('scoring_formula')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#7c3aed] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">6-Factor Hybrid ML</span>
+          <span class="text-[10px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-full font-semibold">SHAP Scoring</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Score = 0.30×Macro + 0.20×Goal + 0.20×Pref + 0.15×Feedback + 0.10×Diversity + 0.05×Prep.
+        </p>
+      </div>
+
+      <div onclick="inspect('dynamic_validation')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#7c3aed] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">100% Macro Validator</span>
+          <span class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full font-semibold">Dynamic Sync</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Dynamically proportions calories, carbs (50%), protein (20%), and fats (30%) across all active meals.
+        </p>
+      </div>
+    </div>
+
+    <!-- STAGE 5: HINGLISH KITCHEN EXECUTION -->
+    <div class="layer-node space-y-3" data-layer="kitchen">
+      <div class="flex items-center gap-2 pb-1.5 border-b border-[#e9dfd5]">
+        <span class="w-3 h-3 rounded-full bg-[#d97706] flex items-center justify-center text-[9px] text-white font-bold">5</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-[#d97706]">Hinglish Kitchen</h3>
+      </div>
+
+      <div onclick="inspect('hinglish_recipe')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#d97706] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Hinglish Step-by-Step</span>
+          <span class="text-[10px] bg-amber-50 text-amber-800 px-2 py-0.5 rounded-full font-semibold">1-Person Prep</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Clear instructions with flame levels, spoon/cup measurements, and single-pan dishwashing hacks.
+        </p>
+      </div>
+
+      <div onclick="inspect('feedback_loop')" class="map-card rounded-2xl bg-white p-3.5 border border-[#e8ded3] border-l-4 border-l-[#d97706] shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-[#421018]">Adaptive Feedback Loop</span>
+          <span class="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full font-semibold">Ridge Regression</span>
+        </div>
+        <p class="text-[11px] text-slate-600 mt-1 font-light">
+          Post-meal ratings update preference_weights vector for future personalized recommendations.
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Bottom Visual Connection Flow Diagram (SVG) -->
+  <div class="relative z-10 mt-6 p-4 rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-x-auto">
+    <h4 class="text-xs font-bold uppercase tracking-wider text-[#581825] mb-2 flex items-center gap-1.5">
+      <span>⚡</span> Automated Data Flow Pipeline (Atmos Sync)
+    </h4>
+    <svg width="980" height="90" xmlns="http://www.w3.org/2000/svg" class="w-full text-xs font-sans">
+      <defs>
+        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#1d4ed8" />
+        </marker>
+      </defs>
+
+      <!-- Stage 1 -->
+      <rect x="10" y="20" width="160" height="50" rx="12" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+      <text x="90" y="42" text-anchor="middle" fill="#1d4ed8" font-weight="700" font-size="11">1. User &amp; Biometrics</text>
+      <text x="90" y="58" text-anchor="middle" fill="#64748b" font-size="9.5">Mifflin BMR + Solo Routine</text>
+
+      <line class="flow-line" x1="170" y1="45" x2="208" y2="45" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Stage 2 -->
+      <rect x="210" y="20" width="160" height="50" rx="12" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5"/>
+      <text x="290" y="42" text-anchor="middle" fill="#047857" font-weight="700" font-size="11">2. AI Grocery OCR</text>
+      <text x="290" y="58" text-anchor="middle" fill="#64748b" font-size="9.5">Pantry Scan + Stock Match</text>
+
+      <line class="flow-line" x1="370" y1="45" x2="408" y2="45" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Stage 3 -->
+      <rect x="410" y="20" width="160" height="50" rx="12" fill="#fdf2f4" stroke="#fbcfe8" stroke-width="1.5"/>
+      <text x="490" y="42" text-anchor="middle" fill="#581825" font-weight="700" font-size="11">3. Safety Gate</text>
+      <text x="490" y="58" text-anchor="middle" fill="#64748b" font-size="9.5">Rule 2 Allergen / Med Filter</text>
+
+      <line class="flow-line" x1="570" y1="45" x2="608" y2="45" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Stage 4 -->
+      <rect x="610" y="20" width="160" height="50" rx="12" fill="#f5f3ff" stroke="#ddd6fe" stroke-width="1.5"/>
+      <text x="690" y="42" text-anchor="middle" fill="#6d28d9" font-weight="700" font-size="11">4. 6-Factor ML &amp; 100% Sync</text>
+      <text x="690" y="58" text-anchor="middle" fill="#64748b" font-size="9.5">SHAP Score + Dynamic Split</text>
+
+      <line class="flow-line" x1="770" y1="45" x2="808" y2="45" stroke="#1d4ed8" stroke-width="2" marker-end="url(#arrow)"/>
+
+      <!-- Stage 5 -->
+      <rect x="810" y="20" width="160" height="50" rx="12" fill="#fffbeb" stroke="#fde68a" stroke-width="1.5"/>
+      <text x="890" y="42" text-anchor="middle" fill="#b45309" font-weight="700" font-size="11">5. Hinglish Cooking</text>
+      <text x="890" y="58" text-anchor="middle" fill="#64748b" font-size="9.5">Step-by-Step + Feedback</text>
+    </svg>
+  </div>
+
+  <!-- Footer -->
+  <div class="relative z-10 mt-6 pt-4 border-t border-[#e9dfd5] flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 font-light gap-2">
+    <span>DietSense Atmos · System Map Document</span>
+    <span class="text-[#581825] font-serif font-medium">Every calorie is calculated, never hallucinated.</span>
+  </div>
+
+</div>
+
+<script>
+  const DETAILS = {
+    mifflin: {
+      title: "Mifflin-St Jeor Biometrics Engine",
+      desc: "Men: BMR = 10W + 6.25H - 5A + 5 | Women: BMR = 10W + 6.25H - 5A - 161. Target Calories = TDEE - 400 kcal (Cut deficit with 1200 floor) or + 300 kcal (Surplus). WHO Macro Split: 50% Carbs, 20% Protein, 30% Healthy Fats."
+    },
+    solo_routine: {
+      title: "Solo Cook Routine & Meal Frequency Customizer",
+      desc: "Supports 2-meal (IF 16:8), 3-meal (Classic), 4-meal (Active), 5-meal (Metabolic), and custom slot toggling. Configures weekday cooking effort preferences (Low effort breakfast <12m, moderate lunch 25m) with single-person portion scaling."
+    },
+    ocr_scanner: {
+      title: "AI Grocery & Multimodal Image Scanner",
+      desc: "Vision OCR extracts food items from physical paper receipts, Blinkit/Zepto/Instamart digital PDFs, and fridge camera shots. Automatically adds items to in-stock kitchen cart with quantities and categories."
+    },
+    pantry_matcher: {
+      title: "Pantry-to-Plate Matching Engine",
+      desc: "Cross-references recipe requirements against user's active pantry inventory. Computes match status ('100% Samaan Available' vs 'Missing X items') to recommend meals that can be cooked immediately with zero shopping."
+    },
+    data_sources: {
+      title: "Authoritative Verified Nutrition Data (Rule 1)",
+      desc: "USDA FoodData Central (8,788 foods) + ICMR-NIN IFCT 2017 (528 Indian regional foods). The LLM is strictly prohibited from generating or modifying any nutritional facts."
+    },
+    safety_gate: {
+      title: "Hard Safety Gate (Rule 2)",
+      desc: "Pre-filtering gate executing SQL queries against dietary_restrictions table before any ML scoring. Filters tree nuts, dairy, seafood, gluten, non-halal, and diabetic constraints."
+    },
+    scoring_formula: {
+      title: "6-Factor Hybrid ML Recommendation Formula",
+      desc: "Score = 0.30×MacroMatch + 0.20×GoalAlignment + 0.20×UserPreference + 0.15×FeedbackHistory + 0.10×Diversity + 0.05×PrepComplexity. SHAP explainability provides transparent reasoning."
+    },
+    dynamic_validation: {
+      title: "Dynamic 100% Macro Allocation Engine",
+      desc: "Proportionally distributes daily target calories and WHO macro grams across all active meal slots. Sum of active slots is strictly verified to match 100% of biometric target."
+    },
+    hinglish_recipe: {
+      title: "Hinglish Solo Kitchen Step-by-Step Execution",
+      desc: "Clear conversational Hinglish instructions with flame settings, 1-portion metric grams and everyday kitchen measures (spoons/cups), and 1-pan dishwashing hacks for solo living."
+    },
+    feedback_loop: {
+      title: "Adaptive Ridge Regression Feedback Loop",
+      desc: "Post-meal 1-5 star ratings and feedback aspects update the preference_weights JSONB vector in PostgreSQL to continuously improve future recommendations."
+    }
+  };
+
+  function inspect(key) {
+    const data = DETAILS[key];
+    if (!data) return;
+    document.getElementById('insp-title').textContent = data.title;
+    document.getElementById('insp-desc').textContent = data.desc;
+    
+    document.querySelectorAll('.map-card').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+
+  function filterLayer(layer) {
+    document.querySelectorAll('.map-card').forEach(c => c.classList.remove('active', 'dimmed'));
+    
+    const buttons = ['all', 'input', 'pantry', 'engine', 'kitchen'];
+    buttons.forEach(b => {
+      const btn = document.getElementById('btn-' + b);
+      if (b === layer) {
+        btn.className = "px-3 py-1.5 rounded-xl border border-[#581825] bg-[#581825] text-white font-medium shadow-sm transition-all";
+      } else {
+        btn.className = "px-3 py-1.5 rounded-xl border border-[#d8c8b8] bg-white text-slate-700 font-medium hover:text-[#581825] transition-all";
+      }
+    });
+
+    if (layer === 'all') {
+      document.querySelectorAll('.layer-node').forEach(n => n.style.display = 'block');
+      return;
+    }
+
+    document.querySelectorAll('.layer-node').forEach(node => {
+      if (node.dataset.layer === layer) {
+        node.style.display = 'block';
+      } else {
+        node.style.display = 'none';
+      }
+    });
+  }
+</script>
+
+</body>
+</html>
