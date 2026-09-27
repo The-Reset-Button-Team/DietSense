@@ -1,23 +1,38 @@
-"""
-DietSense - TF-IDF Vectorizer & Cosine Similarity
-Vectorizes food/recipe text fields (ingredients, tags) and computes similarity against
-user onboarding preference vectors.
-"""
+"""TF-IDF vectorization + cosine similarity between user and candidates."""
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+import numpy as np
 
-from typing import List, Dict, Any
+def build_corpus_text(item: dict) -> str:
+    """Flatten a food/recipe's text fields into one string for TF-IDF."""
+    return " ".join([
+        item.get("name", ""),
+        " ".join(item.get("tags", [])),
+        item.get("cuisine", ""),
+    ])
 
+def build_user_text(user_profile: dict) -> str:
+    """Same flattening, but from the user's stated preferences."""
+    return " ".join([
+        user_profile.get("dietary_pref", ""),
+        " ".join(user_profile.get("preferred_cuisines", [])),
+        " ".join(user_profile.get("liked_tags", [])),
+    ])
 
-def build_tfidf_matrix(recipe_documents: List[str]):
+def get_similarity(user_profile: dict, candidates: list[dict]) -> np.ndarray:
     """
-    Fits and transforms recipe text into a TF-IDF matrix using scikit-learn.
+    Returns a 1D array of cosine similarity scores, one per candidate,
+    in the same order as `candidates`.
     """
-    # TODO: Fit TfidfVectorizer on recipe ingredient/tag texts
-    pass
+    corpus = [build_corpus_text(c) for c in candidates]
+    user_text = build_user_text(user_profile)
 
-
-def compute_similarity_scores(user_preference_text: str, tfidf_matrix, vectorizer) -> List[float]:
-    """
-    Computes cosine similarity between user preference vector and candidate recipes.
-    """
-    # TODO: Transform user preference text and compute cosine similarity
-    pass
+    vectorizer = TfidfVectorizer(stop_words="english")
+    # fit on candidates + user text together so vocab lines up
+    all_vectors = vectorizer.fit_transform(corpus + [user_text])
+    
+    candidate_vectors = all_vectors[:-1]
+    user_vector = all_vectors[-1]
+    
+    scores = cosine_similarity(user_vector, candidate_vectors)[0]
+    return scores

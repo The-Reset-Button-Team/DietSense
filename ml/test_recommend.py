@@ -1,48 +1,27 @@
-"""
-DietSense - Standalone Recommendation Test Runner
-Runs the Phase 3 deliverable: recommend(user_profile) -> ranked list with explanation strings.
-Tests the ML pipeline independently of FastAPI and Supabase.
-"""
-
-from ml.scoring.safety_gate import filter_unsafe_foods
+"""Standalone sanity check — run this BEFORE touching the API."""
 from ml.recommendation.recommender import recommend
 
+fake_user = {
+    "dietary_pref": "vegetarian",
+    "allergies": ["peanuts"],
+    "budget_per_meal": 80,
+    "prep_time_limit": 20,
+    "target_calories": 1800,
+    "preferred_cuisines": ["indian"],
+    "liked_tags": ["light", "quick"],
+}
 
-def run_standalone_test():
-    """
-    Executes an end-to-end recommendation run on mock user profile and candidate meals.
-    """
-    mock_user_profile = {
-        "user_id": "usr_test_1",
-        "diet": "vegetarian",
-        "budget": 200,
-        "prep_time_limit": 20,
-        "allergies": ["peanut"],
-    }
+fake_candidates = [
+    {"name": "Vegetable Poha", "tags": ["veg", "light", "indian"], "allergens": [],
+     "cuisine": "indian", "cost_estimate": 40, "prep_time": 15, "calories": 350},
+    {"name": "Chicken Curry", "tags": ["non-veg", "indian"], "allergens": [],
+     "cuisine": "indian", "cost_estimate": 120, "prep_time": 45, "calories": 500},
+    {"name": "Peanut Noodles", "tags": ["veg", "asian"], "allergens": ["peanuts"],
+     "cuisine": "asian", "cost_estimate": 60, "prep_time": 20, "calories": 450},
+]
 
-    mock_candidates = [
-        {
-            "id": 1,
-            "name": "Moong Dal Khichdi",
-            "allergens": [],
-            "is_vegetarian": True,
-            "prep_time": 15,
-            "cost": 60,
-        },
-        {
-            "id": 2,
-            "name": "Peanut Butter Oats",
-            "allergens": ["peanut"],
-            "is_vegetarian": True,
-            "prep_time": 5,
-            "cost": 40,
-        },
-    ]
+results = recommend(fake_user, fake_candidates, top_n=3)
 
-    print("Running standalone recommendation test...")
-    # TODO: Verify safety gate excludes peanut dish and scores are generated
-    pass
-
-
-if __name__ == "__main__":
-    run_standalone_test()
+for r in results:
+    print(f"{r['item']['name']} | score={r['score']:.2f}")
+    print(f" -> {r['reason']}")

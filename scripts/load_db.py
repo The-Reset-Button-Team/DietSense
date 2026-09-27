@@ -1,4 +1,4 @@
-﻿"""
+"""
 DietSense — Load Processed Foods into Database
 Loads data/processed/foods_merged.csv into database/dietsense.db (SQLite)
 """
@@ -25,6 +25,7 @@ def load_foods():
         df[col] = df[col].fillna(0.0)
 
     print("2. Connecting to SQLite database...")
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
 
