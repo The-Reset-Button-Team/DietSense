@@ -1,4 +1,4 @@
-﻿"""
+"""
 DietSense — Application Configuration
 
 Reads all environment variables from .env (via python-dotenv).
@@ -14,6 +14,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # ─── Database ──────────────────────────────────────────────────────────
@@ -21,11 +22,13 @@ class Settings(BaseSettings):
 
     # ─── Supabase ──────────────────────────────────────────────────────────
     supabase_url: str = ""
+    supabase_anon_key: str = ""
     supabase_service_role_key: str = ""
 
     # ─── Auth ──────────────────────────────────────────────────────────────
     jwt_secret: str = "change-me-in-production"
     jwt_algorithm: str = "HS256"
+    jwt_audience: str = "authenticated"
     jwt_expire_minutes: int = 60 * 24 * 7  # 7 days
 
     # ─── Gemini API ────────────────────────────────────────────────────────

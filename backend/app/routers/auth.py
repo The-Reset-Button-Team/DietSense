@@ -73,27 +73,69 @@ async def login(req: UserLoginRequest):
     token = create_jwt_token(req.email)
     return UserProfileResponse(**user, token=token)
 
+from app.core.dependencies import get_current_user
+
 @router.get("/me", response_model=UserProfileResponse)
-async def get_current_user(email: str = "arvykrane@dietsense.ai"):
-    user = MOCK_USERS_DB.get(email)
+async def get_current_user_profile(user_payload: dict = Depends(get_current_user)):
+    user_id = user_payload["id"]
+    email = user_payload.get("email") or ""
+    user = MOCK_USERS_DB.get(user_id) or MOCK_USERS_DB.get(email)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        # Construct baseline profile for authenticated user from token claims
+        meta = user_payload.get("user_metadata", {})
+        full_name = meta.get("full_name") or meta.get("name") or (email.split("@")[0] if email else "User")
+        user = {
+            "id": user_id,
+            "email": email,
+            "password": "",
+            "full_name": full_name,
+            "age": 26,
+            "gender": "male",
+            "height_cm": 175.0,
+            "weight_kg": 75.0,
+            "goal": "lose_weight",
+            "activity_level": "lightly_active",
+            "daily_calorie_target": 1850,
+            "is_solo_cook": True,
+            "active_meal_frequency": "3_meals",
+        }
+        MOCK_USERS_DB[user_id] = user
     return UserProfileResponse(**user)
 
 @router.put("/profile", response_model=UserProfileResponse)
-async def update_profile(req: UserUpdateRequest, email: str = "arvykrane@dietsense.ai"):
-    user = MOCK_USERS_DB.get(email)
+async def update_profile(
+    req: UserUpdateRequest,
+    user_payload: dict = Depends(get_current_user),
+):
+    user_id = user_payload["id"]
+    email = user_payload.get("email") or ""
+    user = MOCK_USERS_DB.get(user_id) or MOCK_USERS_DB.get(email)
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
+        user = {
+            "id": user_id,
+            "email": email,
+            "password": "",
+            "full_name": email.split("@")[0] if email else "User",
+            "age": 26,
+            "gender": "male",
+            "height_cm": 175.0,
+            "weight_kg": 75.0,
+            "goal": "lose_weight",
+            "activity_level": "lightly_active",
+            "daily_calorie_target": 1850,
+            "is_solo_cook": True,
+            "active_meal_frequency": "3_meals",
+        }
+        MOCK_USERS_DB[user_id] = user
+
     for key, val in req.model_dump(exclude_unset=True).items():
         if val is not None:
             user[key] = val.value if hasattr(val, "value") else val
-            
+
     # Recalculate TDEE if biometrics changed
     bmr = 10 * user["weight_kg"] + 6.25 * user["height_cm"] - 5 * user["age"] + (5 if user["gender"] == "male" else -161)
     act_mult = 1.375 if user["activity_level"] == "lightly_active" else 1.2
     tdee = bmr * act_mult
     user["daily_calorie_target"] = round(tdee - 400 if user["goal"] == "lose_weight" else (tdee + 300 if user["goal"] == "gain_weight" else tdee))
-    
+
     return UserProfileResponse(**user)

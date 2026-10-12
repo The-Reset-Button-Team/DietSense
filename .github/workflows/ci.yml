@@ -1,4 +1,4 @@
-﻿name: DietSense CI
+name: DietSense CI
 
 on:
   push:
@@ -76,10 +76,21 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install test dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pandas
+          python -m pip install pytest pandas numpy pypdf
+
+      - name: Download source datasets
+        run: |
+          python scripts/download_sources.py
+
+      - name: Run ETL pipeline
+        run: |
+          python scripts/etl_usda.py
+          python scripts/etl_ifct.py
+          python scripts/merge_sources.py
+          python scripts/load_db.py
 
       - name: Run tests
         run: |

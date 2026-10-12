@@ -3,11 +3,23 @@
  * Fetch wrapper that attaches Supabase JWT to requests directed to the FastAPI backend.
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+import { createClient } from "./supabaseClient";
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_BASE_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8000";
 
 export async function apiClient<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  // TODO: Retrieve token from Supabase session (e.g., supabase.auth.getSession())
-  const token: string | null = null;
+  let token: string | null = null;
+  try {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token || null;
+  } catch {
+    // If running outside browser or before initialization
+    token = null;
+  }
 
   const headers = new Headers(options.headers || {});
   headers.set("Content-Type", "application/json");
@@ -22,7 +34,16 @@ export async function apiClient<T>(endpoint: string, options: RequestInit = {}):
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    let errorDetail = response.statusText;
+    try {
+      const errJson = await response.json();
+      if (errJson && errJson.detail) {
+        errorDetail = errJson.detail;
+      }
+    } catch {
+      // fallback to statusText
+    }
+    throw new Error(`API Error (${response.status}): ${errorDetail}`);
   }
 
   return response.json() as Promise<T>;

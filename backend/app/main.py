@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.routers import auth, foods
+from routes.users import router as users_router
+from routes.feedback import router as feedback_router
 
 app = FastAPI(
     title="DietSense API",
@@ -32,6 +34,8 @@ app.add_middleware(
 # ─── Routers ─────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth & Profile"])
 app.include_router(foods.router, prefix="/api/foods", tags=["Foods Database"])
+app.include_router(users_router)
+app.include_router(feedback_router)
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
