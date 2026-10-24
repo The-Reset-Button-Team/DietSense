@@ -11,6 +11,8 @@ from routes.users import router as users_router
 from routes.feedback import router as feedback_router
 from routes.recommendations import router as recommendations_router
 from routes.foods import router as catalog_foods_router
+from routes.meal_plans import router as meal_plans_router
+from routes.meal_logs import router as meal_logs_router
 
 app = FastAPI(
     title="DietSense API",
@@ -43,6 +45,8 @@ app.include_router(catalog_foods_router)
 app.include_router(users_router)
 app.include_router(feedback_router)
 app.include_router(recommendations_router)
+app.include_router(meal_plans_router)
+app.include_router(meal_logs_router)
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])

@@ -1,6 +1,7 @@
 """
-DietSense - Recommendation Routes Stub
+DietSense - Recommendation Routes
 Wraps the ML recommendation engine to serve filtered and ranked meal plans.
+Enforces that user_id is derived exclusively from verified JWT, never from request body.
 """
 
 from fastapi import APIRouter, Depends
@@ -60,7 +61,7 @@ SAMPLE_CANDIDATES = [
     {
         "id": 4,
         "name": "Grilled Chicken Breast with Quinoa & Veggies",
-        "tags": ["non-veg", "lunch", "western", "high-protein"],
+        "tags": ["non-veg", "lunch", "western", "high-protein", "long-prep-time", "expensive"],
         "allergens": [],
         "cuisine": "western",
         "cost_estimate": 160,
@@ -117,7 +118,8 @@ def load_candidate_foods() -> List[Dict[str, Any]]:
             db_foods = cur.fetchall()
             conn.close()
             for r in db_foods:
-                tags = [r["food_category"].lower()]
+                cat = str(r["food_category"]).lower()
+                tags = [cat]
                 if r["is_vegetarian"]:
                     tags.append("veg")
                 else:
@@ -125,7 +127,21 @@ def load_candidate_foods() -> List[Dict[str, Any]]:
                 if r["is_gluten_free"]:
                     tags.append("gluten-free")
 
-                allergens = [a.strip() for a in r["allergen_flags"].split(",") if a.strip()]
+                # Derive prep time and cost estimate from category
+                is_meat = any(w in cat for w in ["poultry", "meat", "fish", "beef", "pork", "seafood"])
+                prep = 30 if is_meat else (20 if "legume" in cat or "pulse" in cat else 15)
+                cost = 150 if is_meat else (80 if "nut" in cat or "dairy" in cat else 50)
+
+                # Derive penalty tags with documented thresholds
+                if prep > 25:
+                    tags.append("long-prep-time")
+                else:
+                    tags.append("quick")
+
+                if cost > 100:
+                    tags.append("expensive")
+
+                allergens = [a.strip() for a in (r["allergen_flags"] or "").split(",") if a.strip()]
 
                 candidates.append({
                     "id": 1000 + r["id"],
@@ -133,8 +149,8 @@ def load_candidate_foods() -> List[Dict[str, Any]]:
                     "tags": tags,
                     "allergens": allergens,
                     "cuisine": "indian" if "ICMR" in str(r.get("data_source", "")) else "general",
-                    "cost_estimate": 70,
-                    "prep_time": 20,
+                    "cost_estimate": cost,
+                    "prep_time": prep,
                     "calories": float(r["calories_kcal"]),
                     "protein_g": float(r["protein_g"]),
                     "carbs_g": float(r["carbohydrates_g"]),
@@ -153,10 +169,11 @@ async def generate_recommendations(
     """
     Run candidate meals through safety gate, TF-IDF scoring, and return ranked recommendations.
     Uses authenticated user's meal logs for adaptive penalties.
+    user_id is derived exclusively from JWT for authorization and isolation.
     """
     user_id = current_user["id"]
     meal_logs = USER_MEAL_LOGS.get(user_id, [])
-    
+
     candidates = load_candidate_foods()
     results = recommend(
         user_profile=user_profile,
@@ -165,4 +182,3 @@ async def generate_recommendations(
         top_n=user_profile.get("top_n", 6),
     )
     return results
-
