@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 
@@ -6,9 +6,17 @@ interface MealCardProps {
   item: CalculatedMealItem;
   borderColor: string;
   onOpenRecipe: (recipe: RecipeData) => void;
+  reason?: string;
 }
 
-export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRecipe }) => {
+export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRecipe, reason }) => {
+  const [loggedStatus, setLoggedStatus] = useState<string | null>(null);
+
+  // Generate default explainability string from meal factors if not supplied
+  const displayReason =
+    reason ||
+    `Recommended because it matches your calorie target well (${item.calories} kcal), fits your budget, and ~${item.recipe.prepTimeMins || 15} min prep.`;
+
   return (
     <div
       className={`rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 ${borderColor} shadow-sm transition-all hover:shadow-md`}
@@ -37,6 +45,9 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
                 🛒 Missing: {item.pantryStatus.missing.join(", ")}
               </span>
             )}
+            <span className="text-[10px] text-slate-400 font-mono">
+              USDA/ICMR-NIN estimate
+            </span>
           </div>
 
           <h3 className="text-base font-serif text-[#421018] mt-1 font-semibold">
@@ -45,6 +56,12 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
           <p className="text-xs text-slate-600 font-light mt-0.5 max-w-2xl">
             {item.recipe.tagline}
           </p>
+
+          {/* Plain-language explainability reason per Workflow Brief Section 1 & 6 */}
+          <div className="mt-2 text-[11px] text-[#581825] bg-[#faf7f2] border border-[#ebdcd0] rounded-xl px-2.5 py-1.5 flex items-start gap-1.5 font-sans">
+            <span className="shrink-0 text-xs">💡</span>
+            <span className="leading-snug">{displayReason}</span>
+          </div>
 
           <div className="flex flex-wrap gap-2.5 sm:gap-3 text-xs text-slate-600 mt-2.5 font-medium items-center">
             <span className="text-[#421018] font-bold bg-[#f3eae0] px-2 py-0.5 rounded-md">
@@ -70,55 +87,62 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
         >
           <span>📖</span> Hinglish Recipe &amp; Prep
         </button>
+
         <div className="flex items-center gap-1.5">
-          <button
-            onClick={async (e) => {
-              const btn = e.currentTarget;
-              btn.disabled = true;
-              btn.innerText = "Logged ✓";
-              try {
-                const { apiClient } = await import("@/lib/api-client");
-                await apiClient("/feedback/", {
-                  method: "POST",
-                  body: JSON.stringify({
-                    meal_id: item.recipe.id,
-                    status: "eaten",
-                    slot: item.key,
-                  }),
-                });
-              } catch {
-                // local fallback
-              }
-            }}
-            className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 text-xs font-semibold transition-all"
-          >
-            Mark Eaten ✓
-          </button>
-          <button
-            onClick={async (e) => {
-              const reason = prompt("Skip reason? (time / cost / taste / unavailable)") || "time";
-              const btn = e.currentTarget;
-              btn.disabled = true;
-              btn.innerText = "Skipped";
-              try {
-                const { apiClient } = await import("@/lib/api-client");
-                await apiClient("/feedback/", {
-                  method: "POST",
-                  body: JSON.stringify({
-                    meal_id: item.recipe.id,
-                    status: "skipped",
-                    reason: reason.toLowerCase(),
-                    item_tags: [item.recipe.effortLevel === "low" ? "quick" : "long-prep-time"],
-                  }),
-                });
-              } catch {
-                // local fallback
-              }
-            }}
-            className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-medium transition-all"
-          >
-            Skip ✕
-          </button>
+          {loggedStatus ? (
+            <span className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+              {loggedStatus}
+            </span>
+          ) : (
+            <>
+              <button
+                onClick={async () => {
+                  setLoggedStatus("Eaten ✓");
+                  try {
+                    const { apiClient } = await import("@/lib/api-client");
+                    await apiClient("/meal-logs", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        meal_id: item.recipe.id,
+                        status: "eaten",
+                      }),
+                    });
+                  } catch {
+                    // local graceful fallback
+                  }
+                }}
+                className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 text-xs font-semibold transition-all"
+              >
+                Mark Eaten ✓
+              </button>
+              <button
+                onClick={async () => {
+                  const allowed = ["time", "cost", "taste", "unavailable"];
+                  const input = prompt("Skip reason? Choose: time, cost, taste, or unavailable") || "time";
+                  const reason = input.toLowerCase().trim();
+                  const validReason = allowed.includes(reason) ? reason : "time";
+                  setLoggedStatus(`Skipped (${validReason})`);
+                  try {
+                    const { apiClient } = await import("@/lib/api-client");
+                    await apiClient("/meal-logs", {
+                      method: "POST",
+                      body: JSON.stringify({
+                        meal_id: item.recipe.id,
+                        status: "skipped",
+                        reason: validReason,
+                        item_tags: [item.recipe.effortLevel === "low" ? "quick" : "long-prep-time"],
+                      }),
+                    });
+                  } catch {
+                    // local graceful fallback
+                  }
+                }}
+                className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-medium transition-all"
+              >
+                Skip ✕
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

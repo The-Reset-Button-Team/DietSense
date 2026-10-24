@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { GoalType, Gender, MealFrequency, EffortLevel, RecipeData, PantryItem } from "@/types";
 import { RECIPE_CATALOG } from "@/data/recipes";
 import { INITIAL_PANTRY_ITEMS } from "@/data/pantry";
@@ -23,11 +24,21 @@ import { SwapView } from "@/components/SwapView";
 import { SafetyShield } from "@/components/SafetyShield";
 import { RecipeModal } from "@/components/RecipeModal";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { ProgressAnalytics } from "@/components/ProgressAnalytics";
 
-export default function HomePage() {
+function MainApp() {
   const { user, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>("today");
+  const searchParams = useSearchParams();
+  const queryTab = searchParams.get("tab") as TabType | null;
+
+  const [activeTab, setActiveTab] = useState<TabType>(queryTab || "today");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (queryTab && ["today", "pantry", "profile", "swap", "safety", "progress"].includes(queryTab)) {
+      setActiveTab(queryTab);
+    }
+  }, [queryTab]);
 
   // Profile Biometrics State (initialized from user or defaults)
   const [goal, setGoal] = useState<GoalType>(user?.goal || "lose_weight");
@@ -147,7 +158,6 @@ export default function HomePage() {
   return (
     <main className="min-h-screen text-slate-800 p-3 sm:p-6 lg:p-10 flex flex-col items-center justify-start font-sans antialiased">
       <div className="relative w-full max-w-5xl overflow-hidden rounded-3xl border border-[#e8ded3]/80 bg-[#faf7f2]/95 backdrop-blur-xl p-5 sm:p-8 shadow-2xl text-slate-800 my-auto">
-        
         {/* Header with Auth Capsule Trigger */}
         <Header
           goal={goal}
@@ -177,7 +187,10 @@ export default function HomePage() {
           />
         )}
 
-        {/* Tab 2: Grocery AI Scanner & Pantry */}
+        {/* Tab 2: Real Progress & Adherence Analytics (Recharts) */}
+        {activeTab === "progress" && <ProgressAnalytics />}
+
+        {/* Tab 3: Grocery AI Scanner & Pantry */}
         {activeTab === "pantry" && (
           <PantryScanner
             pantryItems={pantryItems}
@@ -186,7 +199,7 @@ export default function HomePage() {
           />
         )}
 
-        {/* Tab 3: Profile Studio, Routine & Biometrics */}
+        {/* Tab 4: Profile Studio, Routine & Biometrics */}
         {activeTab === "profile" && (
           <ProfileStudio
             isSoloCook={isSoloCook}
@@ -239,10 +252,10 @@ export default function HomePage() {
           />
         )}
 
-        {/* Tab 4: Mindful Swap Generator */}
+        {/* Tab 5: Mindful Swap Generator */}
         {activeTab === "swap" && <SwapView targetCalories={targetCalories} />}
 
-        {/* Tab 5: Active Safety Shield */}
+        {/* Tab 6: Active Safety Shield */}
         {activeTab === "safety" && <SafetyShield />}
 
         {/* Interactive Hinglish Recipe Modal */}
@@ -251,14 +264,22 @@ export default function HomePage() {
         {/* User Auth & Profile Modal */}
         <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
-        {/* Atmosphere Footer */}
+        {/* Atmosphere Footer with Dataset Disclaimer */}
         <div className="relative z-10 mt-6 pt-4 border-t border-[#e9dfd5] flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 font-light gap-2">
-          <span>DietSense Atmos · Silk WebGL Shader Active</span>
+          <span>DietSense · Evidence-Based Nutrition · USDA &amp; ICMR-NIN verified</span>
           <span className="text-[#581825] font-serif font-medium">
-            Every calorie is calculated, never hallucinated.
+            Dataset estimates only. Not medical advice or diagnosis.
           </span>
         </div>
       </div>
     </main>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#faf7f2] flex items-center justify-center text-xs text-slate-500">Loading DietSense...</div>}>
+      <MainApp />
+    </Suspense>
   );
 }

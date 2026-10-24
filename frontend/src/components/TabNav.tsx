@@ -1,6 +1,6 @@
-﻿import React from "react";
+import React from "react";
 
-export type TabType = "today" | "pantry" | "profile" | "swap" | "safety";
+export type TabType = "today" | "pantry" | "profile" | "swap" | "safety" | "progress";
 
 interface TabNavProps {
   activeTab: TabType;
@@ -10,6 +10,7 @@ interface TabNavProps {
 export const TabNav: React.FC<TabNavProps> = ({ activeTab, setActiveTab }) => {
   const tabs: { id: TabType; icon: string; label: string }[] = [
     { id: "today", icon: "🥣", label: "Daily Meal Plan & Hinglish Recipes" },
+    { id: "progress", icon: "📊", label: "Adherence & Trends" },
     { id: "pantry", icon: "🛒", label: "Grocery AI Scanner & Pantry" },
     { id: "profile", icon: "👤", label: "Routine & Biometrics" },
     { id: "swap", icon: "✨", label: "Mindful Swap" },
