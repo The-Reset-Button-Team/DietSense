@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Supabase client utilities for DietSense frontend.
  *
  * Uses @supabase/ssr for proper Next.js App Router integration.
@@ -8,7 +8,10 @@
 import { createBrowserClient } from "@supabase/ssr";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder-project.supabase.co";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-anon-key";
+const supabaseAnonKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+  "placeholder-anon-key";
 
 /**
  * Browser-side Supabase client.

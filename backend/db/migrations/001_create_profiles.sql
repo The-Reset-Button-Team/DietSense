@@ -151,12 +151,14 @@ BEGIN
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'recipes') THEN
         ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
-        DROP POLICY IF EXISTS "Public read recipes" ON public.recipes FOR SELECT USING (true);
+        DROP POLICY IF EXISTS "Public read recipes" ON public.recipes;
+        CREATE POLICY "Public read recipes" ON public.recipes FOR SELECT USING (true);
     END IF;
 
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'recipe_ingredients') THEN
         ALTER TABLE public.recipe_ingredients ENABLE ROW LEVEL SECURITY;
-        DROP POLICY IF EXISTS "Public read recipe ingredients" ON public.recipe_ingredients FOR SELECT USING (true);
+        DROP POLICY IF EXISTS "Public read recipe ingredients" ON public.recipe_ingredients;
+        CREATE POLICY "Public read recipe ingredients" ON public.recipe_ingredients FOR SELECT USING (true);
     END IF;
 END;
 $$;

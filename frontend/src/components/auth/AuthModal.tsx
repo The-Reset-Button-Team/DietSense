@@ -34,7 +34,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         age,
       });
     } else {
-      await login(email || "arvykrane@dietsense.ai", password || "password123");
+      await login(email, password);
     }
     onClose();
   };

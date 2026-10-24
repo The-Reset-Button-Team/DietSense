@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.routers import auth, foods
 from routes.users import router as users_router
 from routes.feedback import router as feedback_router
+from routes.recommendations import router as recommendations_router
+from routes.foods import router as catalog_foods_router
 
 app = FastAPI(
     title="DietSense API",
@@ -23,9 +25,12 @@ app = FastAPI(
 )
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
+# allow_origins=["*"] combined with allow_credentials=True violates the CORS spec
+# (browsers reject it). Use the explicit origins list from config instead.
+_cors_origins = settings.cors_origins if settings.cors_origins else ["http://localhost:3000"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,8 +39,10 @@ app.add_middleware(
 # ─── Routers ─────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth & Profile"])
 app.include_router(foods.router, prefix="/api/foods", tags=["Foods Database"])
+app.include_router(catalog_foods_router)
 app.include_router(users_router)
 app.include_router(feedback_router)
+app.include_router(recommendations_router)
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])

@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 
@@ -70,9 +70,56 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
         >
           <span>📖</span> Hinglish Recipe &amp; Prep
         </button>
-        <button className="px-3.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-xs font-medium transition-all">
-          Mark Eaten ✓
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={async (e) => {
+              const btn = e.currentTarget;
+              btn.disabled = true;
+              btn.innerText = "Logged ✓";
+              try {
+                const { apiClient } = await import("@/lib/api-client");
+                await apiClient("/feedback/", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    meal_id: item.recipe.id,
+                    status: "eaten",
+                    slot: item.key,
+                  }),
+                });
+              } catch {
+                // local fallback
+              }
+            }}
+            className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 text-xs font-semibold transition-all"
+          >
+            Mark Eaten ✓
+          </button>
+          <button
+            onClick={async (e) => {
+              const reason = prompt("Skip reason? (time / cost / taste / unavailable)") || "time";
+              const btn = e.currentTarget;
+              btn.disabled = true;
+              btn.innerText = "Skipped";
+              try {
+                const { apiClient } = await import("@/lib/api-client");
+                await apiClient("/feedback/", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    meal_id: item.recipe.id,
+                    status: "skipped",
+                    reason: reason.toLowerCase(),
+                    item_tags: [item.recipe.effortLevel === "low" ? "quick" : "long-prep-time"],
+                  }),
+                });
+              } catch {
+                // local fallback
+              }
+            }}
+            className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-medium transition-all"
+          >
+            Skip ✕
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -46,20 +46,32 @@ async def get_current_user(
     algorithm = settings.jwt_algorithm or "HS256"
 
     try:
-        # Decode and verify Supabase JWT
+        # Inspect token header without verifying to check algorithm
+        unverified_header = jwt.get_unverified_header(token)
+        token_alg = unverified_header.get("alg", algorithm)
+
+        # Base decode options
+        decode_options = {
+            "verify_signature": True,
+            "verify_exp": True,
+            "verify_aud": bool(settings.jwt_audience),
+        }
         decode_kwargs = {
-            "key": secret,
-            "algorithms": [algorithm],
-            "options": {
-                "verify_signature": True,
-                "verify_exp": True,
-            },
+            "algorithms": [token_alg],
+            "options": decode_options,
         }
         if settings.jwt_audience:
             decode_kwargs["audience"] = settings.jwt_audience
-            decode_kwargs["options"]["verify_aud"] = True
+
+        # If token is signed with asymmetric algorithm (e.g. ES256 for Supabase ECC P-256 or RS256)
+        if token_alg in ["ES256", "RS256"] and settings.supabase_url:
+            jwks_url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
+            jwks_client = jwt.PyJWKClient(jwks_url)
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
+            decode_kwargs["key"] = signing_key.key
         else:
-            decode_kwargs["options"]["verify_aud"] = False
+            decode_kwargs["key"] = secret
+            decode_kwargs["algorithms"] = [algorithm, "HS256"]
 
         payload = jwt.decode(token, **decode_kwargs)
     except jwt.ExpiredSignatureError:

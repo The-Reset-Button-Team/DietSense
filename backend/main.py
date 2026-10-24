@@ -1,46 +1,24 @@
 """
-DietSense - FastAPI Application Entrypoint
-Initializes the FastAPI app, registers CORS middleware, routes, and /health check.
+DietSense — FastAPI Application Entrypoint (legacy wrapper)
+
+This file exists for backwards compatibility.
+The authoritative entry point is backend/app/main.py.
+
+Run from the REPOSITORY ROOT (not from backend/) so that the ml/ and routes/
+packages are importable:
+
+    # From repo root:
+    $env:PYTHONPATH = ".;backend"       # PowerShell (Windows)
+    uvicorn app.main:app --reload --port 8000
+
+Or use the helper script:
+    python run_backend.py
 """
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
-from routes.users import router as users_router
-from routes.foods import router as foods_router
-from routes.recommendations import router as recommendations_router
-from routes.feedback import router as feedback_router
-
-app = FastAPI(
-    title="DietSense API",
-    description="Adaptive AI Meal Planning System Backend",
-    version="1.0.0",
-)
-
-# CORS Middleware configuration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Route registrations
-app.include_router(users_router)
-app.include_router(foods_router)
-app.include_router(recommendations_router)
-app.include_router(feedback_router)
-
-
-@app.get("/health", tags=["Health"])
-async def health_check() -> dict:
-    """
-    Health check route returning API status.
-    """
-    return {"status": "ok", "service": "DietSense FastAPI"}
-
+# Re-export the canonical app so `uvicorn backend.main:app` still works
+# if someone runs it that way (though the preferred entry is app.main:app)
+from app.main import app  # noqa: F401
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

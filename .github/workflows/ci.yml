@@ -79,7 +79,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest pandas numpy pypdf
+          python -m pip install PyJWT "pydantic>=2.7" pydantic-settings
+          python -m pip install -r backend/requirements.txt
+          python -m pip install -r ml/requirements.txt
+          python -m pip install pytest pypdf httpx
 
       - name: Download source datasets
         run: |
@@ -93,5 +96,44 @@ jobs:
           python scripts/load_db.py
 
       - name: Run tests
+        env:
+          # PYTHONPATH must include both the repo root (for ml/, routes/, scripts/)
+          # and the backend/ directory (for app/ imports)
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/backend
+          # Use a test-only JWT secret so auth tests can self-sign tokens offline
+          JWT_SECRET: ci-test-secret-do-not-use-in-production
+          JWT_ALGORITHM: HS256
+          JWT_AUDIENCE: authenticated
+          ENVIRONMENT: test
         run: |
           pytest tests/ -v --tb=short
+
+  frontend-build:
+    name: Frontend Production Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript type check
+        working-directory: frontend
+        run: npm run type-check
+
+      - name: Production build
+        working-directory: frontend
+        env:
+          # Provide placeholder values so Next.js build succeeds without real Supabase
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        run: npm run build

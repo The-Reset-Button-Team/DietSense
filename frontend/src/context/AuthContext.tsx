@@ -270,6 +270,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       supabase.auth.updateUser({
         data: updated,
       }).catch(() => {});
+
+      // Sync with FastAPI backend if user is authenticated
+      import("@/lib/api-client").then(({ apiClient }) => {
+        apiClient("/users/profile", {
+          method: "POST",
+          body: JSON.stringify(next),
+        }).catch(() => {});
+      });
+
       return next;
     });
   };
