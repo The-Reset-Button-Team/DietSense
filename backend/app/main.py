@@ -15,6 +15,7 @@ from routes.recommendations import router as recommendations_router
 from routes.foods import router as catalog_foods_router
 from routes.meal_plans import router as meal_plans_router
 from routes.meal_logs import router as meal_logs_router
+from routes.pantry import router as pantry_router
 from db.database import init_db
 
 
@@ -56,6 +57,7 @@ app.include_router(feedback_router)
 app.include_router(recommendations_router)
 app.include_router(meal_plans_router)
 app.include_router(meal_logs_router)
+app.include_router(pantry_router)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
