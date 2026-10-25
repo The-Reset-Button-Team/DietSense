@@ -137,7 +137,11 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
     setIsScanning(true);
     setErrorMessage("");
     setSelectedFile(null);
-    setPreviewUrl(null);
+    const sampleImg =
+      presetType === "blinkit"
+        ? "/samples/blinkit_sample_bill.png"
+        : "/samples/fridge_sample_snapshot.png";
+    setPreviewUrl(sampleImg);
     setScanMessage(`Analyzing sample ${presetType === "blinkit" ? "Blinkit bill" : "fridge photo"}...`);
 
     try {
@@ -169,6 +173,36 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
         ]);
         setScanMessage("✓ Fridge Snapshot Analyzed! Paneer, Palak & Dahi detected.");
       }
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
+  // Load sample image into the dropzone as a File so user can test the upload API
+  const handleLoadSampleFile = async (presetType: "blinkit" | "fridge") => {
+    setIsScanning(true);
+    setErrorMessage("");
+    setScanMessage("");
+    setDetectedItems([]);
+
+    const sampleUrl =
+      presetType === "blinkit"
+        ? "/samples/blinkit_sample_bill.png"
+        : "/samples/fridge_sample_snapshot.png";
+    const sampleName =
+      presetType === "blinkit" ? "blinkit_sample_bill.png" : "fridge_sample_snapshot.png";
+
+    try {
+      const res = await fetch(sampleUrl);
+      const blob = await res.blob();
+      const file = new File([blob], sampleName, { type: "image/png" });
+      processSelectedFile(file);
+      setScanMode(presetType === "blinkit" ? "bill" : "fridge");
+      setScanMessage(
+        `Loaded ${presetType === "blinkit" ? "Blinkit bill" : "fridge snapshot"} sample file! Click "Process Selected File" to scan.`
+      );
+    } catch {
+      setErrorMessage("Could not load sample image file. You can still use the direct scan button below.");
     } finally {
       setIsScanning(false);
     }
@@ -306,21 +340,42 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
             </div>
 
             {/* Sample Preset Buttons from the reference mockup */}
-            <div className="flex gap-2 flex-wrap justify-center pt-2 border-t border-slate-200/60 w-full max-w-md">
-              <button
-                onClick={() => handlePresetScan("blinkit")}
-                disabled={isScanning}
-                className="px-3 py-1.5 rounded-xl bg-[#581825] hover:bg-[#722230] text-white text-xs font-medium shadow-sm transition-all flex items-center gap-1"
-              >
-                <span>⚡</span> Scan Sample Blinkit Bill
-              </button>
-              <button
-                onClick={() => handlePresetScan("fridge")}
-                disabled={isScanning}
-                className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-sm transition-all flex items-center gap-1"
-              >
-                <span>📸</span> Scan Fridge Photo
-              </button>
+            <div className="flex flex-col items-center gap-2 pt-2 border-t border-slate-200/60 w-full max-w-md">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                <span>🧪 Test with Sample Images:</span>
+              </div>
+              <div className="flex gap-2 flex-wrap justify-center w-full">
+                <button
+                  onClick={() => handlePresetScan("blinkit")}
+                  disabled={isScanning}
+                  className="px-3 py-1.5 rounded-xl bg-[#581825] hover:bg-[#722230] text-white text-xs font-medium shadow-sm transition-all flex items-center gap-1"
+                >
+                  <span>⚡</span> Scan Blinkit Bill
+                </button>
+                <button
+                  onClick={() => handlePresetScan("fridge")}
+                  disabled={isScanning}
+                  className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:bg-slate-50 text-slate-700 text-xs font-medium shadow-sm transition-all flex items-center gap-1"
+                >
+                  <span>📸</span> Scan Fridge Photo
+                </button>
+                <button
+                  onClick={() => handleLoadSampleFile("blinkit")}
+                  disabled={isScanning}
+                  className="px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-800 text-[11px] font-medium shadow-sm transition-all flex items-center gap-1"
+                  title="Loads the sample Blinkit bill image into the dropzone to test upload"
+                >
+                  <span>📄</span> Load Bill File
+                </button>
+                <button
+                  onClick={() => handleLoadSampleFile("fridge")}
+                  disabled={isScanning}
+                  className="px-2.5 py-1.5 rounded-xl bg-sky-50 border border-sky-200 hover:bg-sky-100 text-sky-800 text-[11px] font-medium shadow-sm transition-all flex items-center gap-1"
+                  title="Loads the sample fridge snapshot into the dropzone to test upload"
+                >
+                  <span>🧊</span> Load Fridge File
+                </button>
+              </div>
             </div>
 
             {/* Status Messages */}
