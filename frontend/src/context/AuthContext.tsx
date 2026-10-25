@@ -27,7 +27,6 @@ export interface AuthResult {
 
 interface AuthContextType {
   user: UserProfileData | null;
-  supabaseUser: any | null; // Backwards compatibility alias
   session: any | null;      // Backwards compatibility alias
   isAuthenticated: boolean;
   isLoading: boolean;
@@ -253,7 +252,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user: profile,
-        supabaseUser: profile,
         session: profile ? { user: profile } : null,
         isAuthenticated: !!profile,
         isLoading,

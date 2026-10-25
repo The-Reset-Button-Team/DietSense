@@ -135,3 +135,19 @@ def init_db(db_path: str = None) -> None:
             );
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_feedback_user_id ON feedback(user_id);")
+
+        # 6. Pantry Items table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS pantry_items (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT 'General',
+                quantity TEXT NOT NULL DEFAULT '1 unit',
+                in_stock INTEGER NOT NULL DEFAULT 1,
+                source TEXT NOT NULL DEFAULT 'manual',
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_pantry_items_user_id ON pantry_items(user_id);")

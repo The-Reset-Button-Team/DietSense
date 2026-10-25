@@ -14,6 +14,7 @@ import {
   ActiveSlotsMap,
 } from "@/lib/nutrition";
 import { useAuth } from "@/context/AuthContext";
+import { apiClient } from "@/lib/api-client";
 
 import { Header } from "@/components/Header";
 import { TabNav, TabType } from "@/components/TabNav";
@@ -79,6 +80,44 @@ function MainApp() {
   // Pantry State
   const [pantryItems, setPantryItems] = useState<PantryItem[]>(INITIAL_PANTRY_ITEMS);
 
+  // Load pantry items from backend on mount (authenticated users only)
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const backendItems = await apiClient<
+          Array<{ id: number | string; name: string; category: string; quantity: string; inStock: boolean; source?: string }>
+        >("/api/pantry/");
+
+        if (cancelled) return;
+
+        const mapped: PantryItem[] = backendItems.map((item) => ({
+          id: String(item.id),
+          name: item.name,
+          category: item.category,
+          quantity: item.quantity,
+          inStock: item.inStock,
+        }));
+
+        // Merge: backend items take priority (name-based dedup)
+        setPantryItems((prev) => {
+          const backendNames = new Set(mapped.map((i) => i.name.toLowerCase()));
+          const kept = prev.filter((p) => !backendNames.has(p.name.toLowerCase()));
+          return [...mapped, ...kept];
+        });
+      } catch {
+        // Backend offline — silently keep INITIAL_PANTRY_ITEMS
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
+
   // Recipe Modal State
   const [activeRecipeModal, setActiveRecipeModal] = useState<RecipeData | null>(null);
 
@@ -122,6 +161,10 @@ function MainApp() {
     setPantryItems((prev) =>
       prev.map((item) => (item.id === id ? { ...item, inStock: !item.inStock } : item))
     );
+    // Fire-and-forget sync to backend
+    if (user) {
+      apiClient(`/api/pantry/${id}/toggle`, { method: "PATCH" }).catch(() => {});
+    }
   };
 
   const handleAddManualPantryItem = (name: string) => {
@@ -133,6 +176,27 @@ function MainApp() {
       inStock: true,
     };
     setPantryItems((prev) => [newItem, ...prev]);
+  };
+
+  const handleAddBatchPantryItems = (items: Array<{ name: string; category?: string; quantity?: string }>) => {
+    const newItems: PantryItem[] = items.map((item, idx) => ({
+      id: `${Date.now()}_${idx}`,
+      name: item.name,
+      category: item.category || "Scanned Item",
+      quantity: item.quantity || "1 unit",
+      inStock: true,
+    }));
+    setPantryItems((prev) => {
+      const existingNames = new Set(prev.map((p) => p.name.toLowerCase()));
+      const updatedExisting = prev.map((p) => {
+        if (items.some((i) => i.name.toLowerCase() === p.name.toLowerCase())) {
+          return { ...p, inStock: true };
+        }
+        return p;
+      });
+      const trulyNew = newItems.filter((i) => !existingNames.has(i.name.toLowerCase()));
+      return [...trulyNew, ...updatedExisting];
+    });
   };
 
   // Calculated Meal Plan Items
@@ -196,6 +260,7 @@ function MainApp() {
             pantryItems={pantryItems}
             togglePantryItem={togglePantryItem}
             onAddManualItem={handleAddManualPantryItem}
+            onAddBatchItems={handleAddBatchPantryItems}
           />
         )}
 

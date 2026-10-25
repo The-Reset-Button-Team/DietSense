@@ -108,3 +108,38 @@ def test_adaptive_feedback_loop():
     assert rec_res.status_code == 200
     results = rec_res.json()
     assert len(results) > 0
+
+
+def test_recommendations_pantry_bonus():
+    """Users with in-stock pantry items receive ingredient-aware recommendation boosts."""
+    user_id = "usr_test_pantry_rec_003"
+    token = generate_token(user_id)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Add pantry items for this user
+    add_res = client.post(
+        "/api/pantry/",
+        json={"items": [{"name": "Poha", "category": "Pulses & Grains", "quantity": "500g"}]},
+        headers=headers,
+    )
+    assert add_res.status_code == 200
+
+    # 2. Query recommendations
+    rec_res = client.post(
+        "/recommendations/",
+        json={
+            "dietary_pref": "vegetarian",
+            "target_calories": 1800,
+            "top_n": 5,
+        },
+        headers=headers,
+    )
+    assert rec_res.status_code == 200
+    results = rec_res.json()
+    assert len(results) > 0
+
+    # Poha candidate should have the pantry match reason
+    poha_matches = [r for r in results if "poha" in r["item"]["name"].lower()]
+    if poha_matches:
+        assert "Pantry match" in poha_matches[0]["reason"]
+

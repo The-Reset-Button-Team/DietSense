@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.dependencies import get_current_user
 from routes.meal_logs import get_user_meal_logs
 from ml.recommendation.recommender import recommend
+from db.database import get_db_cursor
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
@@ -174,11 +175,24 @@ async def generate_recommendations(
     user_id = current_user["id"]
     meal_logs = get_user_meal_logs(user_id)
 
+    # Load user's in-stock pantry items for ingredient-aware recommendations
+    pantry_items = []
+    try:
+        with get_db_cursor() as cur:
+            cur.execute(
+                "SELECT name FROM pantry_items WHERE user_id = ? AND in_stock = 1",
+                (user_id,),
+            )
+            pantry_items = [row["name"].lower() for row in cur.fetchall()]
+    except Exception:
+        pass
+
     candidates = load_candidate_foods()
     results = recommend(
         user_profile=user_profile,
         candidates=candidates,
         meal_logs=meal_logs,
         top_n=user_profile.get("top_n", 6),
+        pantry_items=pantry_items,
     )
     return results
