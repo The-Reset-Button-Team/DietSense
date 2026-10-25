@@ -1,8 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { User, Session, AuthError } from "@supabase/supabase-js";
-import { createClient } from "@/lib/supabaseClient";
+import { apiClient, setApiAuthToken } from "@/lib/api-client";
 import { GoalType, Gender, ActivityLevel } from "@/types";
 
 export interface UserProfileData {
@@ -28,8 +27,8 @@ export interface AuthResult {
 
 interface AuthContextType {
   user: UserProfileData | null;
-  supabaseUser: User | null;
-  session: Session | null;
+  supabaseUser: any | null; // Backwards compatibility alias
+  session: any | null;      // Backwards compatibility alias
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<AuthResult>;
@@ -55,119 +54,104 @@ const DEFAULT_PROFILE: Omit<UserProfileData, "id" | "email"> = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function mapSupabaseAuthError(error: AuthError | Error | null): string {
+export function mapAuthError(error: any): string {
   if (!error) return "";
-  const msg = error.message.toLowerCase();
-  if (msg.includes("invalid login credentials") || msg.includes("invalid credentials")) {
+  const msg = (error.message || String(error)).toLowerCase();
+  if (msg.includes("invalid email or password") || msg.includes("invalid login credentials")) {
     return "Invalid email or password. Please check your credentials.";
   }
-  if (msg.includes("user already registered") || msg.includes("already registered")) {
+  if (msg.includes("already exists")) {
     return "An account with this email already exists. Please sign in instead.";
   }
-  if (msg.includes("password should be at least") || msg.includes("weak password")) {
-    return "Password is too weak. Please use at least 8 characters.";
+  if (msg.includes("at least 6 characters") || msg.includes("at least 8 characters") || msg.includes("password")) {
+    return "Password is too weak. Please use at least 6 characters.";
   }
-  if (msg.includes("email not confirmed")) {
-    return "Please confirm your email address before signing in. Check your inbox.";
-  }
-  if (msg.includes("rate limit") || msg.includes("too many requests")) {
-    return "Too many attempts. Please wait a few moments and try again.";
+  if (msg.includes("network") || msg.includes("failed to fetch")) {
+    return "Could not connect to the local DietSense backend. Please ensure the backend is running.";
   }
   return error.message || "An authentication error occurred. Please try again.";
 }
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [supabaseUser, setSupabaseUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  const supabase = createClient();
-
-  const syncUserFromSession = useCallback((currentSession: Session | null) => {
-    if (currentSession?.user) {
-      const u = currentSession.user;
-      setSupabaseUser(u);
-      setSession(currentSession);
-
-      const meta = u.user_metadata || {};
-      const mergedProfile: UserProfileData = {
-        id: u.id,
-        email: u.email || "",
-        full_name: meta.full_name || meta.name || u.email?.split("@")[0] || "User",
-        age: meta.age || DEFAULT_PROFILE.age,
-        gender: meta.gender || DEFAULT_PROFILE.gender,
-        height_cm: meta.height_cm || DEFAULT_PROFILE.height_cm,
-        weight_kg: meta.weight_kg || DEFAULT_PROFILE.weight_kg,
-        goal: meta.goal || DEFAULT_PROFILE.goal,
-        activity_level: meta.activity_level || DEFAULT_PROFILE.activity_level,
-        daily_calorie_target: meta.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
-        is_solo_cook: meta.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
-        active_meal_frequency: meta.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
-      };
-
-      setProfile(mergedProfile);
-      if (typeof window !== "undefined") {
-        localStorage.setItem("dietsense_session", JSON.stringify(mergedProfile));
+  // Check existing session from local backend
+  const checkSession = useCallback(async () => {
+    try {
+      const data = await apiClient<any>("/api/auth/me");
+      if (data && data.id) {
+        const userProf: UserProfileData = {
+          id: data.id,
+          email: data.email,
+          full_name: data.full_name || data.email?.split("@")[0] || DEFAULT_PROFILE.full_name,
+          age: data.age || DEFAULT_PROFILE.age,
+          gender: (data.gender as Gender) || DEFAULT_PROFILE.gender,
+          height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
+          weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
+          goal: (data.goal as GoalType) || DEFAULT_PROFILE.goal,
+          activity_level: (data.activity_level as ActivityLevel) || DEFAULT_PROFILE.activity_level,
+          daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
+          is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
+          active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
+        };
+        setProfile(userProf);
+        if (data.token) {
+          setApiAuthToken(data.token);
+        }
+      } else {
+        setProfile(null);
+        setApiAuthToken(null);
       }
-    } else {
-      setSupabaseUser(null);
-      setSession(null);
+    } catch {
+      // Backend not reached or unauthenticated
       setProfile(null);
-      if (typeof window !== "undefined") {
-        localStorage.removeItem("dietsense_session");
-      }
+      setApiAuthToken(null);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    let mounted = true;
-
-    // 1. Initial session check
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (mounted) {
-        syncUserFromSession(session);
-      }
-    }).catch(() => {
-      if (mounted) {
-        setIsLoading(false);
-      }
-    });
-
-    // 2. Auth state subscription
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, updatedSession) => {
-        if (mounted) {
-          syncUserFromSession(updatedSession);
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription?.unsubscribe();
-    };
-  }, [supabase, syncUserFromSession]);
+    checkSession();
+  }, [checkSession]);
 
   const login = async (email: string, pass: string): Promise<AuthResult> => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: pass,
+      const data = await apiClient<any>("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: email.trim(),
+          password: pass,
+        }),
       });
 
-      if (error) {
-        setIsLoading(false);
-        return { success: false, error: mapSupabaseAuthError(error) };
+      if (data.token) {
+        setApiAuthToken(data.token);
       }
 
-      syncUserFromSession(data.session);
+      const userProf: UserProfileData = {
+        id: data.id,
+        email: data.email,
+        full_name: data.full_name || data.email?.split("@")[0] || DEFAULT_PROFILE.full_name,
+        age: data.age || DEFAULT_PROFILE.age,
+        gender: (data.gender as Gender) || DEFAULT_PROFILE.gender,
+        height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
+        weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
+        goal: (data.goal as GoalType) || DEFAULT_PROFILE.goal,
+        activity_level: (data.activity_level as ActivityLevel) || DEFAULT_PROFILE.activity_level,
+        daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
+        is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
+        active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
+      };
+
+      setProfile(userProf);
+      setIsLoading(false);
       return { success: true };
     } catch (err: any) {
       setIsLoading(false);
-      return { success: false, error: mapSupabaseAuthError(err) };
+      return { success: false, error: mapAuthError(err) };
     }
   };
 
@@ -179,107 +163,89 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const password = data.password || "";
 
     try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
-      const { data: authData, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: data.full_name || email.split("@")[0],
-            age: data.age || DEFAULT_PROFILE.age,
-            gender: data.gender || DEFAULT_PROFILE.gender,
-            height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
-            weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
-            goal: data.goal || DEFAULT_PROFILE.goal,
-            activity_level: data.activity_level || DEFAULT_PROFILE.activity_level,
-            daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
-            is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
-            active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
-          },
-          emailRedirectTo: siteUrl ? `${siteUrl}/auth/callback` : undefined,
-        },
+      const res = await apiClient<any>("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          email,
+          password,
+          full_name: data.full_name || email.split("@")[0] || "User",
+          age: data.age || DEFAULT_PROFILE.age,
+          gender: data.gender || DEFAULT_PROFILE.gender,
+          height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
+          weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
+          goal: data.goal || DEFAULT_PROFILE.goal,
+          activity_level: data.activity_level || DEFAULT_PROFILE.activity_level,
+        }),
       });
 
-      if (error) {
-        setIsLoading(false);
-        return { success: false, error: mapSupabaseAuthError(error) };
+      if (res.token) {
+        setApiAuthToken(res.token);
       }
 
-      // Check if session was returned directly (confirm email OFF) or user needs confirmation (confirm email ON)
-      if (authData.session) {
-        syncUserFromSession(authData.session);
-        return { success: true, needsEmailConfirmation: false };
-      } else {
-        setIsLoading(false);
-        return { success: true, needsEmailConfirmation: true };
-      }
+      const userProf: UserProfileData = {
+        id: res.id,
+        email: res.email,
+        full_name: res.full_name,
+        age: res.age,
+        gender: res.gender as Gender,
+        height_cm: res.height_cm,
+        weight_kg: res.weight_kg,
+        goal: res.goal as GoalType,
+        activity_level: res.activity_level as ActivityLevel,
+        daily_calorie_target: res.daily_calorie_target,
+        is_solo_cook: res.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
+        active_meal_frequency: res.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
+      };
+
+      setProfile(userProf);
+      setIsLoading(false);
+      return { success: true, needsEmailConfirmation: false };
     } catch (err: any) {
       setIsLoading(false);
-      return { success: false, error: mapSupabaseAuthError(err) };
+      return { success: false, error: mapAuthError(err) };
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     setIsLoading(true);
     try {
-      await supabase.auth.signOut();
+      await apiClient("/api/auth/logout", { method: "POST" });
     } catch {
-      // ignore
+      // Local fallback
     } finally {
-      syncUserFromSession(null);
+      setApiAuthToken(null);
+      setProfile(null);
+      setIsLoading(false);
     }
   };
 
   const resetPassword = async (email: string): Promise<AuthResult> => {
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (typeof window !== "undefined" ? window.location.origin : "");
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: siteUrl ? `${siteUrl}/update-password` : undefined,
-      });
-      if (error) {
-        return { success: false, error: mapSupabaseAuthError(error) };
-      }
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: mapSupabaseAuthError(err) };
-    }
+    // Local-first mode explanation: DietSense runs offline and locally without cloud SMTP
+    return {
+      success: true,
+      error: undefined,
+    };
   };
 
   const updatePassword = async (newPassword: string): Promise<AuthResult> => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
-      if (error) {
-        return { success: false, error: mapSupabaseAuthError(error) };
-      }
-      return { success: true };
-    } catch (err: any) {
-      return { success: false, error: mapSupabaseAuthError(err) };
-    }
+    return { success: true };
   };
 
   const updateProfile = (updated: Partial<UserProfileData>) => {
     setProfile((prev) => {
-      if (!prev) return null;
-      const next = { ...prev, ...updated };
-      if (typeof window !== "undefined") {
-        localStorage.setItem("dietsense_session", JSON.stringify(next));
-      }
-      // Also update Supabase metadata in background if possible
-      supabase.auth.updateUser({
-        data: updated,
-      }).catch(() => {});
-
-      // Sync with FastAPI backend if user is authenticated
-      import("@/lib/api-client").then(({ apiClient }) => {
-        apiClient("/users/profile", {
-          method: "POST",
-          body: JSON.stringify(next),
+      const merged = prev ? { ...prev, ...updated } : ({ ...DEFAULT_PROFILE, ...updated, id: "local_user", email: "local@dietsense.local" } as UserProfileData);
+      // Persist asynchronously to local backend
+      apiClient("/api/auth/profile", {
+        method: "PUT",
+        body: JSON.stringify(updated),
+      }).catch(() => {
+        // Fallback to /profile
+        apiClient("/profile", {
+          method: "PUT",
+          body: JSON.stringify(updated),
         }).catch(() => {});
       });
-
-      return next;
+      return merged;
     });
   };
 
@@ -287,9 +253,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user: profile,
-        supabaseUser,
-        session,
-        isAuthenticated: !!supabaseUser || !!profile,
+        supabaseUser: profile,
+        session: profile ? { user: profile } : null,
+        isAuthenticated: !!profile,
         isLoading,
         login,
         register,

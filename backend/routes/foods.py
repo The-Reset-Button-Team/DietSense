@@ -1,17 +1,15 @@
 """
-DietSense - Foods & Recipes Routes Stub
-Provides food catalog search, allergen metadata, and recipe lookups.
+DietSense — Foods & Recipes Routes
+Provides food catalog search, allergen metadata, and recipe lookups from local SQLite.
 """
 
 from fastapi import APIRouter, Query, HTTPException
 from typing import List, Optional, Dict, Any
 import os
 import sqlite3
+from app.core.config import settings
 
 router = APIRouter(prefix="/foods", tags=["Foods"])
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DB_PATH = os.path.join(BASE_DIR, "database", "dietsense.db")
 
 SAMPLE_FOODS = [
     {"id": 1, "name": "Rolled Oats (Avena sativa)", "data_source": "USDA", "food_category": "cereals", "calories_kcal": 389.0, "protein_g": 16.9, "carbohydrates_g": 66.3, "fat_g": 6.9, "is_vegetarian": True, "is_gluten_free": False, "allergen_flags": ""},
@@ -25,31 +23,33 @@ SAMPLE_FOODS = [
 @router.get("/")
 async def list_foods(q: Optional[str] = None, category: Optional[str] = None, limit: int = 50):
     """
-    Query candidate food items and recipes from database with filters.
+    Query candidate food items and recipes from local SQLite database with filters.
     """
-    if os.path.exists(DB_PATH):
+    db_path = settings.sqlite_db_path
+    if os.path.exists(db_path):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
-            
+
             query = "SELECT id, name, name_local, data_source, food_category, calories_kcal, protein_g, carbohydrates_g, fat_g, is_vegetarian, is_vegan, is_gluten_free, allergen_flags FROM foods WHERE 1=1"
             params = []
-            
+
             if q:
                 query += " AND name LIKE ?"
                 params.append(f"%{q}%")
             if category:
                 query += " AND food_category LIKE ?"
                 params.append(f"%{category}%")
-                
+
             query += " LIMIT ?"
             params.append(limit)
-            
+
             cur.execute(query, params)
             rows = [dict(row) for row in cur.fetchall()]
             conn.close()
-            return rows
+            if rows:
+                return rows
         except Exception:
             pass
 
@@ -65,11 +65,12 @@ async def list_foods(q: Optional[str] = None, category: Optional[str] = None, li
 @router.get("/{food_id}")
 async def get_food_detail(food_id: int):
     """
-    Get detailed nutritional breakdown and allergen info for a specific item.
+    Get detailed nutritional breakdown and allergen info for a specific item from SQLite.
     """
-    if os.path.exists(DB_PATH):
+    db_path = settings.sqlite_db_path
+    if os.path.exists(db_path):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
             cur.execute("SELECT * FROM foods WHERE id = ?", (food_id,))
@@ -84,4 +85,3 @@ async def get_food_detail(food_id: int):
         if f["id"] == food_id:
             return f
     raise HTTPException(status_code=404, detail="Food item not found")
-
