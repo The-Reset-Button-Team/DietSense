@@ -1,7 +1,8 @@
 """
-DietSense - Recommendation Routes
+DietSense — Recommendation Routes
 Wraps the ML recommendation engine to serve filtered and ranked meal plans.
 Enforces that user_id is derived exclusively from verified JWT, never from request body.
+Integrates directly with local SQLite food catalog and meal logs.
 """
 
 from fastapi import APIRouter, Depends
@@ -9,14 +10,12 @@ from typing import Dict, Any, List
 import os
 import sqlite3
 
+from app.core.config import settings
 from app.core.dependencies import get_current_user
-from routes.feedback import USER_MEAL_LOGS
+from routes.meal_logs import get_user_meal_logs
 from ml.recommendation.recommender import recommend
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-DB_PATH = os.path.join(BASE_DIR, "database", "dietsense.db")
 
 SAMPLE_CANDIDATES = [
     {
@@ -101,16 +100,17 @@ SAMPLE_CANDIDATES = [
 
 
 def load_candidate_foods() -> List[Dict[str, Any]]:
-    """Loads candidate items from database if available, else returns curated rich candidates."""
+    """Loads candidate items from local SQLite foods catalog, falling back to rich candidates."""
     candidates = list(SAMPLE_CANDIDATES)
-    if os.path.exists(DB_PATH):
+    db_path = settings.sqlite_db_path
+    if os.path.exists(db_path):
         try:
-            conn = sqlite3.connect(DB_PATH)
+            conn = sqlite3.connect(db_path)
             conn.row_factory = sqlite3.Row
             cur = conn.cursor()
             cur.execute("""
                 SELECT id, name, food_category, calories_kcal, protein_g, carbohydrates_g, fat_g,
-                       is_vegetarian, is_vegan, is_gluten_free, allergen_flags
+                       is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
                 FROM foods
                 WHERE calories_kcal > 50
                 LIMIT 40
@@ -148,7 +148,7 @@ def load_candidate_foods() -> List[Dict[str, Any]]:
                     "name": r["name"],
                     "tags": tags,
                     "allergens": allergens,
-                    "cuisine": "indian" if "ICMR" in str(r.get("data_source", "")) else "general",
+                    "cuisine": "indian" if "ICMR" in str(r["data_source"] or "") else "general",
                     "cost_estimate": cost,
                     "prep_time": prep,
                     "calories": float(r["calories_kcal"]),
@@ -168,11 +168,11 @@ async def generate_recommendations(
 ):
     """
     Run candidate meals through safety gate, TF-IDF scoring, and return ranked recommendations.
-    Uses authenticated user's meal logs for adaptive penalties.
+    Uses authenticated user's real meal logs from SQLite for adaptive penalties.
     user_id is derived exclusively from JWT for authorization and isolation.
     """
     user_id = current_user["id"]
-    meal_logs = USER_MEAL_LOGS.get(user_id, [])
+    meal_logs = get_user_meal_logs(user_id)
 
     candidates = load_candidate_foods()
     results = recommend(

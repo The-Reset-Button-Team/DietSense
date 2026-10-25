@@ -1,7 +1,9 @@
 """
 DietSense — FastAPI Application Entry Point
+Local-first adaptive meal planning API.
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,23 +15,30 @@ from routes.recommendations import router as recommendations_router
 from routes.foods import router as catalog_foods_router
 from routes.meal_plans import router as meal_plans_router
 from routes.meal_logs import router as meal_logs_router
+from db.database import init_db
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initializes local SQLite database tables on application startup."""
+    init_db()
+    yield
+
 
 app = FastAPI(
     title="DietSense API",
     description=(
-        "Evidence-based adaptive meal planning API. "
-        "Nutrition facts sourced exclusively from USDA & ICMR-NIN datasets. "
-        "LLM (Gemini) is used for natural-language explanations ONLY."
+        "Local-first evidence-based adaptive meal planning API. "
+        "Nutrition facts sourced exclusively from USDA & ICMR-NIN datasets."
     ),
-    version="0.2.0",
+    version="1.0.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    lifespan=lifespan,
 )
 
 # ─── CORS ────────────────────────────────────────────────────────────────────
-# allow_origins=["*"] combined with allow_credentials=True violates the CORS spec
-# (browsers reject it). Use the explicit origins list from config instead.
-_cors_origins = settings.cors_origins if settings.cors_origins else ["http://localhost:3000"]
+_cors_origins = settings.cors_origins if settings.cors_origins else ["http://localhost:3000", "http://127.0.0.1:3000"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -48,21 +57,23 @@ app.include_router(recommendations_router)
 app.include_router(meal_plans_router)
 app.include_router(meal_logs_router)
 
+
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/", tags=["Health"])
 async def health_check() -> dict[str, str]:
     return {
         "status": "ok",
         "service": "DietSense API",
-        "version": "0.2.0",
+        "version": "1.0.0",
         "environment": settings.environment,
     }
+
 
 @app.get("/health", tags=["Health"])
 async def detailed_health() -> dict[str, str]:
     return {
         "status": "ok",
         "api": "healthy",
-        "database": "mock_db_ready",
-        "auth": "jwt_ready"
+        "database": "sqlite_ready",
+        "auth": "local_jwt_session_ready",
     }

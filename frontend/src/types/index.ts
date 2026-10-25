@@ -13,7 +13,7 @@ export type Gender = "male" | "female" | "other" | "prefer_not_to_say";
 export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface User {
-  id: string;               // UUID (Supabase Auth UID)
+  id: string;               // User ID
   email: string;
   full_name: string;
   age: number;

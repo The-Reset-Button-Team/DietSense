@@ -2,15 +2,17 @@
 DietSense — Meal Logs & Adherence Routes
 Captures meal outcomes (eaten vs skipped with reason), verifies user ownership,
 and provides real calculated adherence analytics for Recharts visualizations.
+Persists data to local SQLite database.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any, List
 from datetime import datetime, timezone
+import json
 import uuid
 
 from app.core.dependencies import get_current_user
-from routes.feedback import USER_MEAL_LOGS
+from db.database import get_db_cursor
 
 router = APIRouter(tags=["Meal Logs & Analytics"])
 
@@ -18,14 +20,43 @@ ALLOWED_STATUSES = {"eaten", "skipped"}
 ALLOWED_SKIP_REASONS = {"time", "cost", "taste", "unavailable"}
 
 
+def _row_to_log(row: Any) -> Dict[str, Any]:
+    item_tags = []
+    if row["item_tags"]:
+        try:
+            item_tags = json.loads(row["item_tags"])
+        except Exception:
+            item_tags = [t.strip() for t in str(row["item_tags"]).split(",") if t.strip()]
+    return {
+        "id": row["id"],
+        "user_id": row["user_id"],
+        "meal_id": row["meal_id"],
+        "status": row["status"],
+        "reason": row["reason"],
+        "item_tags": item_tags,
+        "timestamp": row["timestamp"],
+        "created_at": row["created_at"],
+    }
+
+
+def get_user_meal_logs(user_id: str) -> List[Dict[str, Any]]:
+    """Helper to load all meal logs for a specific user from SQLite."""
+    with get_db_cursor() as cur:
+        cur.execute(
+            "SELECT * FROM meal_logs WHERE user_id = ? ORDER BY timestamp ASC",
+            (user_id,),
+        )
+        return [_row_to_log(r) for r in cur.fetchall()]
+
+
 @router.get("/meal-logs")
 @router.get("/meal_logs")
 async def get_meal_logs(user: Dict[str, Any] = Depends(get_current_user)):
     """
-    Retrieve all meal logs for the verified authenticated user.
+    Retrieve all meal logs for the verified authenticated user from SQLite.
     """
     user_id = user["id"]
-    return USER_MEAL_LOGS.get(user_id, [])
+    return get_user_meal_logs(user_id)
 
 
 @router.post("/meal-logs", status_code=status.HTTP_201_CREATED)
@@ -35,7 +66,7 @@ async def create_meal_log(
     user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
-    Record meal outcome (eaten or skipped with reason).
+    Record meal outcome (eaten or skipped with reason) into SQLite.
     Validates skip reason against: 'time', 'cost', 'taste', 'unavailable'.
     Persisted securely under user_id derived exclusively from JWT.
     """
@@ -57,22 +88,25 @@ async def create_meal_log(
                 detail=f"Invalid skip reason '{reason}'. Allowed values are: {sorted(ALLOWED_SKIP_REASONS)}.",
             )
 
-    if user_id not in USER_MEAL_LOGS:
-        USER_MEAL_LOGS[user_id] = []
-
+    log_id = f"log_{uuid.uuid4().hex[:12]}"
     now = datetime.now(timezone.utc).isoformat()
-    log_entry = {
-        "id": f"log_{uuid.uuid4().hex[:12]}",
-        "user_id": user_id,
-        "meal_id": log_data.get("meal_id"),
-        "status": raw_status,
-        "reason": reason if raw_status == "skipped" else None,
-        "item_tags": log_data.get("item_tags", []),
-        "timestamp": log_data.get("timestamp") or now,
-        "created_at": now,
-    }
+    meal_id = str(log_data.get("meal_id", ""))
+    reason_val = reason if raw_status == "skipped" else None
+    item_tags_json = json.dumps(log_data.get("item_tags", []))
+    timestamp = log_data.get("timestamp") or now
 
-    USER_MEAL_LOGS[user_id].append(log_entry)
+    with get_db_cursor() as cur:
+        cur.execute(
+            """
+            INSERT INTO meal_logs (id, user_id, meal_id, status, reason, item_tags, timestamp, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (log_id, user_id, meal_id, raw_status, reason_val, item_tags_json, timestamp, now),
+        )
+        cur.execute("SELECT * FROM meal_logs WHERE id = ?", (log_id,))
+        created_row = cur.fetchone()
+
+    log_entry = _row_to_log(created_row)
     return {"status": "success", "logged": log_entry}
 
 
@@ -80,11 +114,11 @@ async def create_meal_log(
 @router.get("/meal-logs/analytics")
 async def get_adherence_analytics(user: Dict[str, Any] = Depends(get_current_user)):
     """
-    Calculates real adherence and trend analytics strictly from the user's logged meals.
+    Calculates real adherence and trend analytics strictly from the user's logged meals in SQLite.
     No fabricated data. Used by frontend Recharts components.
     """
     user_id = user["id"]
-    logs = USER_MEAL_LOGS.get(user_id, [])
+    logs = get_user_meal_logs(user_id)
 
     total = len(logs)
     if total == 0:
@@ -109,7 +143,7 @@ async def get_adherence_analytics(user: Dict[str, Any] = Depends(get_current_use
             reason_counts[r] += 1
 
     # Group daily trends by date string
-    daily_groups: Dict[str, Dict[str, int]] = {}
+    daily_groups: Dict[str, Dict[str, Any]] = {}
     for l in logs:
         ts = l.get("timestamp") or l.get("created_at") or datetime.now(timezone.utc).isoformat()
         date_str = ts.split("T")[0]

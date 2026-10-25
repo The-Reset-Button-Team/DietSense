@@ -1,79 +1,66 @@
 """
 DietSense — FastAPI Dependency Injections
 
-Phase 1: Scaffold only.
-Phase 3 will implement get_db() with real Supabase/SQLAlchemy session.
-Phase 4 will implement get_current_user() with JWT validation.
+Extracts and validates verified user credentials from either:
+1. HttpOnly session cookies (for browser clients)
+2. Bearer tokens in Authorization header (for API / CLI clients)
 """
 
 import jwt
-from typing import Generator, Annotated, Optional
-from fastapi import Depends, HTTPException, status
+from datetime import datetime, timezone
+from typing import Generator, Annotated, Optional, Dict, Any
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.core.config import settings
+from app.core.security import decode_access_token, normalize_email
+from db.database import get_db_cursor, get_connection
 
-# ─── Security scheme ─────────────────────────────────────────────────────────
 security = HTTPBearer(auto_error=False)
 
 
-# ─── Database Session ─────────────────────────────────────────────────────────
 def get_db() -> Generator:
-    """
-    Yields a SQLAlchemy database session.
-    """
-    raise NotImplementedError("Database session not wired yet.")
+    """Yields a SQLite database connection within a safe transaction context."""
+    with get_db_cursor() as cur:
+        yield cur
 
 
-# ─── Current User ─────────────────────────────────────────────────────────────
 async def get_current_user(
-    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(security)],
-) -> dict:
+    request: Request,
+    credentials: Annotated[Optional[HTTPAuthorizationCredentials], Depends(security)] = None,
+) -> Dict[str, Any]:
     """
-    Validates the Supabase JWT from the Authorization header.
-    Verifies signature, expiry, and audience ('authenticated').
-    Extracts the user ID exclusively from the verified token ('sub').
-    Never logs or leaks the raw token.
+    Validates user authentication token from either:
+    - Authorization: Bearer <token>
+    - Cookie: dietsense_session=<token>
+
+    Extracts user identity strictly from the verified JWT 'sub' claim.
+    Never trusts client-supplied user IDs. Never logs the raw token.
+    Ensures authenticated identity is provisioned in SQLite users table.
     """
-    if credentials is None or not credentials.credentials:
+    token: Optional[str] = None
+
+    # 1. Check Bearer token from header
+    if credentials is not None and credentials.credentials:
+        token = credentials.credentials
+    elif "authorization" in request.headers:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            token = auth_header[7:].strip()
+
+    # 2. Check HttpOnly session cookie
+    if not token:
+        cookie_name = settings.session_cookie_name
+        token = request.cookies.get(cookie_name)
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Missing Authorization header or Bearer token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
-    secret = settings.jwt_secret
-    algorithm = settings.jwt_algorithm or "HS256"
-
     try:
-        # Inspect token header without verifying to check algorithm
-        unverified_header = jwt.get_unverified_header(token)
-        token_alg = unverified_header.get("alg", algorithm)
-
-        # Base decode options
-        decode_options = {
-            "verify_signature": True,
-            "verify_exp": True,
-            "verify_aud": bool(settings.jwt_audience),
-        }
-        decode_kwargs = {
-            "algorithms": [token_alg],
-            "options": decode_options,
-        }
-        if settings.jwt_audience:
-            decode_kwargs["audience"] = settings.jwt_audience
-
-        # If token is signed with asymmetric algorithm (e.g. ES256 for Supabase ECC P-256 or RS256)
-        if token_alg in ["ES256", "RS256"] and settings.supabase_url:
-            jwks_url = f"{settings.supabase_url.rstrip('/')}/auth/v1/.well-known/jwks.json"
-            jwks_client = jwt.PyJWKClient(jwks_url)
-            signing_key = jwks_client.get_signing_key_from_jwt(token)
-            decode_kwargs["key"] = signing_key.key
-        else:
-            decode_kwargs["key"] = secret
-            decode_kwargs["algorithms"] = [algorithm, "HS256"]
-
-        payload = jwt.decode(token, **decode_kwargs)
+        payload = decode_access_token(token)
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -107,8 +94,31 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    user_id_str = str(user_id)
+    raw_email = payload.get("email") or f"{user_id_str}@dietsense.local"
+    email = normalize_email(raw_email)
+    full_name = payload.get("user_metadata", {}).get("full_name") or email.split("@")[0]
+    now = datetime.now(timezone.utc).isoformat()
+
+    # Ensure user record exists in SQLite to satisfy foreign key integrity
+    with get_db_cursor() as cur:
+        cur.execute("SELECT id FROM users WHERE id = ?", (user_id_str,))
+        if not cur.fetchone():
+            # If email is already taken by another user_id, make it unique to avoid constraint collision
+            cur.execute("SELECT id FROM users WHERE email = ? COLLATE NOCASE", (email,))
+            existing = cur.fetchone()
+            effective_email = email if not existing else f"{user_id_str}_{email}"
+
+            cur.execute(
+                """
+                INSERT INTO users (id, email, password_hash, full_name, status, created_at, updated_at)
+                VALUES (?, ?, '', ?, 'active', ?, ?)
+                """,
+                (user_id_str, effective_email, full_name, now, now),
+            )
+
     return {
-        "id": str(user_id),
+        "id": user_id_str,
         "email": payload.get("email"),
         "role": payload.get("role", "authenticated"),
         "app_metadata": payload.get("app_metadata", {}),
