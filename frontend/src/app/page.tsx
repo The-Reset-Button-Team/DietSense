@@ -199,6 +199,22 @@ function MainApp() {
     });
   };
 
+  // Selected custom recipe per slot (overrides auto-selection if user manually swaps)
+  const [customSelectedRecipes, setCustomSelectedRecipes] = useState<Record<string, string>>({});
+
+  const handleSelectAlternative = (slotKey: string, recipeName: string) => {
+    setCustomSelectedRecipes((prev) => ({
+      ...prev,
+      [slotKey]: recipeName,
+    }));
+  };
+
+  const handleApplyPantryToMealPlan = () => {
+    // Reset manual overrides so smart pantry-first prioritization auto-selects best recipes for all slots
+    setCustomSelectedRecipes({});
+    setActiveTab("today");
+  };
+
   // Calculated Meal Plan Items
   const mealPlanDisplayItems = useMemo(
     () =>
@@ -209,15 +225,30 @@ function MainApp() {
         weekdayBreakfastEffort,
         weekdayLunchEffort,
         RECIPE_CATALOG,
-        pantryItems
+        pantryItems,
+        customSelectedRecipes,
+        true
       ),
-    [activeSlots, targetCalories, macros, weekdayBreakfastEffort, weekdayLunchEffort, pantryItems]
+    [
+      activeSlots,
+      targetCalories,
+      macros,
+      weekdayBreakfastEffort,
+      weekdayLunchEffort,
+      pantryItems,
+      customSelectedRecipes,
+    ]
   );
 
   const totalPlannedCals = mealPlanDisplayItems.reduce((acc, item) => acc + item.calories, 0);
   const totalPlannedProt = mealPlanDisplayItems.reduce((acc, item) => acc + item.protein, 0);
   const totalPlannedCarbs = mealPlanDisplayItems.reduce((acc, item) => acc + item.carbs, 0);
   const totalPlannedFat = mealPlanDisplayItems.reduce((acc, item) => acc + item.fat, 0);
+
+  const inStockPantryNames = useMemo(
+    () => pantryItems.filter((i) => i.inStock).map((i) => i.name),
+    [pantryItems]
+  );
 
   return (
     <main className="min-h-screen text-slate-800 p-3 sm:p-6 lg:p-10 flex flex-col items-center justify-start font-sans antialiased">
@@ -248,6 +279,9 @@ function MainApp() {
             carbsGrams={macros.carbsGrams}
             fatGrams={macros.fatGrams}
             onOpenRecipe={(recipe) => setActiveRecipeModal(recipe)}
+            onSelectAlternative={handleSelectAlternative}
+            inStockPantryNames={inStockPantryNames}
+            onGoToPantry={() => setActiveTab("pantry")}
           />
         )}
 
@@ -261,6 +295,7 @@ function MainApp() {
             togglePantryItem={togglePantryItem}
             onAddManualItem={handleAddManualPantryItem}
             onAddBatchItems={handleAddBatchPantryItems}
+            onApplyToMealPlan={handleApplyPantryToMealPlan}
           />
         )}
 

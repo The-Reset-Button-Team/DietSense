@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DietSense — DBMS Relational Schema Visualisation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f7f3ed;
+      color: #1e293b;
+    }
+    .font-serif-title {
+      font-family: 'Cinzel', serif;
+    }
+    .font-mono-code {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .table-card {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .table-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 30px -10px rgba(88, 24, 37, 0.12), 0 6px 12px -4px rgba(29, 78, 216, 0.08);
+    }
+    .table-card.selected {
+      border-color: #581825 !important;
+      box-shadow: 0 0 0 3px rgba(88, 24, 37, 0.2), 0 20px 35px -8px rgba(88, 24, 37, 0.18);
+    }
+    .table-card.dimmed {
+      opacity: 0.3;
+      filter: grayscale(0.5);
+    }
+    .badge-pk {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+    .badge-fk {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .badge-uq {
+      background: #fdf2f8;
+      color: #9d174d;
+      border: 1px solid #fbcfe8;
+    }
+    /* Custom scrollbars */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1ebe1;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d8c8b8;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="p-3 sm:p-6 lg:p-8 antialiased selection:bg-[#581825] selection:text-white">
+
+  <!-- Container -->
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Top Navigation / Back bar -->
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-[#faf7f2] border border-[#e8ded3] shadow-md relative overflow-hidden">
+      <!-- Glow ambient backdrop -->
+      <div class="absolute -right-20 -top-20 w-80 h-80 bg-rose-200/40 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -left-20 -bottom-20 w-80 h-80 bg-blue-200/30 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div class="relative z-10">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-semibold mb-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>DietSense Local SQLite DBMS · 10 Tables · 14,181+ Records</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl md:text-4xl font-serif-title font-bold text-[#421018] tracking-tight">
+          Relational Database <span class="text-[#1d4ed8]">Schema Visualisation</span>
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-600 mt-1 max-w-3xl">
+          Complete physical and logical schema representation for DietSense. Click any table to inspect column data types, foreign keys, cascade rules, indices, and parameterized SQL queries.
+        </p>
+      </div>
+
+      <div class="relative z-10 flex items-center gap-3 shrink-0">
+        <button onclick="window.print()" class="px-4 py-2 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5">
+          <span>🖨️</span> Print / Export
+        </button>
+        <button onclick="resetSelection()" class="px-4 py-2 rounded-xl bg-[#581825] hover:bg-[#421018] text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5">
+          <span>🔄</span> Reset Highlights
+        </button>
+      </div>
+    </header>
+
+    <!-- Metrics Bar -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      <div class="p-4 rounded-2xl bg-white border border-[#e8ded3] shadow-xs">
+        <span class="text-[10px] uppercase font-bold text-slate-400">DBMS Engine</span>
+        <div class="flex items-center gap-1.5 mt-1">
+          <span class="text-lg">🗄️</span>
+          <span class="text-sm font-bold text-[#421018]">SQLite 3 (WAL Mode)</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-0.5 font-mono">PRAGMA foreign_keys = ON</p>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-white border border-[#e8ded3] shadow-xs">
+        <span class="text-[10px] uppercase font-bold text-slate-400">Total Entities</span>
+        <div class="flex items-center gap-1.5 mt-1">
+          <span class="text-lg">📊</span>
+          <span class="text-sm font-bold text-[#1d4ed8]">10 Core Tables</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-0.5">5 Per-User, 5 Reference</p>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-white border border-[#e8ded3] shadow-xs">
+        <span class="text-[10px] uppercase font-bold text-slate-400">Authoritative Catalog</span>
+        <div class="flex items-center gap-1.5 mt-1">
+          <span class="text-lg">🥗</span>
+          <span class="text-sm font-bold text-emerald-700">14,181 Foods</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-0.5">USDA: 13,694 · ICMR-NIN: 487</p>
+      </div>
+
+      <div class="p-4 rounded-2xl bg-white border border-[#e8ded3] shadow-xs">
+        <span class="text-[10px] uppercase font-bold text-slate-400">Data Isolation &amp; Auth</span>
+        <div class="flex items-center gap-1.5 mt-1">
+          <span class="text-lg">🔒</span>
+          <span class="text-sm font-bold text-[#581825]">Strict user_id FKs</span>
+        </div>
+        <p class="text-[11px] text-slate-500 mt-0.5">ON DELETE CASCADE enforced</p>
+      </div>
+    </div>
+
+    <!-- Domain Filters -->
+    <div class="flex items-center gap-2 flex-wrap pb-1">
+      <span class="text-xs font-bold text-slate-500 mr-1">Filter by Domain:</span>
+      <button onclick="filterDomain('all')" id="btn-all" class="domain-btn active px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-[#581825] text-white border border-[#581825] transition-all">
+        All Tables (10)
+      </button>
+      <button onclick="filterDomain('user')" id="btn-user" class="domain-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-[#d8c8b8] hover:border-[#581825] transition-all">
+        👤 User &amp; Profile (2)
+      </button>
+      <button onclick="filterDomain('meal')" id="btn-meal" class="domain-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-[#d8c8b8] hover:border-[#581825] transition-all">
+        🍽️ Meal Plans &amp; Logs (3)
+      </button>
+      <button onclick="filterDomain('pantry')" id="btn-pantry" class="domain-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-[#d8c8b8] hover:border-[#581825] transition-all">
+        🛒 Pantry &amp; Scanner (1)
+      </button>
+      <button onclick="filterDomain('nutrition')" id="btn-nutrition" class="domain-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold bg-white text-slate-700 border border-[#d8c8b8] hover:border-[#581825] transition-all">
+        🌿 Nutrition Reference (4)
+      </button>
+    </div>
+
+    <!-- Schema Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="schema-grid">
+
+      <!-- ================= 1. USERS ================= -->
+      <div id="table-users" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="user" data-table="users" onclick="selectTable('users')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-[#581825]/10 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-[#581825] text-white text-sm">👤</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">users</h3>
+            </div>
+            <span class="text-[10px] bg-[#fdf2f4] text-[#581825] font-bold px-2 py-0.5 rounded-full border border-[#fbcfe8]">
+              Central Identity Root
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (UUID)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-800"><span class="badge-uq px-1 py-0.5 rounded text-[9px] mr-1">UQ</span> email</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT COLLATE NOCASE</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">password_hash</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (Bcrypt)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">full_name</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">status</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('active')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between text-slate-400">
+              <span>created_at / updated_at</span>
+              <span class="font-sans text-[10px]">TEXT (ISO-8601)</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span class="font-semibold text-[#581825]">🔗 Outgoing: 5 1:N relations</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 2. PROFILES ================= -->
+      <div id="table-profiles" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="user" data-table="profiles" onclick="selectTable('profiles')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-blue-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-[#1d4ed8] text-white text-sm">🧬</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">profiles</h3>
+            </div>
+            <span class="text-[10px] bg-blue-50 text-[#1d4ed8] font-bold px-2 py-0.5 rounded-full border border-blue-200">
+              1:1 to Users
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> user_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ users.id (CASCADE)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">dietary_pref</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('vegetarian')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">allergies</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (JSON array)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">target_calories</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER (2000)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">budget_per_meal</span>
+              <span class="text-slate-500 font-sans text-[10px]">REAL (100.0)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">prep_time_limit</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER (30m)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">age, gender, height, weight</span>
+              <span class="text-slate-500 font-sans text-[10px]">Biometrics</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span>Index: <span class="font-mono">idx_profiles_user_id</span></span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 3. MEAL_PLANS ================= -->
+      <div id="table-meal_plans" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="meal" data-table="meal_plans" onclick="selectTable('meal_plans')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-amber-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-amber-600 text-white text-sm">📅</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">meal_plans</h3>
+            </div>
+            <span class="text-[10px] bg-amber-50 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+              Daily User Plans
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> user_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ users.id (CASCADE)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">date</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (YYYY-MM-DD)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">target_calories</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">items</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (JSON meal slots)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">status</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('generated')</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span>Items reference <span class="font-mono text-emerald-800">foods.id</span></span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 4. MEAL_LOGS ================= -->
+      <div id="table-meal_logs" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="meal" data-table="meal_logs" onclick="selectTable('meal_logs')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-emerald-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-emerald-600 text-white text-sm">📝</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">meal_logs</h3>
+            </div>
+            <span class="text-[10px] bg-emerald-50 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-200">
+              Adaptive Feedback Loop
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> user_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ users.id (CASCADE)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">meal_id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700 font-semibold text-emerald-700">status</span>
+              <span class="text-slate-500 font-sans text-[10px]">CHECK ('eaten' | 'skipped')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700 font-semibold text-amber-700">reason</span>
+              <span class="text-slate-500 font-sans text-[10px]">CHECK ('time'|'cost'|'taste'|'unavailable')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">item_tags</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (JSON tags)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between text-slate-400">
+              <span>timestamp</span>
+              <span class="font-sans text-[10px]">TEXT (ISO-8601)</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span class="font-semibold text-emerald-700">Powers Recharts Analytics</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 5. FEEDBACK ================= -->
+      <div id="table-feedback" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="meal" data-table="feedback" onclick="selectTable('feedback')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-purple-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-purple-600 text-white text-sm">⭐</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">feedback</h3>
+            </div>
+            <span class="text-[10px] bg-purple-50 text-purple-800 font-bold px-2 py-0.5 rounded-full border border-purple-200">
+              User Meal Ratings
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> user_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ users.id (CASCADE)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">meal_id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">status</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">derived_penalty_tag</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">feedback_text</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span>Feeds ML reweighting</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 6. PANTRY_ITEMS ================= -->
+      <div id="table-pantry_items" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="pantry" data-table="pantry_items" onclick="selectTable('pantry_items')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-emerald-50 to-amber-50 border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-emerald-600 text-white text-sm">📦</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">pantry_items</h3>
+            </div>
+            <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full border border-emerald-300">
+              Scanned Bills &amp; Stock
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> user_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ users.id (CASCADE)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-800 font-semibold">name</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (e.g. Paneer)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">category</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('Dairy &amp; Protein')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">quantity</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('250g')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">in_stock</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER (1=True, 0=False)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">source</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('receipt' | 'fridge' | 'manual')</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span class="font-semibold text-emerald-800">Auto-plans recipes from stock</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 7. FOODS (AUTHORITATIVE CATALOG) ================= -->
+      <div id="table-foods" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between md:col-span-2 lg:col-span-2" data-domain="nutrition" data-table="foods" onclick="selectTable('foods')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-emerald-50 via-teal-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-teal-700 text-white text-sm">🥗</span>
+              <div>
+                <h3 class="font-serif-title font-bold text-sm text-[#421018]">foods</h3>
+                <p class="text-[10px] text-slate-500 font-sans">Authoritative Reference Food Dataset (USDA + ICMR-NIN)</p>
+              </div>
+            </div>
+            <span class="text-xs bg-emerald-100 text-emerald-900 font-bold px-3 py-1 rounded-full border border-emerald-300">
+              14,181 Rows · 0 NaNs
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 p-3 text-[11px] font-mono-code divide-y sm:divide-y-0 divide-slate-100">
+            <div class="space-y-1.5">
+              <div class="py-1 flex items-center justify-between">
+                <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+                <span class="text-slate-500 font-sans text-[10px]">INTEGER AUTOINCREMENT</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-800 font-semibold">name, name_local</span>
+                <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-800"><span class="badge-uq px-1 py-0.5 rounded text-[9px] mr-1">UQ</span> data_source, external_id</span>
+                <span class="text-slate-500 font-sans text-[10px]">USDA / ICMR_NIN</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-700">food_category</span>
+                <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-800 font-bold text-emerald-800">calories_kcal</span>
+                <span class="text-slate-500 font-sans text-[10px]">REAL NOT NULL</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-700">protein_g, carbohydrates_g, fat_g</span>
+                <span class="text-slate-500 font-sans text-[10px]">REAL NOT NULL (Macros)</span>
+              </div>
+            </div>
+
+            <div class="space-y-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 sm:border-l sm:border-slate-100 sm:pl-4">
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-700">fiber_g, sugar_g, sodium_mg</span>
+                <span class="text-slate-500 font-sans text-[10px]">REAL NOT NULL</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-700">potassium, calcium, iron, zinc</span>
+                <span class="text-slate-500 font-sans text-[10px]">REAL (Micronutrients)</span>
+              </div>
+              <div class="py-1 flex items-center justify-between">
+                <span class="text-slate-700">vitamin_a, vitamin_c, vitamin_d</span>
+                <span class="text-slate-500 font-sans text-[10px]">REAL</span>
+              </div>
+              <div class="py-1 flex items-center justify-between bg-emerald-50/50 px-1 rounded">
+                <span class="font-bold text-emerald-800">is_vegetarian, is_vegan, is_gluten_free</span>
+                <span class="text-slate-500 font-sans text-[10px]">BOOLEAN</span>
+              </div>
+              <div class="py-1 flex items-center justify-between bg-rose-50/50 px-1 rounded">
+                <span class="font-bold text-rose-800">allergen_flags</span>
+                <span class="text-slate-500 font-sans text-[10px]">TEXT (Hard Safety Gate)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span class="font-semibold text-teal-800">Rule 1: Never altered or written by LLM</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 8. FACT_SHEETS ================= -->
+      <div id="table-fact_sheets" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="nutrition" data-table="fact_sheets" onclick="selectTable('fact_sheets')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-teal-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-teal-600 text-white text-sm">📑</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">fact_sheets</h3>
+            </div>
+            <span class="text-[10px] bg-teal-50 text-teal-800 font-bold px-2 py-0.5 rounded-full border border-teal-200">
+              WHO Dietary Guidelines
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER AUTOINCREMENT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-800 font-semibold">title</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT NOT NULL</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">publisher</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT ('WHO')</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">content_json</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span>Parent of nutrient rules</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 9. NUTRIENT_RECOMMENDATIONS ================= -->
+      <div id="table-nutrient_recommendations" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="nutrition" data-table="nutrient_recommendations" onclick="selectTable('nutrient_recommendations')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-teal-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-teal-600 text-white text-sm">🧪</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">nutrient_recommendations</h3>
+            </div>
+            <span class="text-[10px] bg-teal-50 text-teal-800 font-bold px-2 py-0.5 rounded-full border border-teal-200">
+              WHO Energy Split
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER AUTOINCREMENT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> fact_sheet_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ fact_sheets.id</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">category, target_population</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">min_energy_pct, max_energy_pct</span>
+              <span class="text-slate-500 font-sans text-[10px]">REAL (% of calories)</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span>50% Carbs, 20% Prot, 30% Fat</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+      <!-- ================= 10. QUANTITATIVE_TARGETS ================= -->
+      <div id="table-quantitative_targets" class="table-card rounded-2xl bg-white border border-[#e8ded3] shadow-sm overflow-hidden flex flex-col justify-between" data-domain="nutrition" data-table="quantitative_targets" onclick="selectTable('quantitative_targets')">
+        <div>
+          <div class="p-4 bg-gradient-to-r from-teal-50 to-transparent border-b border-[#e8ded3] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 rounded-lg bg-teal-600 text-white text-sm">🎯</span>
+              <h3 class="font-serif-title font-bold text-sm text-[#421018]">quantitative_targets</h3>
+            </div>
+            <span class="text-[10px] bg-teal-50 text-teal-800 font-bold px-2 py-0.5 rounded-full border border-teal-200">
+              Macro/Micro Targets
+            </span>
+          </div>
+          <div class="p-3 text-[11px] font-mono-code divide-y divide-slate-100">
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="font-semibold text-slate-900"><span class="badge-pk px-1 py-0.5 rounded text-[9px] mr-1">PK</span> id</span>
+              <span class="text-slate-500 font-sans text-[10px]">INTEGER AUTOINCREMENT</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between bg-blue-50/50 px-1 rounded">
+              <span class="font-semibold text-[#1d4ed8]"><span class="badge-fk px-1 py-0.5 rounded text-[9px] mr-1">FK</span> fact_sheet_id</span>
+              <span class="text-[#1d4ed8] font-sans text-[10px]">→ fact_sheets.id</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">target_name, unit</span>
+              <span class="text-slate-500 font-sans text-[10px]">TEXT (e.g. Free Sugars, Salt)</span>
+            </div>
+            <div class="py-1.5 flex items-center justify-between">
+              <span class="text-slate-700">min_value, max_value</span>
+              <span class="text-slate-500 font-sans text-[10px]">REAL Bounds</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-2.5 bg-[#faf7f2] border-t border-slate-100 text-[10px] text-slate-600 flex items-center justify-between">
+          <span>Clinical validation bounds</span>
+          <span class="underline text-slate-500 cursor-pointer">Inspect DDL</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Inspector Modal / Drawer -->
+    <div id="inspector-modal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+      <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] overflow-y-auto border border-[#e8ded3] shadow-2xl p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div class="flex items-center gap-2">
+            <span id="modal-icon" class="text-2xl">📋</span>
+            <div>
+              <h3 id="modal-title" class="font-serif-title font-bold text-lg text-[#421018]">Table Name</h3>
+              <p id="modal-subtitle" class="text-xs text-slate-500">Domain &amp; Role</p>
+            </div>
+          </div>
+          <button onclick="closeInspector()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center text-sm font-bold">
+            ✕
+          </button>
+        </div>
+
+        <div>
+          <h4 class="text-xs uppercase font-bold text-slate-500">Exact SQLite DDL Statement</h4>
+          <pre id="modal-ddl" class="mt-1 p-3 bg-slate-900 text-emerald-400 rounded-xl text-xs font-mono-code overflow-x-auto"></pre>
+        </div>
+
+        <div>
+          <h4 class="text-xs uppercase font-bold text-slate-500">Security &amp; User Isolation in Code</h4>
+          <pre id="modal-query" class="mt-1 p-3 bg-slate-900 text-blue-300 rounded-xl text-xs font-mono-code overflow-x-auto"></pre>
+        </div>
+
+        <div id="modal-notes" class="text-xs text-slate-600 bg-[#faf7f2] p-3 rounded-xl border border-[#ebdcd0]">
+        </div>
+      </div>
+    </div>
+
+    <!-- Architecture & Viva Notes Footer -->
+    <footer class="p-6 rounded-3xl bg-[#faf7f2] border border-[#e8ded3] shadow-sm space-y-3">
+      <div class="flex items-center gap-2">
+        <span class="text-xl">🎓</span>
+        <h3 class="font-serif-title font-bold text-base text-[#421018]">
+          Teacher Viva &amp; DBMS Architecture Defense Guide
+        </h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+        <div class="space-y-1">
+          <p class="font-bold text-slate-800">1. Why Local SQLite instead of Cloud DB?</p>
+          <p>
+            Complete privacy, zero cloud hosting bills, zero network latency, and 100% offline functionality. SQLite with WAL mode supports concurrent reads and fast transactions for local workloads.
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <p class="font-bold text-slate-800">2. How is Multi-Tenant Isolation Enforced?</p>
+          <p>
+            Every table referencing user data has a foreign key to <code class="font-mono bg-white px-1 border">users.id</code> with <code class="font-mono bg-white px-1 border">ON DELETE CASCADE</code>. FastAPI derives <code class="font-mono">user_id</code> exclusively from the verified JWT token on every query.
+          </p>
+        </div>
+
+        <div class="space-y-1">
+          <p class="font-bold text-slate-800">3. Where Do Nutrition Numbers Come From?</p>
+          <p>
+            Strictly from the <code class="font-mono bg-white px-1 border">foods</code> table (14,181 rows from USDA &amp; ICMR-NIN). The recommendation engine scores and ranks them deterministically; an LLM never touches calorie or macro values.
+          </p>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-[#e8ded3] flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500">
+        <span>DietSense · Adaptive AI Meal Planning System</span>
+        <span class="font-medium text-[#581825]">Physical &amp; Logical Relational Schema</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Client-side Logic for Interactivity -->
+  <script>
+    const TABLE_METADATA = {
+      users: {
+        icon: "👤",
+        title: "users",
+        subtitle: "Auth & Identity Domain · Primary Root Entity",
+        ddl: `CREATE TABLE users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL COLLATE NOCASE,
+    password_hash TEXT NOT NULL,
+    full_name TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'active',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);`,
+        query: `-- Authentication & Token Generation:
+SELECT id, password_hash FROM users WHERE email = ? COLLATE NOCASE;
+
+-- User Profile Sync:
+SELECT id, email, full_name FROM users WHERE id = ?;`,
+        notes: "Passwords hashed with Bcrypt (never plaintext). Email is indexed with COLLATE NOCASE for case-insensitive lookup."
+      },
+      profiles: {
+        icon: "🧬",
+        title: "profiles",
+        subtitle: "User Domain · 1:1 Personalization & Biometrics",
+        ddl: `CREATE TABLE profiles (
+    id TEXT PRIMARY KEY,
+    user_id TEXT UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    email TEXT NOT NULL COLLATE NOCASE,
+    full_name TEXT NOT NULL DEFAULT '',
+    dietary_pref TEXT NOT NULL DEFAULT 'vegetarian',
+    allergies TEXT NOT NULL DEFAULT '[]',
+    target_calories INTEGER NOT NULL DEFAULT 2000,
+    budget_per_meal REAL NOT NULL DEFAULT 100.0,
+    prep_time_limit INTEGER NOT NULL DEFAULT 30,
+    is_solo_cook INTEGER NOT NULL DEFAULT 1,
+    active_meal_frequency TEXT NOT NULL DEFAULT '3_meals',
+    age INTEGER NOT NULL DEFAULT 26,
+    gender TEXT NOT NULL DEFAULT 'male',
+    height_cm REAL NOT NULL DEFAULT 175.0,
+    weight_kg REAL NOT NULL DEFAULT 75.0,
+    goal TEXT NOT NULL DEFAULT 'lose_weight',
+    activity_level TEXT NOT NULL DEFAULT 'lightly_active',
+    preferred_cuisines TEXT NOT NULL DEFAULT '["indian"]',
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);`,
+        query: `-- Fetching isolated profile for authenticated user:
+SELECT * FROM profiles WHERE user_id = ?;
+
+-- Updating biometrics and preferences:
+UPDATE profiles SET dietary_pref = ?, allergies = ?, updated_at = ?
+WHERE user_id = ?;`,
+        notes: "Stores hard safety constraints (dietary_pref, allergies) used by ml/scoring/safety_gate.py before scoring."
+      },
+      meal_plans: {
+        icon: "📅",
+        title: "meal_plans",
+        subtitle: "Meal Domain · Saved Daily Meal Plans",
+        ddl: `CREATE TABLE meal_plans (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    date TEXT NOT NULL,
+    target_calories INTEGER NOT NULL DEFAULT 2000,
+    items TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'generated',
+    created_at TEXT NOT NULL
+);`,
+        query: `-- Fetching daily plan:
+SELECT * FROM meal_plans WHERE user_id = ? AND date = ?;
+
+-- Saving generated plan:
+INSERT INTO meal_plans (id, user_id, date, target_calories, items, created_at)
+VALUES (?, ?, ?, ?, ?, ?);`,
+        notes: "Items column stores JSON array of recommended meal slots, referencing foods.id."
+      },
+      meal_logs: {
+        icon: "📝",
+        title: "meal_logs",
+        subtitle: "Meal Domain · Outcomes & Skip Reasons",
+        ddl: `CREATE TABLE meal_logs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    meal_id TEXT,
+    status TEXT NOT NULL CHECK (status IN ('eaten', 'skipped')),
+    reason TEXT CHECK (reason IS NULL OR reason IN ('time', 'cost', 'taste', 'unavailable')),
+    item_tags TEXT NOT NULL DEFAULT '[]',
+    timestamp TEXT NOT NULL,
+    created_at TEXT NOT NULL
+);`,
+        query: `-- Feeds the Adaptive Loop:
+SELECT status, reason, item_tags FROM meal_logs 
+WHERE user_id = ? 
+ORDER BY created_at DESC LIMIT 50;
+
+-- Aggregated Progress Analytics for Recharts:
+SELECT status, count(*) FROM meal_logs WHERE user_id = ? GROUP BY status;`,
+        notes: "SQL CHECK constraints guarantee that only valid skip reasons ('time', 'cost', 'taste', 'unavailable') can be saved."
+      },
+      feedback: {
+        icon: "⭐",
+        title: "feedback",
+        subtitle: "Meal Domain · Ratings & Re-weighting Notes",
+        ddl: `CREATE TABLE feedback (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    meal_id TEXT,
+    status TEXT NOT NULL,
+    reason TEXT,
+    feedback_text TEXT,
+    derived_penalty_tag TEXT,
+    created_at TEXT NOT NULL
+);`,
+        query: `SELECT * FROM feedback WHERE user_id = ? ORDER BY created_at DESC;`,
+        notes: "Stores user feedback that directly maps into penalty weights."
+      },
+      pantry_items: {
+        icon: "📦",
+        title: "pantry_items",
+        subtitle: "Pantry Domain · Grocery Bills & Fridge Snapshots",
+        ddl: `CREATE TABLE pantry_items (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'General',
+    quantity TEXT NOT NULL DEFAULT '1 unit',
+    in_stock INTEGER NOT NULL DEFAULT 1,
+    source TEXT NOT NULL DEFAULT 'manual',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);`,
+        query: `-- Fetching in-stock items to calculate recipe matches:
+SELECT name, category, quantity FROM pantry_items 
+WHERE user_id = ? AND in_stock = 1;
+
+-- Toggling stock status:
+UPDATE pantry_items SET in_stock = ?, updated_at = ? WHERE id = ? AND user_id = ?;`,
+        notes: "Created via Blinkit receipt scanner, fridge photo analysis, or manual entry. Directly prioritized in Today's Meal Plan."
+      },
+      foods: {
+        icon: "🥗",
+        title: "foods",
+        subtitle: "Authoritative Reference Catalog · 14,181 Foods",
+        ddl: `CREATE TABLE foods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    name_local TEXT,
+    data_source TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    food_category TEXT NOT NULL,
+    calories_kcal REAL NOT NULL,
+    protein_g REAL NOT NULL,
+    carbohydrates_g REAL NOT NULL,
+    fat_g REAL NOT NULL,
+    fiber_g REAL NOT NULL,
+    sugar_g REAL NOT NULL,
+    saturated_fat_g REAL,
+    trans_fat_g REAL,
+    sodium_mg REAL NOT NULL,
+    potassium_mg REAL,
+    calcium_mg REAL,
+    iron_mg REAL,
+    zinc_mg REAL,
+    vitamin_c_mg REAL,
+    vitamin_a_mcg REAL,
+    vitamin_d_mcg REAL,
+    is_vegetarian BOOLEAN NOT NULL,
+    is_vegan BOOLEAN NOT NULL,
+    is_gluten_free BOOLEAN NOT NULL,
+    allergen_flags TEXT NOT NULL,
+    UNIQUE(data_source, external_id)
+);`,
+        query: `-- Candidate generation for recommendation engine:
+SELECT * FROM foods 
+WHERE calories_kcal > 50 
+LIMIT 50;`,
+        notes: "Strict reference table populated by ETL scripts (scripts/etl_usda.py and scripts/etl_ifct.py). Zero NaN values in calories_kcal."
+      },
+      fact_sheets: {
+        icon: "📑",
+        title: "fact_sheets",
+        subtitle: "WHO Evidence Base · Reference Guidelines",
+        ddl: `CREATE TABLE fact_sheets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    publisher TEXT,
+    source_url TEXT UNIQUE,
+    publication_date TEXT,
+    reading_time_minutes INTEGER,
+    word_count INTEGER,
+    content_json TEXT
+);`,
+        query: `SELECT * FROM fact_sheets WHERE publisher = 'WHO';`,
+        notes: "Master table holding authoritative nutritional guidelines and dietary fact sheets."
+      },
+      nutrient_recommendations: {
+        icon: "🧪",
+        title: "nutrient_recommendations",
+        subtitle: "WHO Evidence Base · Macronutrient Splits",
+        ddl: `CREATE TABLE nutrient_recommendations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fact_sheet_id INTEGER,
+    category TEXT NOT NULL,
+    target_population TEXT,
+    min_energy_pct REAL,
+    max_energy_pct REAL,
+    unit TEXT,
+    notes TEXT,
+    FOREIGN KEY (fact_sheet_id) REFERENCES fact_sheets(id)
+);`,
+        query: `SELECT * FROM nutrient_recommendations WHERE fact_sheet_id = ?;`,
+        notes: "Defines target calorie percentages (e.g. carbohydrates 45-55%, protein 15-25%, healthy fats 25-35%)."
+      },
+      quantitative_targets: {
+        icon: "🎯",
+        title: "quantitative_targets",
+        subtitle: "WHO Evidence Base · Nutrient Constraints",
+        ddl: `CREATE TABLE quantitative_targets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fact_sheet_id INTEGER,
+    category TEXT NOT NULL,
+    target_name TEXT NOT NULL,
+    population TEXT NOT NULL,
+    min_value REAL,
+    max_value REAL,
+    unit TEXT NOT NULL,
+    FOREIGN KEY (fact_sheet_id) REFERENCES fact_sheets(id)
+);`,
+        query: `SELECT * FROM quantitative_targets WHERE fact_sheet_id = ?;`,
+        notes: "Quantitative benchmarks for salt (<5g/day), free sugars (<10% energy), potassium, etc."
+      }
+    };
+
+    // Filter by Domain
+    function filterDomain(domain) {
+      document.querySelectorAll('.domain-btn').forEach(b => {
+        b.classList.remove('bg-[#581825]', 'text-white', 'border-[#581825]');
+        b.classList.add('bg-white', 'text-slate-700', 'border-[#d8c8b8]');
+      });
+      const activeBtn = document.getElementById(`btn-${domain}`);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-[#581825]', 'text-white', 'border-[#581825]');
+        activeBtn.classList.remove('bg-white', 'text-slate-700', 'border-[#d8c8b8]');
+      }
+
+      const cards = document.querySelectorAll('.table-card');
+      cards.forEach(card => {
+        if (domain === 'all' || card.dataset.domain === domain) {
+          card.classList.remove('hidden');
+          card.classList.remove('dimmed');
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+    }
+
+    // Select Table & Highlight Relations
+    function selectTable(tableName) {
+      const cards = document.querySelectorAll('.table-card');
+      cards.forEach(c => {
+        c.classList.remove('selected', 'dimmed');
+      });
+
+      const selected = document.getElementById(`table-${tableName}`);
+      if (selected) {
+        selected.classList.add('selected');
+
+        // Dim unrelated tables
+        cards.forEach(c => {
+          const t = c.dataset.table;
+          const isRelated = 
+            (tableName === 'users' && ['profiles', 'meal_plans', 'meal_logs', 'feedback', 'pantry_items'].includes(t)) ||
+            (['profiles', 'meal_plans', 'meal_logs', 'feedback', 'pantry_items'].includes(tableName) && t === 'users') ||
+            (tableName === 'fact_sheets' && ['nutrient_recommendations', 'quantitative_targets'].includes(t)) ||
+            (['nutrient_recommendations', 'quantitative_targets'].includes(tableName) && t === 'fact_sheets') ||
+            (t === tableName);
+
+          if (!isRelated) {
+            c.classList.add('dimmed');
+          }
+        });
+      }
+
+      openInspector(tableName);
+    }
+
+    function resetSelection() {
+      document.querySelectorAll('.table-card').forEach(c => {
+        c.classList.remove('selected', 'dimmed');
+      });
+      filterDomain('all');
+    }
+
+    // Inspector Modal
+    function openInspector(tableName) {
+      const meta = TABLE_METADATA[tableName];
+      if (!meta) return;
+
+      document.getElementById('modal-icon').innerText = meta.icon;
+      document.getElementById('modal-title').innerText = meta.title;
+      document.getElementById('modal-subtitle').innerText = meta.subtitle;
+      document.getElementById('modal-ddl').innerText = meta.ddl;
+      document.getElementById('modal-query').innerText = meta.query;
+      document.getElementById('modal-notes').innerHTML = `<strong>Architectural Note:</strong> ${meta.notes}`;
+
+      document.getElementById('inspector-modal').classList.remove('hidden');
+    }
+
+    function closeInspector() {
+      document.getElementById('inspector-modal').classList.add('hidden');
+    }
+
+    // Close modal on escape
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeInspector();
+    });
+  </script>
+</body>
+</html>

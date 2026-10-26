@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { MealFrequency, RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 import { MealCard } from "./MealCard";
@@ -17,6 +17,9 @@ interface MealPlanViewProps {
   carbsGrams: number;
   fatGrams: number;
   onOpenRecipe: (recipe: RecipeData) => void;
+  onSelectAlternative?: (slotKey: string, recipeName: string) => void;
+  inStockPantryNames?: string[];
+  onGoToPantry?: () => void;
 }
 
 export const MealPlanView: React.FC<MealPlanViewProps> = ({
@@ -33,6 +36,9 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   carbsGrams,
   fatGrams,
   onOpenRecipe,
+  onSelectAlternative,
+  inStockPantryNames,
+  onGoToPantry,
 }) => {
   const borderColors = [
     "border-l-[#0284c7]",
@@ -44,6 +50,43 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
 
   return (
     <div className="relative z-10 space-y-4">
+      {/* Smart Pantry-to-Plate Sync Banner */}
+      {inStockPantryNames && inStockPantryNames.length > 0 && (
+        <div className="rounded-2xl bg-gradient-to-r from-emerald-50 via-[#faf7f2] to-amber-50 p-4 border border-emerald-200/80 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-start sm:items-center gap-3">
+            <span className="p-2.5 rounded-2xl bg-emerald-600 text-white text-xl shadow-xs">
+              📦
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="font-serif font-bold text-sm text-[#421018]">
+                  Pantry &amp; Scanned Bill Synced
+                </h4>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {inStockPantryNames.length} Scanned Items Active
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Today&apos;s meals automatically prioritized to use your fresh{" "}
+                <span className="font-semibold text-emerald-900">
+                  {inStockPantryNames.slice(0, 5).join(", ")}
+                  {inStockPantryNames.length > 5 ? "..." : ""}
+                </span>{" "}
+                first to prevent grocery waste!
+              </p>
+            </div>
+          </div>
+          {onGoToPantry && (
+            <button
+              onClick={onGoToPantry}
+              className="px-3.5 py-2 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-600 hover:text-white text-emerald-800 text-xs font-semibold transition-all shadow-xs shrink-0 flex items-center gap-1.5"
+            >
+              <span>📸</span> Scan Bill / Edit Pantry
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Solo Routine Quick Bar */}
       <div className="rounded-2xl bg-white p-4 border border-[#e8ded3] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5">
@@ -90,6 +133,7 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
             item={item}
             borderColor={borderColors[index % borderColors.length]}
             onOpenRecipe={onOpenRecipe}
+            onSelectAlternative={onSelectAlternative}
           />
         ))}
       </div>

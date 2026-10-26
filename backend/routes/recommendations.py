@@ -97,6 +97,32 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 24.0,
         "fat_g": 6.0,
     },
+    {
+        "id": 7,
+        "name": "Masala Paneer Bhurji with Whole Wheat Toast",
+        "tags": ["veg", "breakfast", "quick", "high-protein", "indian", "dairy", "bread"],
+        "allergens": ["dairy", "gluten"],
+        "cuisine": "indian",
+        "cost_estimate": 65,
+        "prep_time": 10,
+        "calories": 390,
+        "protein_g": 22.0,
+        "carbs_g": 38.0,
+        "fat_g": 14.0,
+    },
+    {
+        "id": 8,
+        "name": "Fresh Palak Paneer & Brown Rice with Dahi Bowl",
+        "tags": ["veg", "lunch", "dinner", "high-protein", "indian", "iron-rich", "dairy"],
+        "allergens": ["dairy"],
+        "cuisine": "indian",
+        "cost_estimate": 95,
+        "prep_time": 20,
+        "calories": 480,
+        "protein_g": 24.0,
+        "carbs_g": 52.0,
+        "fat_g": 16.0,
+    },
 ]
 
 

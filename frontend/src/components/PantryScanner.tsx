@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { PantryItem } from "@/types";
+import React, { useState, useRef, useMemo } from "react";
+import { PantryItem, RecipeData } from "@/types";
 import { apiClient } from "@/lib/api-client";
+import { RECIPE_CATALOG } from "@/data/recipes";
+import { checkPantryMatch } from "@/lib/nutrition";
 
 export interface DetectedItem {
   name: string;
@@ -17,6 +19,7 @@ interface PantryScannerProps {
   togglePantryItem: (id: string) => void;
   onAddManualItem: (name: string) => void;
   onAddBatchItems?: (items: Array<{ name: string; category?: string; quantity?: string }>) => void;
+  onApplyToMealPlan?: () => void;
 }
 
 export const PantryScanner: React.FC<PantryScannerProps> = ({
@@ -24,6 +27,7 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
   togglePantryItem,
   onAddManualItem,
   onAddBatchItems,
+  onApplyToMealPlan,
 }) => {
   const [pantryInputText, setPantryInputText] = useState<string>("");
   const [isScanning, setIsScanning] = useState<boolean>(false);
@@ -215,6 +219,35 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
     );
   };
 
+  // Virtual pantry combining selected detected items + current in-stock pantry items
+  const virtualPantry: PantryItem[] = useMemo(() => {
+    const selected = detectedItems.filter((i) => i.selected);
+    const virtualItems: PantryItem[] = selected.map((item, idx) => ({
+      id: `virtual_${idx}`,
+      name: item.name,
+      category: item.category || "Scanned Bill",
+      quantity: item.quantity || "1 unit",
+      inStock: true,
+    }));
+    return [...pantryItems.filter((p) => p.inStock), ...virtualItems];
+  }, [detectedItems, pantryItems]);
+
+  // Recipes that can be prepared with scanned items
+  const recipesFromBill = useMemo(() => {
+    if (detectedItems.length === 0) return [];
+    return Object.values(RECIPE_CATALOG)
+      .map((recipe) => {
+        const match = checkPantryMatch(recipe, virtualPantry);
+        return { recipe, match };
+      })
+      .filter((r) => r.match.matchCount > 0)
+      .sort((a, b) => {
+        const ratioA = a.match.matchCount / a.match.total;
+        const ratioB = b.match.matchCount / b.match.total;
+        return ratioB - ratioA;
+      });
+  }, [detectedItems, virtualPantry]);
+
   // Commit selected items into the pantry
   const handleAddSelectedToPantry = async () => {
     const selected = detectedItems.filter((i) => i.selected);
@@ -238,6 +271,14 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
     setDetectedItems([]);
     setSelectedFile(null);
     setPreviewUrl(null);
+  };
+
+  // Commit selected items and auto-navigate to meal plan view
+  const handleApplyAndPlanMeals = async () => {
+    await handleAddSelectedToPantry();
+    if (onApplyToMealPlan) {
+      onApplyToMealPlan();
+    }
   };
 
   const inStockCount = pantryItems.filter((i) => i.inStock).length;
@@ -429,16 +470,24 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
                   <span>🥗</span> Extracted Items Review ({detectedItems.filter((i) => i.selected).length} selected)
                 </h4>
                 <p className="text-[11px] text-slate-600">
-                  Select which items you want to add to your in-stock pantry:
+                  Select items to add to your pantry stock &amp; plan your meals:
                 </p>
               </div>
 
-              <button
-                onClick={handleAddSelectedToPantry}
-                className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all flex items-center gap-1.5"
-              >
-                <span>✓</span> Add Selected ({detectedItems.filter((i) => i.selected).length}) to Pantry
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleAddSelectedToPantry}
+                  className="px-3.5 py-2 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-800 text-xs font-semibold shadow-xs transition-all flex items-center gap-1"
+                >
+                  <span>✓</span> Add to Pantry Only
+                </button>
+                <button
+                  onClick={handleApplyAndPlanMeals}
+                  className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <span>⚡</span> Auto-Plan Meals from This Bill
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1">
@@ -474,13 +523,76 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
                 </div>
               ))}
             </div>
+
+            {/* Recipes that can be prepared with this scanned bill */}
+            {recipesFromBill.length > 0 && (
+              <div className="rounded-2xl bg-white p-4 border border-[#e8ded3] shadow-xs space-y-3 mt-3">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xl">🍳</span>
+                    <div>
+                      <h4 className="text-xs font-serif font-bold text-[#421018]">
+                        Recipes Unlocked by This Scanned Bill ({recipesFromBill.length} Dishes)
+                      </h4>
+                      <p className="text-[10px] text-slate-500">
+                        Ye saari dishes aapke scanned grocery items se easily bann sakti hain!
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">
+                    Pantry-to-Plate AI
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                  {recipesFromBill.slice(0, 4).map(({ recipe, match }) => {
+                    const is100 = match.isFullMatch;
+                    return (
+                      <div
+                        key={recipe.id}
+                        className="p-3 rounded-xl bg-[#faf7f2]/70 border border-[#e2d6c9] flex items-start gap-2.5"
+                      >
+                        <span className="text-xl p-1.5 rounded-lg bg-white border border-[#e2d6c9] shrink-0">
+                          {recipe.icon}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="text-[9px] uppercase font-bold text-[#581825]">
+                              {recipe.slotLabel}
+                            </span>
+                            {is100 ? (
+                              <span className="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded-full">
+                                ✓ 100% In-Stock
+                              </span>
+                            ) : (
+                              <span className="text-[9px] bg-amber-100 text-amber-800 font-semibold px-1.5 py-0.5 rounded-full">
+                                {match.matchCount}/{match.total} Ready
+                              </span>
+                            )}
+                          </div>
+                          <h5 className="font-semibold text-xs text-[#421018] mt-0.5 truncate">
+                            {recipe.name}
+                          </h5>
+                          <p className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                            {recipe.tagline}
+                          </p>
+                          <div className="mt-1 text-[10px] text-emerald-800 font-medium">
+                            <span className="font-bold">Uses:</span> {match.matched.join(" · ")}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {/* Current Pantry Stock List */}
       <div className="rounded-2xl bg-white p-5 border border-[#e8ded3] shadow-sm space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <h3 className="text-base font-serif text-[#421018] font-semibold">
               My Pantry / Kitchen Stock ({inStockCount} In Stock)
@@ -489,9 +601,14 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
               Uncheck jo khatam ho gaya hai — recommendations automatically update honge.
             </p>
           </div>
-          <span className="text-xs text-slate-600 font-medium">
-            {inStockCount} / {pantryItems.length} Available
-          </span>
+          {onApplyToMealPlan && (
+            <button
+              onClick={onApplyToMealPlan}
+              className="px-3.5 py-1.5 rounded-xl bg-[#581825] hover:bg-[#421018] text-white text-xs font-semibold shadow-xs flex items-center gap-1.5 transition-all"
+            >
+              <span>🍽️</span> View Plan Using This Stock
+            </button>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 pt-2">

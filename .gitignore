@@ -23,6 +23,7 @@ frontend/.next/
 frontend/out/
 frontend/build/
 frontend/.vercel/
+frontend/lab/
 *.tsbuildinfo
 npm-debug.log*
 yarn-debug.log*

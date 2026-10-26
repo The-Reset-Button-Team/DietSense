@@ -1,92 +1,95 @@
-﻿# DietSense — Backend (Member 2)
+# DietSense — Backend (M2 Pranav Chaudhari)
 
-FastAPI · PostgreSQL (Supabase) · Pydantic · Supabase Auth
+FastAPI · Local SQLite Database · Pydantic v2 · Local Session/JWT Authentication
 
 ---
 
-## Setup
+## 🚀 Quick Setup
 
 ```bash
+# From repository root or backend/
 cd backend
-cp .env.example .env          # Fill in your Supabase credentials
-
 python -m venv venv
+
 # Windows:
 venv\Scripts\activate
 # macOS/Linux:
 source venv/bin/activate
 
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+pip install -r ../ml/requirements.txt
+
+# Initialize local SQLite database
+python db/init_db.py
+
+# Launch server
+python ../run_backend.py
+# Or: uvicorn app.main:app --reload --port 8000
 ```
 
-- **API Base**: http://localhost:8000
-- **Swagger UI**: http://localhost:8000/docs
-- **ReDoc**: http://localhost:8000/redoc
+- **API Base**: `http://127.0.0.1:8000`
+- **Interactive Swagger UI**: `http://127.0.0.1:8000/docs`
+- **Alternative ReDoc**: `http://127.0.0.1:8000/redoc`
 
 ---
 
-## Database Setup
+## 🗄️ Local SQLite Database
 
-The full schema is in `db/schema.sql`. To apply it:
+DietSense uses a local-first SQLite database stored at `database/dietsense.db`.
 
+To inspect or initialize the schema:
 ```bash
-# Option 1: Supabase SQL Editor (paste the file)
-# Option 2: psql
-psql $DATABASE_URL -f db/schema.sql
-psql $DATABASE_URL -f db/seed.sql
+python backend/db/init_db.py
 ```
+
+### Managed Tables:
+1. `foods` — 14,181 foods sourced from USDA and ICMR-NIN.
+2. `users` — Hashed passwords (bcrypt), email, status, timestamps.
+3. `profiles` — Biometrics, calorie targets, dietary preferences, and allergy lists.
+4. `meal_plans` — Saved daily meal plans per authenticated user.
+5. `meal_logs` — Recorded meal logs with outcome (`eaten` or `skipped`) and validated skip reasons (`time`, `cost`, `unavailable`, `taste`).
+6. `feedback` — User meal ratings and subjective notes.
+7. `pantry_items` — Scanned or manually added grocery items per user.
 
 ---
 
-## Folder Structure
+## 🔒 Authentication & Data Isolation
+
+- **Local Session/JWT Auth:** Authentication is managed locally by FastAPI. Login returns a secure, signed JWT token (as a Bearer token or HttpOnly cookie).
+- **Strict User Isolation:** Every database query filters by `user_id` derived directly from the verified token. User IDs sent in request bodies are never trusted.
+- **Offline Email Support:** In local operation, account registration does not depend on cloud email services; registration activates immediately.
+
+---
+
+## 📂 Directory Structure
 
 ```
 backend/
 ├── app/
-│   ├── main.py               # FastAPI app, CORS, router registration
+│   ├── main.py               # FastAPI application entry point, CORS, routers
 │   ├── core/
-│   │   ├── config.py         # Environment variables (Pydantic Settings)
-│   │   ├── dependencies.py   # get_db(), get_current_user() dependency injections
-│   │   └── safety_gate.py    # Hard constraint filter (Phase 6)
-│   ├── routers/              # One file per domain (auth, foods, recipes, plans, etc.)
-│   ├── schemas/              # Pydantic request/response models
-│   └── models/               # SQLAlchemy ORM models (mirrors schema.sql)
-└── db/
-    ├── schema.sql            # Full PostgreSQL DDL
-    └── seed.sql              # Reference data: restriction types, food categories
+│   │   ├── config.py         # Pydantic BaseSettings (DB path, secrets, CORS)
+│   │   ├── security.py       # Password hashing & JWT generation/verification
+│   │   └── dependencies.py   # get_current_user, get_optional_user dependencies
+│   └── routers/
+│       ├── auth.py           # Register, login, me, logout endpoints
+│       └── foods.py          # Food search and pagination endpoints
+├── db/
+│   ├── database.py           # SQLite connection pool, WAL mode, schema init
+│   └── init_db.py            # Standalone database initialization script
+└── routes/
+    ├── users.py              # User profile endpoints
+    ├── recommendations.py    # Recommendation pipeline endpoint
+    ├── meal_plans.py         # Saved plan CRUD endpoints
+    ├── meal_logs.py          # Meal outcome logging & analytics
+    ├── feedback.py           # Meal ratings & notes
+    └── pantry.py             # Grocery receipt & fridge scanner endpoints
 ```
 
 ---
 
-## API Endpoints
+## 🧪 Testing
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/register` | Register new user |
-| POST | `/auth/login` | Login, returns JWT |
-| GET | `/auth/me` | Current user profile |
-| GET | `/foods` | List foods (paginated) |
-| GET | `/foods/{food_id}` | Single food with all macros |
-| GET | `/foods/search?q=` | Text search |
-| GET | `/recipes` | List recipes |
-| GET | `/recipes/{recipe_id}` | Recipe with ingredients + macros |
-| POST | `/meal-plans` | Generate meal plan for user + date |
-| GET | `/meal-plans/{user_id}` | User`s meal plan history |
-| POST | `/feedback` | Submit post-meal rating |
-| GET | `/progress/{user_id}` | Weight + calorie trends |
-| POST | `/progress` | Log daily progress |
-
-All endpoints except `/auth/register` and `/auth/login` require:
+```bash
+pytest ../tests/test_auth.py ../tests/test_local_auth_db.py ../tests/test_pantry_scanner.py -v
 ```
-Authorization: Bearer <supabase-jwt>
-```
-
----
-
-## Naming Conventions
-
-- **Schemas** (Pydantic): `UserCreate`, `UserResponse`, `RecipeResponse`
-- **Models** (SQLAlchemy): `User`, `Food`, `Recipe`
-- **Routers**: one file per resource domain (e.g., `routers/foods.py`)
-- **Database columns**: `snake_case`

@@ -1,201 +1,184 @@
-# DietSense — Adaptive AI Meal Planning for Obesity Prevention
+# DietSense — Adaptive AI Meal Planning System
 
-> Evidence-based, explainable, personalized meal planning powered by USDA/ICMR-NIN nutrition data, Scikit-learn, and the Gemini API.
+> Evidence-based, explainable, personalized meal planning powered by USDA & ICMR-NIN nutrition data, Scikit-learn, and FastAPI.
 
-[![Phase](https://img.shields.io/badge/Phase-1%20Requirements%20%26%20Specs-blue)](docs/)
-[![Stack](https://img.shields.io/badge/Stack-Next.js%20%7C%20FastAPI%20%7C%20PostgreSQL%20%7C%20Scikit--learn-green)](ARCHITECTURE.md)
+[![Build & Test Status](https://img.shields.io/badge/Pytest-39%20Passed-brightgreen)](tests/)
+[![Architecture](https://img.shields.io/badge/Architecture-Local--First%20SQLite%20%2B%20FastAPI-blue)](ARCHITECTURE.md)
 [![License](https://img.shields.io/badge/License-MIT-lightgrey)]()
 
 ---
 
-## 📊 Visual Documentation
+## 🧑‍💻 Team & Assigned Roles
 
-| Diagram | Description |
-|---------|-------------|
-| [🗂️ Entity Relationship Diagram](docs/er_diagram.html) | All 11 PostgreSQL tables, columns, data types, FK links — click any table to highlight relationships |
-| [⚡ Architectural Pipeline](docs/pipeline.html) | Full data flow: USDA/ICMR-NIN → ETL → DB → Safety Gate → ML Scoring → SHAP → Gemini → UI → Feedback |
-| [🧑‍💻 Tech Stack & Team Roles](docs/tech_stack.html) | 4-member domain ownership, all technologies, scoring formula bar chart |
-| [📅 20-Week Roadmap](docs/roadmap.html) | All 10 phases with deliverables, timeline, lead owners |
-
-> Open HTML files in a browser. GitHub renders them via Pages or clone + open locally.
-
-
-
-## 🎯 Project Goal
-
-Build an adaptive, evidence-based personalized meal planning system where:
-- **Nutrition facts come strictly from validated datasets** (USDA FoodData Central, ICMR-NIN/IFCT 2017).
-- **AI is confined to personalization, re-ranking, and natural-language interaction** — never to generating or altering calorie/macro data.
+| Member | Role | Primary Ownership |
+|--------|------|-------------------|
+| **Daksh Chaukhande** | M1 — Frontend Lead | Next.js 14/16 app, TypeScript screens, Recharts analytics, API integration |
+| **Pranav Chaudhari** | M2 — Backend Lead | FastAPI REST API, local SQLite persistence, JWT & session auth, route isolation |
+| **Prasoon Bodke** | M3 — AI/ML Lead | Safety gate, TF-IDF + cosine similarity, 4-factor scoring, adaptive skip penalties |
+| **Atharv Bodkhe** | M4 — Data & QA Lead | USDA & ICMR-NIN ETL pipeline (14,181 foods), CI automation, end-to-end testing |
 
 ---
 
-## ⚡ Primary Architectural Pipeline
+## 🎯 Project Overview & Core Principles
+
+DietSense is an adaptive meal-planning and recommendation system designed to provide personalized, transparent, and safe nutrition recommendations without relying on cloud services.
+
+### Non-Negotiable Core Principles
+1. **Authoritative Nutrition Data:** Calorie and macronutrient values are derived **strictly** from authoritative food composition tables (USDA FoodData Central and ICMR-NIN / IFCT 2017). An AI model **never** generates, predicts, or alters nutrition numbers.
+2. **Safety Gate Runs First:** Hard dietary constraints (vegetarian, vegan) and allergen safety exclusions execute **before any scoring occurs**. Boosts and penalties never re-introduce an excluded item.
+3. **Deterministic & Explainable Scoring:** Recommendations are ranked using transparent multi-factor scoring (similarity, macro fit, budget, and prep time) and provide human-readable explanations derived from the scoring factors.
+4. **Adaptive Feedback Loop:** When a user logs a meal as *skipped*, DietSense infers reasons (e.g. *time* → long cooking duration, *cost* → expensive) to gently penalize matching items in future recommendations (+0.1 per skip, capped at 0.5).
+5. **Non-Medical Disclaimer:** DietSense is a lifestyle decision-support tool, not a diagnostic or clinical medical application.
+
+---
+
+## ⚡ System Architecture
 
 ```
-USDA/ICMR-NIN Data
-      ↓
-ETL & Normalization (Pandas/NumPy)
-      ↓
-PostgreSQL Database (Supabase)
-      ↓
-Hard Safety Gate  ← allergies & restrictions checked FIRST
-      ↓
-Hybrid Recommendation Scoring
-  0.30 × Macro Match
-  0.20 × Goal Alignment
-  0.20 × User Preferences
-  0.15 × Feedback History
-  0.10 × Diversity
-  0.05 × Prep Complexity
-      ↓
-SHAP / Rules Explainability
-      ↓
-Gemini API (Natural Language Explanations ONLY)
-      ↓
-User Feedback Loop → Adaptive Re-Ranking
+┌─────────────────────────────────────────────────────────────┐
+│               LOCAL FOOD CATALOG & ETL (M4)                 │
+│                                                             │
+│   USDA FoodData Central (13,694 foods)                      │
+│   ICMR-NIN / IFCT 2017  (487 foods)                         │
+│             ↓                                               │
+│   ETL Pipeline (Pandas: clean units, verify 0 NaNs)         │
+│   Saved to data/processed/foods_merged.csv & SQLite         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 FASTAPI BACKEND API (M2)                    │
+│                                                             │
+│   • Local SQLite Database (database/dietsense.db)           │
+│     Tables: users, profiles, meal_plans, meal_logs,         │
+│             feedback, pantry_items, foods                   │
+│   • Secure Session / JWT Auth with Password Hashing         │
+│   • Strict user-level data isolation on every query         │
+│   • Endpoints: /api/auth, /api/foods, /api/recommendations, │
+│                /api/meal-plans, /api/meal-logs, /api/pantry │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│             MACHINE LEARNING & SCORING (M3)                 │
+│                                                             │
+│   1. Hard Safety Gate: Dietary & allergen hard exclusion    │
+│   2. Text Vectorization: TF-IDF + Cosine similarity (0.4)   │
+│   3. Multi-Factor Scoring:                                  │
+│      Score = 0.40 × Similarity + 0.30 × Macro Fit           │
+│            + 0.20 × Budget Fit + 0.10 × Prep-Time Fit       │
+│   4. Adaptive Feedback Reweighting:                         │
+│      Applies skip penalties (time, cost, availability)      │
+│   5. Explanation Generation:                                │
+│      Templates driven exclusively by active score factors   │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                               ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  NEXT.JS FRONTEND (M1)                      │
+│                                                             │
+│   • Next.js + React + TypeScript + Tailwind CSS             │
+│   • Interactive Dashboard, Profile Studio, Meal Plan View   │
+│   • Pantry Scanner (Receipt PDF/Image & Fridge Snapshot)    │
+│   • Real-Time Progress Analytics powered by Recharts        │
+│   • Running locally on http://localhost:3000                │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### Non-Negotiable Rules
-| Rule | Description |
-|------|-------------|
-| **Rule 1** | The LLM **NEVER** generates or alters calorie, macro, or medical facts. |
-| **Rule 2** | Hard safety constraints (allergies, restrictions) execute **BEFORE** recommendation scoring. |
-
 ---
 
-## 🗂️ Repository Structure
+## 🚀 Quick Start (Local Setup)
 
-```
-DietSense/
-├── frontend/          # Next.js 14 + TypeScript + Tailwind (Member 1)
-├── backend/           # FastAPI + PostgreSQL + Pydantic (Member 2)
-│   ├── app/
-│   └── db/            # SQL schemas and seeds
-├── ml/                # Scikit-learn + SHAP + Gemini prompts (Member 3)
-├── data/              # Raw & processed USDA/ICMR-NIN datasets (Member 4)
-├── scripts/           # ETL pipeline scripts (Member 4)
-├── tests/             # Unit & integration tests (Member 4)
-├── database/          # Reference documents (WHO, IFCT PDFs, etc.)
-└── .github/           # PR templates, issue templates, CI workflows
-```
+The entire system runs locally on your machine with zero external cloud accounts.
 
----
-
-## 🧑‍💻 Team Roles
-
-| Member | Role | Domain | Key Deliverables |
-|--------|------|---------|-----------------|
-| Member 1 | Frontend Lead | `/frontend` | Multi-screen UI, onboarding wizard, meal dashboard, feedback forms |
-| Member 2 | Backend Lead | `/backend` | Async API routes, SQL schemas, JWT middleware, RLS |
-| Member 3 | AI/ML Lead | `/ml` | Scoring engine, adaptive re-ranking, SHAP/XAI, Gemini prompts |
-| Member 4 | Data Lead | `/data`, `/scripts`, `/tests` | ETL pipeline, cleaned seed dataset, safety gate |
-
----
-
-## 🔧 Tech Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS, Recharts | SSR dashboard, type-safe UI |
-| Backend | Python 3.11+, FastAPI, Pydantic, SQLAlchemy | Async REST API, schema validation |
-| Database | PostgreSQL (Supabase) | Relational food/recipe store, JSONB logs, RLS |
-| Auth | Supabase Auth | JWT authentication, session hooks |
-| ML | Scikit-learn | Preference regression, candidate re-ranking, clustering |
-| XAI | SHAP + deterministic rules | Feature attribution, prose explanation generation |
-| Generative AI | Gemini API | NL explanations, recipe instructions, chat assistant |
-| ETL | Pandas, NumPy | Data ingestion, cleaning, unit normalization |
-| Hosting | Vercel (FE), Render/Railway (BE) | Continuous deployment |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
+### 1. Prerequisites
+- Python 3.10+
 - Node.js 18+
-- Python 3.11+
 - Git
 
-### 1. Clone the repository
+### 2. Clone the Repository
 ```bash
 git clone https://github.com/The-Reset-Button-Team/DietSense-.git
 cd DietSense-
 ```
 
-### 2. Frontend Setup (Member 1)
+### 3. One-Click Start (Windows PowerShell)
+```powershell
+.\start_local.ps1
+```
+This script initializes the local SQLite database and launches both the backend and frontend in parallel.
+
+### Or Run Manually:
+
+#### A. Initialize Database & Start Backend
+```bash
+# Install backend dependencies
+pip install -r backend/requirements.txt
+pip install -r ml/requirements.txt
+
+# Initialize database tables
+python backend/db/init_db.py
+
+# Launch FastAPI backend
+python run_backend.py
+# → Backend running at: http://127.0.0.1:8000
+# → Swagger API Docs:  http://127.0.0.1:8000/docs
+```
+
+#### B. Start Frontend
 ```bash
 cd frontend
-cp .env.example .env.local
 npm install
 npm run dev
-# → http://localhost:3000
-```
-
-### 3. Backend Setup (Member 2)
-```bash
-cd backend
-cp .env.example .env
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# macOS/Linux:
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-# → http://localhost:8000
-# → Swagger UI: http://localhost:8000/docs
-```
-
-### 4. ML Setup (Member 3)
-```bash
-cd ml
-cp .env.example .env
-python -m venv venv
-venv\Scripts\activate  # or source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 5. Data / Scripts Setup (Member 4)
-```bash
-cd scripts
-pip install -r requirements.txt
-# See scripts/README.md for ETL pipeline instructions
+# → Frontend running at: http://localhost:3000
 ```
 
 ---
 
-## 📋 Implementation Roadmap
+## 🧪 Testing & Verification
 
-| Phase | Milestone | Timeline | Lead |
-|-------|-----------|----------|------|
-| **1** | ✅ Requirements & Specs | Weeks 1–2 | All |
-| 2 | Data Extraction & ETL | Weeks 3–4 | Member 4 |
-| 3 | Database & Auth Setup | Weeks 5–6 | Member 2 |
-| 4 | Backend API Foundation | Weeks 7–8 | Member 2 |
-| 5 | Frontend UI Foundation | Weeks 9–10 | Member 1 |
-| 6 | Rule-Based Rec Engine | Weeks 11–12 | Member 3 |
-| 7 | Adaptive Feedback Loop | Weeks 13–14 | Members 2 & 3 |
-| 8 | XAI & Gemini Integration | Weeks 15–16 | Member 3 |
-| 9 | End-to-End System Sync | Weeks 17–18 | All |
-| 10 | Deployment & Evaluation | Weeks 19–20 | All |
+DietSense maintains a comprehensive automated and manual test suite:
+
+### 1. Backend & ML Automated Tests (Pytest)
+```bash
+pytest tests/ -v
+# Runs 39 automated tests covering:
+# - test_auth.py: Authentication, token verification, session protection
+# - test_local_auth_db.py: SQLite persistence, registration, user isolation
+# - test_etl.py: Dataset integrity, column standardization, zero NaNs
+# - test_scoring.py: Scoring formula weights, bounds, safety gate logic
+# - test_recommendations.py: Top-N output, pantry integration, explainability
+# - test_pantry_scanner.py: Bill receipt OCR parsing, fridge image analysis
+# - test_meal_workflow.py: Complete logging, skips, adaptive re-ranking
+```
+
+### 2. Frontend Validation
+```bash
+cd frontend
+npm run type-check   # Strict TypeScript verification
+npm run lint         # Code style and syntax check
+npm run build        # Production Next.js build
+```
+
+### 3. Manual Testing Checklist
+Refer to [`docs/manual-test-checklist.md`](docs/manual-test-checklist.md) for step-by-step user acceptance flows.
 
 ---
 
-## 📚 Reference Documents
+## 📊 Dataset Provenance
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Full technical architecture
-- [`backend/db/schema.sql`](backend/db/schema.sql) — PostgreSQL schema (all tables)
-- [`data/sources.md`](data/sources.md) — Dataset sources and normalization rules
-- [`database/WHO_Healthy_Diet_Fact_Sheet.md`](database/WHO_Healthy_Diet_Fact_Sheet.md) — WHO dietary guidelines reference
+| Dataset | Records | Description | Usage in DietSense |
+|---------|---------|-------------|--------------------|
+| **USDA FoodData Central** | 13,694 | Foundation Foods & SR Legacy reference nutrients | General macro and micronutrient benchmarks |
+| **ICMR-NIN / IFCT 2017** | 487 | Indian Food Composition Tables | Authentic Indian recipes, regional dishes, and staples |
+| **Total Merged Catalog** | **14,181** | Unified food database (`data/processed/foods_merged.csv`) | 100% verified, 0 missing/NaN calorie values |
 
 ---
 
-## 🤝 Contributing
+## 📄 Documentation Links
 
-See [`.github/PULL_REQUEST_TEMPLATE.md`](.github/PULL_REQUEST_TEMPLATE.md) for PR conventions and [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) for bug/feature reporting.
-
-**Branch naming convention:**
-```
-feat/[domain]/[short-description]    # e.g. feat/backend/add-foods-endpoint
-fix/[domain]/[short-description]     # e.g. fix/ml/scoring-weight-update
-docs/[short-description]             # e.g. docs/update-architecture
-```
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — Detailed technical architecture and data schemas
+- [`docs/manual-test-checklist.md`](docs/manual-test-checklist.md) — Manual end-to-end test checklist
+- [`samples/README.md`](samples/README.md) — Offline pantry scanner sample receipts and images
+- [`backend/README.md`](backend/README.md) — FastAPI endpoints, auth models, and SQLite queries
+- [`frontend/README.md`](frontend/README.md) — Next.js components, state management, and Recharts

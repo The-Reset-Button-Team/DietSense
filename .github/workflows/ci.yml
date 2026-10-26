@@ -132,8 +132,6 @@ jobs:
       - name: Production build
         working-directory: frontend
         env:
-          # Provide placeholder values so Next.js build succeeds without real Supabase
-          NEXT_PUBLIC_SUPABASE_URL: https://placeholder-project.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+          NEXT_PUBLIC_SITE_URL: http://localhost:3000
         run: npm run build

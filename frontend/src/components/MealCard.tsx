@@ -6,16 +6,28 @@ interface MealCardProps {
   item: CalculatedMealItem;
   borderColor: string;
   onOpenRecipe: (recipe: RecipeData) => void;
+  onSelectAlternative?: (slotKey: string, recipeName: string) => void;
   reason?: string;
 }
 
-export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRecipe, reason }) => {
+export const MealCard: React.FC<MealCardProps> = ({
+  item,
+  borderColor,
+  onOpenRecipe,
+  onSelectAlternative,
+  reason,
+}) => {
   const [loggedStatus, setLoggedStatus] = useState<string | null>(null);
+  const [showSwapModal, setShowSwapModal] = useState<boolean>(false);
 
   // Generate default explainability string from meal factors if not supplied
   const displayReason =
     reason ||
-    `Recommended because it matches your calorie target well (${item.calories} kcal), fits your budget, and ~${item.recipe.prepTimeMins || 15} min prep.`;
+    (item.pantryStatus.isFullMatch
+      ? `✨ Recommended: 100% matched to your scanned grocery bill (${item.pantryStatus.matched?.join(", ")}). Saves prep time and avoids waste!`
+      : item.pantryStatus.matched && item.pantryStatus.matched.length > 0
+      ? `✨ Pantry Match: Uses ${item.pantryStatus.matched.length} scanned ingredients from your kitchen (${item.pantryStatus.matched.join(", ")}).`
+      : `Recommended because it matches your calorie target well (${item.calories} kcal), fits your budget, and ~${item.recipe.prepTimeMins || 15} min prep.`);
 
   return (
     <div
@@ -57,6 +69,14 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
             {item.recipe.tagline}
           </p>
 
+          {/* Scanned Pantry Ingredients Used */}
+          {item.pantryStatus.matched && item.pantryStatus.matched.length > 0 && (
+            <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[11px] text-emerald-800 bg-emerald-50/80 border border-emerald-200/80 rounded-lg px-2.5 py-1 font-medium">
+              <span className="font-bold">📦 Scanned In-Stock:</span>
+              <span>{item.pantryStatus.matched.join(" · ")}</span>
+            </div>
+          )}
+
           {/* Plain-language explainability reason per Workflow Brief Section 1 & 6 */}
           <div className="mt-2 text-[11px] text-[#581825] bg-[#faf7f2] border border-[#ebdcd0] rounded-xl px-2.5 py-1.5 flex items-start gap-1.5 font-sans">
             <span className="shrink-0 text-xs">💡</span>
@@ -81,12 +101,24 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
 
       {/* Action Buttons */}
       <div className="flex sm:flex-col md:items-end justify-between sm:justify-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-        <button
-          onClick={() => onOpenRecipe(item.recipe)}
-          className="px-3.5 py-2 rounded-xl bg-[#faf7f2] border border-[#d8c8b8] hover:bg-[#581825] hover:text-white text-[#581825] text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
-        >
-          <span>📖</span> Hinglish Recipe &amp; Prep
-        </button>
+        <div className="flex items-center gap-1.5 flex-wrap sm:flex-col sm:items-end">
+          <button
+            onClick={() => onOpenRecipe(item.recipe)}
+            className="px-3.5 py-2 rounded-xl bg-[#faf7f2] border border-[#d8c8b8] hover:bg-[#581825] hover:text-white text-[#581825] text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
+          >
+            <span>📖</span> Recipe &amp; Prep
+          </button>
+
+          {item.availableAlternatives && item.availableAlternatives.length > 1 && onSelectAlternative && (
+            <button
+              onClick={() => setShowSwapModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-medium transition-all shadow-xs flex items-center gap-1"
+              title="Choose another recipe that uses your scanned items"
+            >
+              <span>⇄</span> Swap ({item.availableAlternatives.length})
+            </button>
+          )}
+        </div>
 
         <div className="flex items-center gap-1.5">
           {loggedStatus ? (
@@ -145,6 +177,81 @@ export const MealCard: React.FC<MealCardProps> = ({ item, borderColor, onOpenRec
           )}
         </div>
       </div>
+
+      {/* Alternative Dish Selection Modal */}
+      {showSwapModal && item.availableAlternatives && onSelectAlternative && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl p-5 max-w-lg w-full max-h-[85vh] overflow-y-auto border border-[#e8ded3] shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h4 className="text-base font-serif font-bold text-[#421018] flex items-center gap-2">
+                  <span>⇄</span> Choose Recipe for {item.recipe.slotLabel}
+                </h4>
+                <p className="text-xs text-slate-500">
+                  Select any recipe that matches your scanned groceries &amp; pantry stock.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSwapModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2.5">
+              {item.availableAlternatives.map((alt) => {
+                const isSelected = alt.id === item.recipe.id;
+                return (
+                  <div
+                    key={alt.id}
+                    onClick={() => {
+                      onSelectAlternative(item.key, alt.name);
+                      setShowSwapModal(false);
+                    }}
+                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 ${
+                      isSelected
+                        ? "border-[#581825] bg-[#fdf2f4]/60 ring-2 ring-[#581825]/20"
+                        : "border-[#e8ded3] hover:border-[#581825]/50 bg-[#faf7f2]/50 hover:bg-[#faf7f2]"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <span className="text-2xl p-2 rounded-xl bg-white border border-[#e2d6c9] shrink-0">
+                        {alt.icon}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm text-[#421018]">{alt.name}</span>
+                          <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-medium">
+                            {alt.effortLevel === "low" ? "⚡ <10m" : "🍳 ~20m"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 font-light mt-0.5 line-clamp-1">
+                          {alt.tagline}
+                        </p>
+                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[10px] text-slate-500">
+                          <span className="font-medium text-[#581825]">Ingredients:</span>
+                          <span>{alt.requiredPantryItems.join(" · ")}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <button
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
+                        isSelected
+                          ? "bg-[#581825] text-white"
+                          : "bg-white border border-[#d8c8b8] text-[#581825] hover:bg-[#581825] hover:text-white"
+                      }`}
+                    >
+                      {isSelected ? "Active ✓" : "Select"}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,4 +1,4 @@
-﻿# DietSense — Docs
+# DietSense — Docs
 
 Visual documentation for the DietSense project. Open these HTML files in a browser or the IDE preview.
 
@@ -6,6 +6,7 @@ Visual documentation for the DietSense project. Open these HTML files in a brows
 
 | File | Description |
 |------|-------------|
+| [dbms_schema_visualization.html](dbms_schema_visualization.html) | **Interactive DBMS Relational Schema Visualisation** — Complete physical and logical SQLite schema, all 10 tables, exact SQLite DDL, foreign key cascade relations, parameterized isolation queries, and viva defense guide. |
 | [er_diagram_classical.html](er_diagram_classical.html) | **Classical Peter Chen ER Diagram Web** — 100% comprehensive schema web with authentic Entity Rectangles, Relationship Diamonds, Attribute Ovals/Keys, and Cardinality lines for all 11 tables. |
 | [ER_DIAGRAM.md](ER_DIAGRAM.md) | **Classical ER Theory & ASCII Web** — Full Peter Chen relational notation breakdown and entity dictionary. |
 | [er_diagram.html](er_diagram.html) | **Interactive Relational Schema Explorer** — all 11 PostgreSQL tables, columns, data types, FK linkages with interactive highlighting. |
