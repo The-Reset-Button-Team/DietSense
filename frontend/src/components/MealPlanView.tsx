@@ -1,4 +1,4 @@
-﻿import React from "react";
+import React from "react";
 import { MealFrequency, RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 import { MealCard } from "./MealCard";
@@ -44,7 +44,7 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
 
   return (
     <div className="relative z-10 space-y-4">
-      {/* Solo Routine Quick Bar */}
+      {/* Solo Routine Quick Bar with Multiple Meal Dropdown Section */}
       <div className="rounded-2xl bg-white p-4 border border-[#e8ded3] shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-2.5">
           <span className="p-2 rounded-xl bg-[#fdf2f4] text-[#581825] text-base">🍳</span>
@@ -56,29 +56,49 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           </div>
         </div>
 
-        {/* Quick Meal Frequency Switcher */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-slate-500 font-medium mr-1">Meals / Day:</span>
-          {(
-            [
-              { id: "2_meals", label: "2 (IF 16:8)" },
-              { id: "3_meals", label: "3 (Classic)" },
-              { id: "4_meals", label: "4 (Active)" },
-              { id: "5_meals", label: "5 (Metabolic)" },
-            ] as const
-          ).map((freq) => (
-            <button
-              key={freq.id}
-              onClick={() => applyMealFrequency(freq.id)}
-              className={`px-2.5 py-1 rounded-lg border font-semibold transition-all ${
-                mealFrequency === freq.id
-                  ? "bg-[#1d4ed8] text-white border-[#1d4ed8]"
-                  : "bg-[#faf7f2] border-[#d8c8b8] text-slate-700 hover:bg-slate-100"
-              }`}
+        {/* Multiple Meal Dropdown Section */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <label htmlFor="meal-frequency-select" className="text-slate-600 font-semibold text-xs flex items-center gap-1">
+              <span>🍽️</span> Routine:
+            </label>
+            <select
+              id="meal-frequency-select"
+              value={mealFrequency}
+              onChange={(e) => applyMealFrequency(e.target.value as MealFrequency)}
+              className="bg-white border border-[#d8c8b8] rounded-xl px-2.5 py-1 text-xs text-slate-800 font-semibold focus:outline-none focus:ring-2 focus:ring-[#1d4ed8] cursor-pointer shadow-xs"
             >
-              {freq.label}
-            </button>
-          ))}
+              <option value="2_meals">2 Meals / Day · Intermittent Fasting (16:8)</option>
+              <option value="3_meals">3 Meals / Day · Classic (Breakfast, Lunch, Dinner)</option>
+              <option value="4_meals">4 Meals / Day · Active (Breakfast, Lunch, Snack, Dinner)</option>
+              <option value="5_meals">5 Meals / Day · Metabolic 5-Stage (All Slots)</option>
+              <option value="custom">Custom Routine Selection</option>
+            </select>
+          </div>
+
+          {/* Quick Pill Buttons */}
+          <div className="hidden lg:flex items-center gap-1">
+            {(
+              [
+                { id: "2_meals", label: "2 Meals" },
+                { id: "3_meals", label: "3 Meals" },
+                { id: "4_meals", label: "4 Meals" },
+                { id: "5_meals", label: "5 Meals" },
+              ] as const
+            ).map((freq) => (
+              <button
+                key={freq.id}
+                onClick={() => applyMealFrequency(freq.id)}
+                className={`px-2 py-1 rounded-lg border text-[11px] font-semibold transition-all ${
+                  mealFrequency === freq.id
+                    ? "bg-[#1d4ed8] text-white border-[#1d4ed8]"
+                    : "bg-[#faf7f2] border-[#d8c8b8] text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                {freq.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

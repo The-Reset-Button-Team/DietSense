@@ -49,17 +49,6 @@ function MainApp() {
   const [gender, setGender] = useState<Gender>(user?.gender || "male");
   const [activity, setActivity] = useState<number>(1.375);
 
-  // Sync state if auth user updates
-  useEffect(() => {
-    if (user) {
-      setGoal(user.goal);
-      setWeight(user.weight_kg);
-      setHeight(user.height_cm);
-      setAge(user.age);
-      setGender(user.gender);
-    }
-  }, [user]);
-
   // Solo Cook & Routine Settings
   const [isSoloCook, setIsSoloCook] = useState<boolean>(user?.is_solo_cook ?? true);
   const [mealFrequency, setMealFrequency] = useState<MealFrequency>(
@@ -76,6 +65,39 @@ function MainApp() {
     evening_snack: false,
     dinner: true,
   });
+
+  const applyMealFrequency = (freq: MealFrequency, syncToBackend = true) => {
+    setMealFrequency(freq);
+    if (syncToBackend) {
+      updateProfile({ active_meal_frequency: freq });
+    }
+    if (freq === "2_meals") {
+      setActiveSlots({ early_morning: false, breakfast: false, lunch: true, evening_snack: false, dinner: true });
+    } else if (freq === "3_meals") {
+      setActiveSlots({ early_morning: false, breakfast: true, lunch: true, evening_snack: false, dinner: true });
+    } else if (freq === "4_meals") {
+      setActiveSlots({ early_morning: false, breakfast: true, lunch: true, evening_snack: true, dinner: true });
+    } else if (freq === "5_meals") {
+      setActiveSlots({ early_morning: true, breakfast: true, lunch: true, evening_snack: true, dinner: true });
+    }
+  };
+
+  // Sync state if auth user updates
+  useEffect(() => {
+    if (user) {
+      setGoal(user.goal);
+      setWeight(user.weight_kg);
+      setHeight(user.height_cm);
+      setAge(user.age);
+      setGender(user.gender);
+      if (user.active_meal_frequency) {
+        applyMealFrequency(user.active_meal_frequency as MealFrequency, false);
+      }
+      if (typeof user.is_solo_cook === "boolean") {
+        setIsSoloCook(user.is_solo_cook);
+      }
+    }
+  }, [user]);
 
   // Pantry State
   const [pantryItems, setPantryItems] = useState<PantryItem[]>(INITIAL_PANTRY_ITEMS);
@@ -135,20 +157,6 @@ function MainApp() {
       : "0 kcal (Maintenance)";
 
   // Handlers
-  const applyMealFrequency = (freq: MealFrequency) => {
-    setMealFrequency(freq);
-    updateProfile({ active_meal_frequency: freq });
-    if (freq === "2_meals") {
-      setActiveSlots({ early_morning: false, breakfast: false, lunch: true, evening_snack: false, dinner: true });
-    } else if (freq === "3_meals") {
-      setActiveSlots({ early_morning: false, breakfast: true, lunch: true, evening_snack: false, dinner: true });
-    } else if (freq === "4_meals") {
-      setActiveSlots({ early_morning: false, breakfast: true, lunch: true, evening_snack: true, dinner: true });
-    } else if (freq === "5_meals") {
-      setActiveSlots({ early_morning: true, breakfast: true, lunch: true, evening_snack: true, dinner: true });
-    }
-  };
-
   const toggleSlot = (slotKey: keyof ActiveSlotsMap) => {
     const updated = { ...activeSlots, [slotKey]: !activeSlots[slotKey] };
     const activeCount = Object.values(updated).filter(Boolean).length;

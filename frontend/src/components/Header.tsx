@@ -12,6 +12,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth }) => {
   const { user, isAuthenticated } = useAuth();
+  const displayName = isAuthenticated && user?.full_name?.trim() ? user.full_name.trim() : null;
 
   return (
     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-[#e9dfd5]">
@@ -19,7 +20,7 @@ export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth
         <div className="flex items-center gap-2 mb-2.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-medium tracking-wide shadow-sm">
             <span className="w-2 h-2 rounded-full bg-[#581825] animate-pulse"></span>
-            <span>DietSense Atmos · Solo Cook & AI Pantry Studio</span>
+            <span>DietSense Atmos · Solo Cook &amp; AI Pantry Studio</span>
           </div>
 
           {/* User Profile Capsule Button */}
@@ -27,16 +28,16 @@ export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth
             onClick={onOpenAuth}
             className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#bfdbfe] text-[#1d4ed8] text-xs font-semibold hover:bg-[#eff6ff] transition-all shadow-sm"
           >
-            <span className="w-4 h-4 rounded-full bg-[#1d4ed8] text-white flex items-center justify-center text-[9px]">
-              {user?.full_name?.charAt(0).toUpperCase() || "A"}
+            <span className="w-4 h-4 rounded-full bg-[#1d4ed8] text-white flex items-center justify-center text-[9px] font-bold">
+              {displayName ? displayName.charAt(0).toUpperCase() : "👤"}
             </span>
-            <span>{isAuthenticated ? user?.full_name : "Sign In"}</span>
+            <span>{displayName || "Sign In"}</span>
             <span className="text-[10px] text-slate-400">⚙️</span>
           </button>
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-serif text-[#421018] tracking-tight">
-          Namaste, <span className="text-[#1d4ed8] font-sans font-normal">{user?.full_name || "arvykrane"}</span>
+          Namaste, <span className="text-[#1d4ed8] font-sans font-normal">{displayName || "Foodie"}</span>
         </h1>
         <p className="text-sm text-slate-600 mt-1 font-light max-w-xl">
           Cook for yourself with zero stress: upload your grocery list, set meal routine, and follow easy Hinglish recipes.

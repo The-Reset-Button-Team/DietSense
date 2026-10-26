@@ -19,24 +19,53 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [weight, setWeight] = useState(75);
   const [height, setHeight] = useState(175);
   const [age, setAge] = useState(26);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
+
+    if (!email.trim() || !password) {
+      setErrorMessage("Please enter both email and password.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setErrorMessage("Password must be at least 6 characters.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    let result;
     if (isRegisterMode) {
-      await register({
-        email,
-        full_name: name || email.split("@")[0],
+      result = await register({
+        email: email.trim(),
+        password,
+        full_name: name.trim() || email.split("@")[0] || "User",
         goal,
         weight_kg: weight,
         height_cm: height,
         age,
       });
     } else {
-      await login(email, password);
+      result = await login(email.trim(), password);
     }
-    onClose();
+    setIsSubmitting(false);
+
+    if (result.success) {
+      setErrorMessage("");
+      onClose();
+    } else {
+      setErrorMessage(result.error || "Authentication failed. Please check your credentials.");
+    }
+  };
+
+  const handleToggleMode = () => {
+    setIsRegisterMode(!isRegisterMode);
+    setErrorMessage("");
   };
 
   return (
@@ -58,11 +87,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         {isAuthenticated ? (
           <div className="space-y-5 text-center relative z-10">
             <div className="w-16 h-16 rounded-full bg-[#eff6ff] border-2 border-[#1d4ed8] text-[#1d4ed8] font-bold text-2xl flex items-center justify-center mx-auto shadow-sm">
-              {user?.full_name?.charAt(0).toUpperCase() || "A"}
+              {user?.full_name?.charAt(0).toUpperCase() || "👤"}
             </div>
             <div>
               <h2 className="text-xl font-serif font-bold text-[#421018]">
-                {user?.full_name || "arvykrane"}
+                {user?.full_name || "Foodie"}
               </h2>
               <p className="text-xs text-slate-500 font-mono mt-0.5">{user?.email}</p>
               <div className="inline-flex items-center gap-2 px-3 py-1 mt-2.5 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[11px] font-semibold text-[#581825]">
@@ -106,6 +135,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </p>
             </div>
 
+            {/* Error Message Alert */}
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700 flex items-start gap-2 animate-fade-in">
+                <span className="text-sm font-bold">⚠️</span>
+                <span>{errorMessage}</span>
+              </div>
+            )}
+
             {isRegisterMode && (
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">Your Name</label>
@@ -114,7 +151,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Arvy"
+                  placeholder="e.g. Rahul Sharma"
                   className="w-full px-3.5 py-2 rounded-xl bg-white border border-[#d8c8b8] text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#1d4ed8]"
                 />
               </div>
@@ -178,15 +215,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#581825] text-white text-xs font-semibold hover:bg-[#421018] shadow-md transition-all mt-2"
+              disabled={isSubmitting}
+              className="w-full py-2.5 rounded-xl bg-[#581825] text-white text-xs font-semibold hover:bg-[#421018] shadow-md transition-all mt-2 disabled:opacity-60 flex items-center justify-center gap-2"
             >
-              {isRegisterMode ? "Register & Setup Plan" : "Sign In"}
+              {isSubmitting ? (
+                <>
+                  <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>{isRegisterMode ? "Creating Account..." : "Signing In..."}</span>
+                </>
+              ) : (
+                isRegisterMode ? "Register & Setup Plan" : "Sign In"
+              )}
             </button>
 
             <div className="text-center pt-2">
               <button
                 type="button"
-                onClick={() => setIsRegisterMode(!isRegisterMode)}
+                onClick={handleToggleMode}
                 className="text-xs text-[#1d4ed8] hover:underline font-medium"
               >
                 {isRegisterMode

@@ -11,8 +11,24 @@ const API_BASE_URL =
 
 let _inMemoryToken: string | null = null;
 
+// Initialize token from active tab session if available
+if (typeof window !== "undefined") {
+  try {
+    _inMemoryToken = sessionStorage.getItem("dietsense_session_token");
+  } catch {}
+}
+
 export function setApiAuthToken(token: string | null) {
   _inMemoryToken = token;
+  if (typeof window !== "undefined") {
+    try {
+      if (token) {
+        sessionStorage.setItem("dietsense_session_token", token);
+      } else {
+        sessionStorage.removeItem("dietsense_session_token");
+      }
+    } catch {}
+  }
 }
 
 export function getApiAuthToken(): string | null {
