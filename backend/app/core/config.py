@@ -3,6 +3,7 @@ DietSense — Application Configuration
 
 Type-safe, validated configuration for local-first execution.
 Defaults to local SQLite database and secure local session handling.
+Supports optional Supabase PostgreSQL integration.
 """
 
 import os
@@ -11,11 +12,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 _DEFAULT_DB_PATH = os.path.join(_REPO_ROOT, "database", "dietsense.db")
+_BACKEND_ENV = os.path.join(_REPO_ROOT, "backend", ".env")
+_ROOT_ENV = os.path.join(_REPO_ROOT, ".env")
 
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(_BACKEND_ENV, _ROOT_ENV, ".env"),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -25,10 +28,15 @@ class Settings(BaseSettings):
     sqlite_db_path: str = _DEFAULT_DB_PATH
     database_url: str = f"sqlite:///{_DEFAULT_DB_PATH}"
 
-    # ─── Supabase (Deprecated / Optional compatibility placeholders) ───────
+    # ─── Supabase (Optional cloud backend) ───────────────────────────────
+    database_provider: str = "sqlite"  # 'sqlite' or 'supabase'
     supabase_url: str = ""
     supabase_anon_key: str = ""
+    supabase_publishable_key: str = ""
     supabase_service_role_key: str = ""
+    supabase_secret_key: str = ""
+    supabase_jwt_secret: str = ""
+    supabase_db_url: str = ""
 
     # ─── Auth & Security ───────────────────────────────────────────────────
     jwt_secret: str = "dietsense-local-dev-secret-key-32chars-minimum-needed"

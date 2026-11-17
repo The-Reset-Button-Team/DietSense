@@ -25,3 +25,11 @@ httpx==0.27.0
 
 # ─── Utilities ────────────────────────────────────────────────────────────────
 python-multipart==0.0.9   # Form data parsing
+
+# ─── Extended ML / PDF / Image support ───────────────────────────────────────
+pillow>=10.0.0
+pypdf>=4.0.0
+
+# ─── Supabase / Postgres (optional cloud backend) ─────────────────────────────
+psycopg2-binary>=2.9.0
+supabase>=2.0.0

@@ -12,9 +12,11 @@ import {
   calculateMacroGrams,
   calculateMealPlanItems,
   ActiveSlotsMap,
+  CalculatedMealItem,
 } from "@/lib/nutrition";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
+import { useRecommendations } from "@/hooks/useRecommendations";
 
 import { Header } from "@/components/Header";
 import { TabNav, TabType } from "@/components/TabNav";
@@ -28,7 +30,7 @@ import { AuthModal } from "@/components/auth/AuthModal";
 import { ProgressAnalytics } from "@/components/ProgressAnalytics";
 
 function MainApp() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, isAuthenticated } = useAuth();
   const searchParams = useSearchParams();
   const queryTab = searchParams.get("tab") as TabType | null;
 
@@ -240,10 +242,48 @@ function MainApp() {
     ]
   );
 
-  const totalPlannedCals = mealPlanDisplayItems.reduce((acc, item) => acc + item.calories, 0);
-  const totalPlannedProt = mealPlanDisplayItems.reduce((acc, item) => acc + item.protein, 0);
-  const totalPlannedCarbs = mealPlanDisplayItems.reduce((acc, item) => acc + item.carbs, 0);
-  const totalPlannedFat = mealPlanDisplayItems.reduce((acc, item) => acc + item.fat, 0);
+  // ─── Backend Recommendations (authenticated users only) ────────────────────
+  const { recommendations } = useRecommendations({
+    profile: user,
+    activeSlots,
+    pantryItems,
+    enabled: isAuthenticated && !!user,
+  });
+
+  /**
+   * Merge backend nutritional values into the static meal plan items.
+   * When authenticated and backend data is available, override macros with
+   * real values from the backend while preserving the existing recipe display
+   * info (name, icon, tagline, etc.).
+   * Falls back silently to mealPlanDisplayItems when no backend data.
+   */
+  const activeMealItems = useMemo((): CalculatedMealItem[] => {
+    if (!recommendations || recommendations.length === 0) {
+      return mealPlanDisplayItems;
+    }
+
+    return mealPlanDisplayItems.map((item, idx) => {
+      const rec = recommendations[idx];
+      if (!rec) return item;
+
+      return {
+        ...item,
+        // Override nutritional numbers with real backend values (not percentage ratios)
+        calories: Math.round(rec.item.calories),
+        protein: Math.round(rec.item.protein_g),
+        carbs: Math.round(rec.item.carbs_g),
+        fat: Math.round(rec.item.fat_g),
+        // fibre not in backend response — keep existing static value
+        fibre: item.fibre,
+      };
+    });
+  }, [mealPlanDisplayItems, recommendations]);
+
+  // Recalculate totals from whichever items are active
+  const totalPlannedCals = activeMealItems.reduce((acc, item) => acc + item.calories, 0);
+  const totalPlannedProt = activeMealItems.reduce((acc, item) => acc + item.protein, 0);
+  const totalPlannedCarbs = activeMealItems.reduce((acc, item) => acc + item.carbs, 0);
+  const totalPlannedFat = activeMealItems.reduce((acc, item) => acc + item.fat, 0);
 
   const inStockPantryNames = useMemo(
     () => pantryItems.filter((i) => i.inStock).map((i) => i.name),
@@ -266,7 +306,7 @@ function MainApp() {
         {/* Tab 1: Daily Meal Plan & Recipes */}
         {activeTab === "today" && (
           <MealPlanView
-            mealPlanDisplayItems={mealPlanDisplayItems}
+            mealPlanDisplayItems={activeMealItems}
             mealFrequency={mealFrequency}
             applyMealFrequency={applyMealFrequency}
             isSoloCook={isSoloCook}
