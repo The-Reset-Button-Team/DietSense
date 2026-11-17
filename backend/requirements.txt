@@ -33,3 +33,6 @@ pypdf>=4.0.0
 # ─── Supabase / Postgres (optional cloud backend) ─────────────────────────────
 psycopg2-binary>=2.9.0
 supabase>=2.0.0
+
+# ─── Google Gemini AI ─────────────────────────────────────────────────────────
+google-genai>=1.0.0

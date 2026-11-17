@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, foods, sync
+from app.routers import auth, foods, sync, ai
 from routes.users import router as users_router
 from routes.feedback import router as feedback_router
 from routes.recommendations import router as recommendations_router
@@ -60,6 +60,7 @@ app.include_router(recommendations_router, prefix="/api")
 app.include_router(meal_plans_router)
 app.include_router(meal_logs_router)
 app.include_router(pantry_router)
+app.include_router(ai.router)
 
 
 # ─── Health Check ─────────────────────────────────────────────────────────────

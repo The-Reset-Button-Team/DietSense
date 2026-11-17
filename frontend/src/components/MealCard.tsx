@@ -7,6 +7,8 @@ interface MealCardProps {
   borderColor: string;
   onOpenRecipe: (recipe: RecipeData) => void;
   onSelectAlternative?: (slotKey: string, recipeName: string) => void;
+  onExplainWithAI?: (foodId: number, foodName: string) => void;
+  onCookWithAI?: (foodId: number, foodName: string) => void;
   reason?: string;
 }
 
@@ -15,6 +17,8 @@ export const MealCard: React.FC<MealCardProps> = ({
   borderColor,
   onOpenRecipe,
   onSelectAlternative,
+  onExplainWithAI,
+  onCookWithAI,
   reason,
 }) => {
   const [loggedStatus, setLoggedStatus] = useState<string | null>(null);
@@ -107,6 +111,22 @@ export const MealCard: React.FC<MealCardProps> = ({
             className="px-3.5 py-2 rounded-xl bg-[#faf7f2] border border-[#d8c8b8] hover:bg-[#581825] hover:text-white text-[#581825] text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
           >
             <span>📖</span> Recipe &amp; Prep
+          </button>
+
+          <button
+            onClick={() => onExplainWithAI?.(item.recipe.id, item.recipe.name)}
+            className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-medium transition-all shadow-xs flex items-center gap-1"
+            title="AI breakdown of this recommendation"
+          >
+            <span>✨</span> Explain with AI
+          </button>
+
+          <button
+            onClick={() => onCookWithAI?.(item.recipe.id, item.recipe.name)}
+            className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-medium transition-all shadow-xs flex items-center gap-1"
+            title="Step-by-step AI cooking guide"
+          >
+            <span>👨‍🍳</span> AI Cooking
           </button>
 
           {item.availableAlternatives && item.availableAlternatives.length > 1 && onSelectAlternative && (

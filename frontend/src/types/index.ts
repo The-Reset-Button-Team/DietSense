@@ -228,3 +228,7 @@ export interface PaginatedResponse<T> {
   per_page: number;
   total_pages: number;
 }
+
+// ─── AI & Gemini Types ───────────────────────────────────────────────────────
+export * from "./ai";
+

@@ -208,3 +208,22 @@ def init_db(db_path: str = None) -> None:
                 updated_at TEXT NOT NULL
             );
         """)
+
+        # 9. AI Interaction Logs table (Audit logging for Gemini prompts & responses)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS ai_interaction_logs (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                feature TEXT NOT NULL,
+                model TEXT NOT NULL,
+                prompt_tokens INTEGER DEFAULT 0,
+                completion_tokens INTEGER DEFAULT 0,
+                total_tokens INTEGER DEFAULT 0,
+                latency_ms INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                error_message TEXT,
+                created_at TEXT NOT NULL
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ai_logs_user_id ON ai_interaction_logs(user_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_ai_logs_created_at ON ai_interaction_logs(created_at);")

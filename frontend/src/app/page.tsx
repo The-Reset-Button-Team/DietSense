@@ -28,6 +28,11 @@ import { SafetyShield } from "@/components/SafetyShield";
 import { RecipeModal } from "@/components/RecipeModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { ProgressAnalytics } from "@/components/ProgressAnalytics";
+import { AIAssistantView } from "@/components/ai/AIAssistantView";
+import { AIExplanationModal } from "@/components/ai/AIExplanationModal";
+import { CookingInstructionsModal } from "@/components/ai/CookingInstructionsModal";
+import { PantryCookAssistant } from "@/components/ai/PantryCookAssistant";
+import { RecipeSuggestionView } from "@/components/ai/RecipeSuggestionView";
 
 function MainApp() {
   const { user, updateProfile, isAuthenticated } = useAuth();
@@ -38,7 +43,7 @@ function MainApp() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    if (queryTab && ["today", "pantry", "profile", "swap", "safety", "progress"].includes(queryTab)) {
+    if (queryTab && ["today", "pantry", "profile", "swap", "safety", "progress", "ai"].includes(queryTab)) {
       setActiveTab(queryTab);
     }
   }, [queryTab]);
@@ -122,6 +127,11 @@ function MainApp() {
 
   // Recipe Modal State
   const [activeRecipeModal, setActiveRecipeModal] = useState<RecipeData | null>(null);
+
+  // AI Feature State
+  const [explainModal, setExplainModal] = useState<{ foodId: number; foodName: string } | null>(null);
+  const [cookingModal, setCookingModal] = useState<{ foodId: number; foodName: string } | null>(null);
+  const [askAIMealContext, setAskAIMealContext] = useState<{ id: number; name: string } | null>(null);
 
   // Metabolic Calculations
   const bmr = useMemo(() => calculateBMR(weight, height, age, gender), [weight, height, age, gender]);
@@ -320,6 +330,8 @@ function MainApp() {
             fatGrams={macros.fatGrams}
             onOpenRecipe={(recipe) => setActiveRecipeModal(recipe)}
             onSelectAlternative={handleSelectAlternative}
+            onExplainWithAI={(foodId, foodName) => setExplainModal({ foodId, foodName })}
+            onCookWithAI={(foodId, foodName) => setCookingModal({ foodId, foodName })}
             inStockPantryNames={inStockPantryNames}
             onGoToPantry={() => setActiveTab("pantry")}
           />
@@ -330,13 +342,16 @@ function MainApp() {
 
         {/* Tab 3: Grocery AI Scanner & Pantry */}
         {activeTab === "pantry" && (
-          <PantryScanner
-            pantryItems={pantryItems}
-            togglePantryItem={togglePantryItem}
-            onAddManualItem={handleAddManualPantryItem}
-            onAddBatchItems={handleAddBatchPantryItems}
-            onApplyToMealPlan={handleApplyPantryToMealPlan}
-          />
+          <div className="space-y-4">
+            <PantryScanner
+              pantryItems={pantryItems}
+              togglePantryItem={togglePantryItem}
+              onAddManualItem={handleAddManualPantryItem}
+              onAddBatchItems={handleAddBatchPantryItems}
+              onApplyToMealPlan={handleApplyPantryToMealPlan}
+            />
+            <PantryCookAssistant inStockPantryNames={inStockPantryNames} />
+          </div>
         )}
 
         {/* Tab 4: Profile Studio, Routine & Biometrics */}
@@ -398,8 +413,43 @@ function MainApp() {
         {/* Tab 6: Active Safety Shield */}
         {activeTab === "safety" && <SafetyShield />}
 
+        {/* Tab 7: AI Meal Coach */}
+        {activeTab === "ai" && (
+          <div className="space-y-4">
+            <AIAssistantView
+              initialMealContext={askAIMealContext}
+              onClearInitialContext={() => setAskAIMealContext(null)}
+              availableFoods={activeMealItems.map((item) => ({
+                id: item.recipe.id,
+                name: item.recipe.name,
+              }))}
+            />
+            <RecipeSuggestionView />
+          </div>
+        )}
+
         {/* Interactive Hinglish Recipe Modal */}
         <RecipeModal recipe={activeRecipeModal} onClose={() => setActiveRecipeModal(null)} />
+
+        {/* AI Explanation Modal (Global Overlay) */}
+        <AIExplanationModal
+          isOpen={explainModal !== null}
+          foodId={explainModal?.foodId ?? null}
+          foodName={explainModal?.foodName ?? ""}
+          onClose={() => setExplainModal(null)}
+          onAskAboutMeal={(foodId, foodName) => {
+            setAskAIMealContext({ id: foodId, name: foodName });
+            setActiveTab("ai");
+          }}
+        />
+
+        {/* AI Cooking Instructions Modal (Global Overlay) */}
+        <CookingInstructionsModal
+          isOpen={cookingModal !== null}
+          foodId={cookingModal?.foodId ?? null}
+          foodName={cookingModal?.foodName ?? ""}
+          onClose={() => setCookingModal(null)}
+        />
 
         {/* User Auth & Profile Modal */}
         <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />

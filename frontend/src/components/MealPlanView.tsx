@@ -18,6 +18,8 @@ interface MealPlanViewProps {
   fatGrams: number;
   onOpenRecipe: (recipe: RecipeData) => void;
   onSelectAlternative?: (slotKey: string, recipeName: string) => void;
+  onExplainWithAI?: (foodId: number, foodName: string) => void;
+  onCookWithAI?: (foodId: number, foodName: string) => void;
   inStockPantryNames?: string[];
   onGoToPantry?: () => void;
 }
@@ -37,6 +39,8 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   fatGrams,
   onOpenRecipe,
   onSelectAlternative,
+  onExplainWithAI,
+  onCookWithAI,
   inStockPantryNames,
   onGoToPantry,
 }) => {
@@ -134,6 +138,8 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
             borderColor={borderColors[index % borderColors.length]}
             onOpenRecipe={onOpenRecipe}
             onSelectAlternative={onSelectAlternative}
+            onExplainWithAI={onExplainWithAI}
+            onCookWithAI={onCookWithAI}
           />
         ))}
       </div>

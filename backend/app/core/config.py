@@ -49,8 +49,15 @@ class Settings(BaseSettings):
     session_cookie_secure: bool = False
     session_cookie_samesite: str = "lax"
 
-    # ─── Gemini API (Removed / Deprecated) ─────────────────────────────────
+    # ─── Google Gemini API ────────────────────────────────────────────────
     gemini_api_key: str = ""
+    gemini_model: str = "gemini-3.8-flash"
+    gemini_fallback_model: str = "gemini-3.5-flash-lite"
+    gemini_request_timeout: float = 12.0
+    gemini_max_retries: int = 3
+    gemini_rate_limit_rpm: int = 60
+    gemini_cache_ttl_hours: int = 24
+    ai_feature_enabled: bool = True
 
     # ─── App ───────────────────────────────────────────────────────────────
     environment: str = "development"
