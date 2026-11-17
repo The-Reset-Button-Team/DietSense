@@ -9,6 +9,7 @@ Configuration is loaded from backend/.env via pydantic-settings.
 """
 
 import os
+import time
 from functools import lru_cache
 from typing import Optional
 
@@ -43,7 +44,7 @@ def get_supabase_client():
 
 # ─── Direct PostgreSQL Connection ──────────────────────────────────────────────
 
-def get_pg_connection(autocommit: bool = False):
+def get_pg_connection(autocommit: bool = False, timeout: int = 10):
     """
     Returns a direct psycopg2 connection to Supabase PostgreSQL.
     Uses the pooler URL (port 6543, transaction mode).
@@ -53,18 +54,16 @@ def get_pg_connection(autocommit: bool = False):
     """
     db_url = getattr(settings, "supabase_db_url", "") or ""
     if not db_url:
-        # Try to read from env directly
         db_url = os.environ.get("SUPABASE_DB_URL", "")
 
     if not db_url:
         return None
 
     try:
-        conn = psycopg2.connect(db_url, connect_timeout=15)
+        conn = psycopg2.connect(db_url, connect_timeout=timeout)
         conn.autocommit = autocommit
         return conn
     except Exception as e:
-        print(f"[supabase_client] PostgreSQL connection failed: {e}")
         return None
 
 
@@ -80,7 +79,10 @@ def get_pg_cursor(conn=None):
     return conn, conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
 
-# ─── Database Provider Detection ──────────────────────────────────────────────
+# ─── Database Provider Detection & Availability ───────────────────────────────
+
+_last_avail_check = 0.0
+_last_avail_result = False
 
 def get_database_provider() -> str:
     """
@@ -93,24 +95,32 @@ def get_database_provider() -> str:
     ).strip().lower()
 
     if provider == "supabase":
-        # Verify we can actually connect
-        conn = get_pg_connection()
-        if conn:
-            conn.close()
+        if is_supabase_available(timeout=3):
             return "supabase"
         else:
-            print("[supabase_client] DATABASE_PROVIDER=supabase but connection failed. Falling back to sqlite.")
             return "sqlite"
     return "sqlite"
 
 
-def is_supabase_available() -> bool:
-    """Quick check: can we reach Supabase PostgreSQL?"""
+def is_supabase_available(timeout: int = 3) -> bool:
+    """
+    Fast, cached check: can we reach Supabase PostgreSQL?
+    Caches positive/negative result for 10 seconds to eliminate query lag.
+    """
+    global _last_avail_check, _last_avail_result
+    now = time.time()
+    if now - _last_avail_check < 10.0:
+        return _last_avail_result
+
     try:
-        conn = get_pg_connection()
+        conn = get_pg_connection(timeout=timeout)
         if conn:
             conn.close()
-            return True
+            _last_avail_result = True
+        else:
+            _last_avail_result = False
     except Exception:
-        pass
-    return False
+        _last_avail_result = False
+
+    _last_avail_check = now
+    return _last_avail_result

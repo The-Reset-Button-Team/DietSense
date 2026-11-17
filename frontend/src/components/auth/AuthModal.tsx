@@ -10,8 +10,20 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
-  const { user, login, register, logout, isAuthenticated } = useAuth();
+  const {
+    user,
+    login,
+    register,
+    loginWithSupabase,
+    registerWithSupabase,
+    linkSupabase,
+    unlinkSupabase,
+    logout,
+    isAuthenticated,
+  } = useAuth();
+
   const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [providerMode, setProviderMode] = useState<"local" | "supabase">("local");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -19,29 +31,78 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [weight, setWeight] = useState(75);
   const [height, setHeight] = useState(175);
   const [age, setAge] = useState(26);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [linkSuccessMessage, setLinkSuccessMessage] = useState("");
+  const [isLinking, setIsLinking] = useState(false);
+  const [linkEmail, setLinkEmail] = useState("");
+  const [linkPassword, setLinkPassword] = useState("");
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
+
+    let res;
     if (isRegisterMode) {
-      await register({
+      const regData = {
         email,
+        password,
         full_name: name || email.split("@")[0],
         goal,
         weight_kg: weight,
         height_cm: height,
         age,
-      });
+      };
+      res = providerMode === "supabase"
+        ? await registerWithSupabase(regData)
+        : await register(regData);
     } else {
-      await login(email, password);
+      res = providerMode === "supabase"
+        ? await loginWithSupabase(email, password)
+        : await login(email, password);
     }
-    onClose();
+
+    if (res.success) {
+      onClose();
+    } else {
+      setErrorMessage(res.error || "Authentication failed.");
+    }
   };
+
+  const handleLinkSupabase = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMessage("");
+    setLinkSuccessMessage("");
+    const res = await linkSupabase({ email: linkEmail, password: linkPassword });
+    if (res.success) {
+      setLinkSuccessMessage("Supabase account linked successfully!");
+      setIsLinking(false);
+      setLinkEmail("");
+      setLinkPassword("");
+    } else {
+      setErrorMessage(res.error || "Failed to link Supabase account.");
+    }
+  };
+
+  const handleUnlinkSupabase = async () => {
+    if (!confirm("Are you sure you want to unlink your Supabase account?")) return;
+    setErrorMessage("");
+    setLinkSuccessMessage("");
+    const res = await unlinkSupabase();
+    if (res.success) {
+      setLinkSuccessMessage("Supabase account unlinked.");
+    } else {
+      setErrorMessage(res.error || "Failed to unlink Supabase account.");
+    }
+  };
+
+  const hasLocal = user?.auth_providers?.includes("local") ?? true;
+  const hasSupabase = user?.auth_providers?.includes("supabase") ?? false;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-md bg-[#faf7f2] border border-[#e2d6c9] rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md bg-[#faf7f2] border border-[#e2d6c9] rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
         
         {/* Atmosphere Light */}
         <div className="absolute -top-16 -right-12 w-48 h-48 bg-[#dbeafe] rounded-full blur-2xl pointer-events-none opacity-60"></div>
@@ -62,14 +123,97 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             </div>
             <div>
               <h2 className="text-xl font-serif font-bold text-[#421018]">
-                {user?.full_name || "arvykrane"}
+                {user?.full_name || "DietSense User"}
               </h2>
               <p className="text-xs text-slate-500 font-mono mt-0.5">{user?.email}</p>
-              <div className="inline-flex items-center gap-2 px-3 py-1 mt-2.5 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[11px] font-semibold text-[#581825]">
+              
+              {/* Linked Providers */}
+              <div className="flex items-center justify-center gap-2 mt-3">
+                {hasLocal && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-[10px] font-semibold text-emerald-800">
+                    ✓ Local Auth
+                  </span>
+                )}
+                {hasSupabase ? (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-semibold text-blue-800">
+                    ✓ Supabase Linked
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-[10px] font-medium text-slate-600">
+                    Supabase Unlinked
+                  </span>
+                )}
+              </div>
+
+              <div className="inline-flex items-center gap-2 px-3 py-1 mt-2 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[11px] font-semibold text-[#581825]">
                 <span>🎯 Goal: {user?.goal?.replace("_", " ")}</span>
                 <span>•</span>
                 <span>🔥 {user?.daily_calorie_target} kcal</span>
               </div>
+            </div>
+
+            {errorMessage && (
+              <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs text-left">
+                {errorMessage}
+              </div>
+            )}
+
+            {linkSuccessMessage && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs text-left">
+                {linkSuccessMessage}
+              </div>
+            )}
+
+            {/* Supabase Account Linking / Unlinking */}
+            <div className="p-3.5 rounded-2xl bg-white/70 border border-[#e2d6c9] text-left space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">Supabase Cloud Sync</h4>
+                  <p className="text-[11px] text-slate-500">Sync meal plans across devices with Supabase Auth</p>
+                </div>
+                {hasSupabase ? (
+                  <button
+                    onClick={handleUnlinkSupabase}
+                    className="px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 text-[10px] font-medium transition"
+                  >
+                    Unlink
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setIsLinking(!isLinking)}
+                    className="px-2.5 py-1 rounded-lg bg-[#1d4ed8] text-white hover:bg-[#1e40af] text-[10px] font-semibold transition"
+                  >
+                    {isLinking ? "Cancel" : "Link Account"}
+                  </button>
+                )}
+              </div>
+
+              {isLinking && !hasSupabase && (
+                <form onSubmit={handleLinkSupabase} className="pt-2 border-t border-slate-200 space-y-2">
+                  <input
+                    type="email"
+                    required
+                    placeholder="Supabase account email"
+                    value={linkEmail}
+                    onChange={(e) => setLinkEmail(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#d8c8b8] text-xs"
+                  />
+                  <input
+                    type="password"
+                    required
+                    placeholder="Supabase password"
+                    value={linkPassword}
+                    onChange={(e) => setLinkPassword(e.target.value)}
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-[#d8c8b8] text-xs"
+                  />
+                  <button
+                    type="submit"
+                    className="w-full py-1.5 rounded-lg bg-[#581825] text-white text-xs font-semibold hover:bg-[#421018]"
+                  >
+                    Verify & Link
+                  </button>
+                </form>
+              )}
             </div>
 
             <div className="pt-2 border-t border-[#e8ded3] flex gap-3">
@@ -105,6 +249,38 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                   : "Sign in to access your synchronized meal plans and verified recipes."}
               </p>
             </div>
+
+            {/* Provider Toggle Tabs */}
+            <div className="flex rounded-xl bg-[#ede4d8] p-1 text-xs font-semibold text-slate-700">
+              <button
+                type="button"
+                onClick={() => setProviderMode("local")}
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
+                  providerMode === "local"
+                    ? "bg-white text-slate-900 shadow-sm font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                🔒 Local (Offline)
+              </button>
+              <button
+                type="button"
+                onClick={() => setProviderMode("supabase")}
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
+                  providerMode === "supabase"
+                    ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                ⚡ Supabase Auth
+              </button>
+            </div>
+
+            {errorMessage && (
+              <div className="p-3 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs">
+                {errorMessage}
+              </div>
+            )}
 
             {isRegisterMode && (
               <div>
@@ -178,15 +354,24 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-[#581825] text-white text-xs font-semibold hover:bg-[#421018] shadow-md transition-all mt-2"
+              className={`w-full py-2.5 rounded-xl text-white text-xs font-semibold shadow-md transition-all mt-2 ${
+                providerMode === "supabase"
+                  ? "bg-[#1d4ed8] hover:bg-[#1e40af]"
+                  : "bg-[#581825] hover:bg-[#421018]"
+              }`}
             >
-              {isRegisterMode ? "Register & Setup Plan" : "Sign In"}
+              {isRegisterMode
+                ? `Register with ${providerMode === "supabase" ? "Supabase" : "Local Account"}`
+                : `Sign In with ${providerMode === "supabase" ? "Supabase" : "Local Account"}`}
             </button>
 
             <div className="text-center pt-2">
               <button
                 type="button"
-                onClick={() => setIsRegisterMode(!isRegisterMode)}
+                onClick={() => {
+                  setIsRegisterMode(!isRegisterMode);
+                  setErrorMessage("");
+                }}
                 className="text-xs text-[#1d4ed8] hover:underline font-medium"
               >
                 {isRegisterMode

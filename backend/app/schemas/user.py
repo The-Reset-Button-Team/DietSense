@@ -49,6 +49,7 @@ class UserProfileResponse(BaseModel):
     is_solo_cook: bool = True
     active_meal_frequency: str = "3_meals"
     token: Optional[str] = None
+    auth_providers: List[str] = ["local"]
 
 class UserUpdateRequest(BaseModel):
     full_name: Optional[str] = None
@@ -60,3 +61,23 @@ class UserUpdateRequest(BaseModel):
     activity_level: Optional[ActivityLevel] = None
     is_solo_cook: Optional[bool] = None
     active_meal_frequency: Optional[str] = None
+
+class SupabaseLoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class SupabaseTokenVerifyRequest(BaseModel):
+    access_token: str
+
+class AccountLinkRequest(BaseModel):
+    provider: str = "supabase"
+    access_token: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+
+class PasswordResetConfirmRequest(BaseModel):
+    token: str
+    new_password: str = Field(min_length=6)

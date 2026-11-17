@@ -1,7 +1,11 @@
 """
 DietSense — Authentication & Profile Routes
-Local database-backed authentication using bcrypt password hashing,
-session cookies, and JWT verification. No Supabase dependency.
+Hybrid local-first authentication architecture:
+- Local database-backed authentication using bcrypt password hashing, session cookies, and JWT.
+- Supabase Auth integration (email registration, login, token verification, password reset).
+- Secure account linking with stable internal DietSense user IDs.
+- Duplicate account prevention and strict user data isolation.
+- Offline and local fallback handling.
 """
 
 import uuid
@@ -12,6 +16,10 @@ from app.schemas.user import (
     UserLoginRequest,
     UserProfileResponse,
     UserUpdateRequest,
+    SupabaseLoginRequest,
+    SupabaseTokenVerifyRequest,
+    AccountLinkRequest,
+    PasswordResetRequest,
 )
 from app.core.config import settings
 from app.core.security import (
@@ -21,7 +29,18 @@ from app.core.security import (
     create_access_token,
 )
 from app.core.dependencies import get_current_user
+from app.core.auth_service import (
+    verify_supabase_token,
+    resolve_supabase_identity,
+    link_supabase_account,
+    get_user_auth_providers,
+    supabase_register_user,
+    supabase_login_user,
+    supabase_request_password_reset,
+    get_supabase_anon_client,
+)
 from db.database import get_db_cursor, get_connection
+from app.core.sync_service import enqueue_sync_operation
 
 router = APIRouter()
 
@@ -66,6 +85,29 @@ def _calculate_target_calories(
     return round(target)
 
 
+def _build_profile_response(user_id: str, email: str, prof: dict, token: str = None) -> UserProfileResponse:
+    """Constructs a unified UserProfileResponse including active auth providers."""
+    providers = get_user_auth_providers(user_id)
+    return UserProfileResponse(
+        id=user_id,
+        email=prof.get("email") or email,
+        full_name=prof.get("full_name") or (email.split("@")[0] if email else "User"),
+        age=prof.get("age", 26),
+        gender=prof.get("gender", "male"),
+        height_cm=float(prof.get("height_cm", 175.0)),
+        weight_kg=float(prof.get("weight_kg", 75.0)),
+        goal=prof.get("goal", "lose_weight"),
+        activity_level=prof.get("activity_level", "lightly_active"),
+        daily_calorie_target=int(prof.get("target_calories", 1850)),
+        is_solo_cook=bool(prof.get("is_solo_cook", 1)),
+        active_meal_frequency=prof.get("active_meal_frequency", "3_meals"),
+        token=token,
+        auth_providers=providers,
+    )
+
+
+# ─── LOCAL AUTHENTICATION (Preserved & Offline-Ready) ─────────────────────────
+
 @router.post("/register", response_model=UserProfileResponse)
 async def register(req: UserRegisterRequest, response: Response):
     """
@@ -88,7 +130,7 @@ async def register(req: UserRegisterRequest, response: Response):
     )
 
     with get_db_cursor() as cur:
-        # Check if email is already registered
+        # Check if email is already registered locally
         cur.execute("SELECT id FROM users WHERE email = ? COLLATE NOCASE", (email,))
         if cur.fetchone():
             raise HTTPException(
@@ -103,6 +145,16 @@ async def register(req: UserRegisterRequest, response: Response):
             VALUES (?, ?, ?, ?, 'active', ?, ?)
             """,
             (user_id, email, hashed_pw, req.full_name, now, now),
+        )
+
+        # Insert auth identity for local provider
+        ident_id = f"ident_{uuid.uuid4().hex[:12]}"
+        cur.execute(
+            """
+            INSERT OR IGNORE INTO auth_identities (id, user_id, provider, provider_user_id, email, created_at, updated_at)
+            VALUES (?, ?, 'local', ?, ?, ?, ?)
+            """,
+            (ident_id, user_id, user_id, email, now, now),
         )
 
         # Insert profile
@@ -153,6 +205,7 @@ async def register(req: UserRegisterRequest, response: Response):
         is_solo_cook=True,
         active_meal_frequency="3_meals",
         token=token,
+        auth_providers=["local"],
     )
 
 
@@ -161,6 +214,7 @@ async def login(req: UserLoginRequest, response: Response):
     """
     Authenticates a user using email and password against local SQLite.
     Verifies bcrypt hash, sets HttpOnly cookie, and returns user profile + token.
+    Works completely offline without external network dependencies.
     """
     email = normalize_email(req.email)
     with get_db_cursor() as cur:
@@ -181,7 +235,6 @@ async def login(req: UserLoginRequest, response: Response):
         prof = cur.fetchone()
 
         if not prof:
-            # Create default profile if missing
             now = datetime.now(timezone.utc).isoformat()
             cur.execute(
                 """
@@ -205,38 +258,255 @@ async def login(req: UserLoginRequest, response: Response):
     token = create_access_token(user_id=user_id, email=email, full_name=full_name)
     _set_auth_cookie(response, token)
 
-    return UserProfileResponse(
-        id=user_id,
-        email=email,
-        full_name=prof["full_name"] or full_name,
-        age=prof["age"],
-        gender=prof["gender"],
-        height_cm=float(prof["height_cm"]),
-        weight_kg=float(prof["weight_kg"]),
-        goal=prof["goal"],
-        activity_level=prof["activity_level"],
-        daily_calorie_target=int(prof["target_calories"]),
-        is_solo_cook=bool(prof["is_solo_cook"]),
-        active_meal_frequency=prof["active_meal_frequency"],
+    return _build_profile_response(user_id=user_id, email=email, prof=dict(prof), token=token)
+
+
+# ─── SUPABASE AUTHENTICATION ─────────────────────────────────────────────────
+
+@router.post("/supabase/register", response_model=UserProfileResponse)
+async def supabase_register(req: UserRegisterRequest, response: Response):
+    """
+    Registers a new user through Supabase Auth.
+    Checks for duplicate accounts, provisions a stable internal DietSense user ID,
+    maps the Supabase UUID in auth_identities, sets session cookie, and returns profile.
+    """
+    target_cal = _calculate_target_calories(
+        weight_kg=req.weight_kg,
+        height_cm=req.height_cm,
+        age=req.age,
+        gender=req.gender.value,
+        activity_level=req.activity_level.value,
+        goal=req.goal.value,
+    )
+
+    biometrics = {
+        "age": req.age,
+        "gender": req.gender.value,
+        "height_cm": req.height_cm,
+        "weight_kg": req.weight_kg,
+        "goal": req.goal.value,
+        "activity_level": req.activity_level.value,
+        "target_calories": target_cal,
+    }
+
+    internal_user_id, token, extra = supabase_register_user(
+        email=req.email,
+        password=req.password,
+        full_name=req.full_name,
+        biometrics=biometrics,
+    )
+
+    _set_auth_cookie(response, token)
+
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM profiles WHERE user_id = ?", (internal_user_id,))
+        prof = cur.fetchone()
+
+    return _build_profile_response(
+        user_id=internal_user_id,
+        email=normalize_email(req.email),
+        prof=dict(prof) if prof else {},
         token=token,
     )
 
 
+@router.post("/supabase/login", response_model=UserProfileResponse)
+async def supabase_login(req: SupabaseLoginRequest, response: Response):
+    """
+    Authenticates a user against Supabase Auth.
+    Resolves the stable internal DietSense user ID from Supabase UUID,
+    sets the session cookie, and returns the profile.
+    """
+    internal_user_id, token, extra = supabase_login_user(
+        email=req.email,
+        password=req.password,
+    )
+
+    _set_auth_cookie(response, token)
+
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM profiles WHERE user_id = ?", (internal_user_id,))
+        prof = cur.fetchone()
+
+    return _build_profile_response(
+        user_id=internal_user_id,
+        email=normalize_email(req.email),
+        prof=dict(prof) if prof else {},
+        token=token,
+    )
+
+
+@router.post("/supabase/verify", response_model=UserProfileResponse)
+async def supabase_verify_token(req: SupabaseTokenVerifyRequest, response: Response):
+    """
+    Exchanges a verified Supabase access token (e.g. from client SDK or OAuth)
+    for a stable internal DietSense session and cookie.
+    Validates token via Supabase GoTrue Auth service (never misusing API keys as secrets).
+    """
+    sb_user = verify_supabase_token(req.access_token)
+    supabase_uid = sb_user["id"]
+    email = sb_user.get("email") or ""
+    full_name = sb_user.get("user_metadata", {}).get("full_name") or email.split("@")[0]
+
+    internal_user_id = resolve_supabase_identity(
+        supabase_user_id=supabase_uid,
+        email=email,
+        full_name=full_name,
+        metadata=sb_user.get("user_metadata", {}),
+        auto_link_verified=True,
+    )
+
+    token = create_access_token(
+        user_id=internal_user_id,
+        email=email,
+        full_name=full_name,
+    )
+    _set_auth_cookie(response, token)
+
+    with get_db_cursor() as cur:
+        cur.execute("SELECT * FROM profiles WHERE user_id = ?", (internal_user_id,))
+        prof = cur.fetchone()
+
+    return _build_profile_response(
+        user_id=internal_user_id,
+        email=email,
+        prof=dict(prof) if prof else {},
+        token=token,
+    )
+
+
+# ─── ACCOUNT LINKING ─────────────────────────────────────────────────────────
+
+@router.post("/link/supabase")
+async def link_supabase(
+    req: AccountLinkRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Securely links a Supabase identity to the currently authenticated DietSense account.
+    Validates that the Supabase account is not already linked to another user.
+    """
+    internal_user_id = current_user["id"]
+    supabase_uid = None
+    email = None
+
+    if req.access_token:
+        sb_user = verify_supabase_token(req.access_token)
+        supabase_uid = sb_user["id"]
+        email = sb_user.get("email") or ""
+    elif req.email and req.password:
+        client = get_supabase_anon_client()
+        if not client:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Supabase Auth service is not available",
+            )
+        try:
+            res = client.auth.sign_in_with_password({
+                "email": normalize_email(str(req.email)),
+                "password": req.password,
+            })
+            if not res.user:
+                raise HTTPException(status_code=401, detail="Invalid Supabase credentials")
+            supabase_uid = str(res.user.id)
+            email = str(res.user.email)
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Supabase authentication failed: {e}")
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Must provide either access_token or email + password to link Supabase account",
+        )
+
+    link_supabase_account(
+        internal_user_id=internal_user_id,
+        supabase_user_id=supabase_uid,
+        email=email,
+    )
+
+    providers = get_user_auth_providers(internal_user_id)
+    return {
+        "status": "success",
+        "message": "Supabase account linked successfully",
+        "user_id": internal_user_id,
+        "auth_providers": providers,
+    }
+
+
+@router.delete("/link/supabase")
+async def unlink_supabase(current_user: dict = Depends(get_current_user)):
+    """
+    Unlinks the Supabase identity from the authenticated account.
+    Fails safely if Supabase is the user's only authentication method.
+    """
+    user_id = current_user["id"]
+    providers = get_user_auth_providers(user_id)
+
+    if "local" not in providers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot unlink Supabase because you do not have a local password set.",
+        )
+
+    with get_db_cursor() as cur:
+        cur.execute(
+            "DELETE FROM auth_identities WHERE user_id = ? AND provider = 'supabase'",
+            (user_id,),
+        )
+
+    return {
+        "status": "success",
+        "message": "Supabase account unlinked successfully",
+        "auth_providers": get_user_auth_providers(user_id),
+    }
+
+
+# ─── PASSWORD RESET ──────────────────────────────────────────────────────────
+
+@router.post("/reset-password")
+async def reset_password(req: PasswordResetRequest):
+    """
+    Initiates a password reset for a user.
+    If the user has a linked Supabase identity, triggers Supabase's GoTrue email reset.
+    Returns success message to prevent user enumeration.
+    """
+    email = normalize_email(req.email)
+    supabase_request_password_reset(email)
+    return {
+        "status": "success",
+        "message": "If an account with that email exists, password reset instructions have been sent.",
+    }
+
+
+# ─── LOGOUT & SESSION MANAGEMENT ─────────────────────────────────────────────
+
 @router.post("/logout")
 async def logout(response: Response):
-    """Clears the session cookie and terminates user session."""
+    """
+    Clears the HttpOnly session cookie and terminates the user session.
+    Signs out from Supabase client if configured.
+    """
     response.delete_cookie(
         key=settings.session_cookie_name,
         path="/",
     )
+    client = get_supabase_anon_client()
+    if client:
+        try:
+            client.auth.sign_out()
+        except Exception:
+            pass
+
     return {"status": "success", "message": "Successfully logged out"}
 
+
+# ─── PROFILE RETRIEVAL & UPDATE ──────────────────────────────────────────────
 
 @router.get("/me", response_model=UserProfileResponse)
 async def get_current_user_profile(user_payload: dict = Depends(get_current_user)):
     """
     Returns the profile of the verified authenticated user.
-    Loads data directly from local SQLite.
+    Loads data directly from local SQLite and includes linked auth providers.
     """
     user_id = user_payload["id"]
     email = normalize_email(user_payload.get("email") or "")
@@ -268,19 +538,10 @@ async def get_current_user_profile(user_payload: dict = Depends(get_current_user
             cur.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
             prof = cur.fetchone()
 
-    return UserProfileResponse(
-        id=user_id,
-        email=prof["email"] if prof else email,
-        full_name=prof["full_name"] if prof else "User",
-        age=prof["age"] if prof else 26,
-        gender=prof["gender"] if prof else "male",
-        height_cm=float(prof["height_cm"]) if prof else 175.0,
-        weight_kg=float(prof["weight_kg"]) if prof else 75.0,
-        goal=prof["goal"] if prof else "lose_weight",
-        activity_level=prof["activity_level"] if prof else "lightly_active",
-        daily_calorie_target=int(prof["target_calories"]) if prof else 1850,
-        is_solo_cook=bool(prof["is_solo_cook"]) if prof else True,
-        active_meal_frequency=prof["active_meal_frequency"] if prof else "3_meals",
+    return _build_profile_response(
+        user_id=user_id,
+        email=email,
+        prof=dict(prof) if prof else {},
     )
 
 
@@ -301,7 +562,6 @@ async def update_profile(
         cur.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
         prof = cur.fetchone()
         if not prof:
-            # Insert baseline
             cur.execute(
                 """
                 INSERT INTO profiles (
@@ -371,17 +631,16 @@ async def update_profile(
         if req.full_name is not None:
             cur.execute("UPDATE users SET full_name = ?, updated_at = ? WHERE id = ?", (req.full_name, now, user_id))
 
-    return UserProfileResponse(
-        id=user_id,
+    enqueue_sync_operation(
+        user_id=user_id,
+        entity_type="profile",
+        entity_id=user_id,
+        operation="UPSERT",
+        payload=current_data,
+    )
+
+    return _build_profile_response(
+        user_id=user_id,
         email=current_data["email"],
-        full_name=current_data["full_name"],
-        age=current_data["age"],
-        gender=current_data["gender"],
-        height_cm=float(current_data["height_cm"]),
-        weight_kg=float(current_data["weight_kg"]),
-        goal=current_data["goal"],
-        activity_level=current_data["activity_level"],
-        daily_calorie_target=target_cal,
-        is_solo_cook=bool(current_data["is_solo_cook"]),
-        active_meal_frequency=current_data["active_meal_frequency"],
+        prof=current_data,
     )

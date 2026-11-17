@@ -2,6 +2,7 @@
 DietSense — Meal Plans Routes
 Allows authenticated users to generate, persist, and retrieve daily/weekly meal plans.
 Data is persisted to local SQLite database with strict user ownership enforcement.
+Mutations are enqueued into the local sync_queue for cloud synchronization.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,6 +13,7 @@ import uuid
 
 from app.core.dependencies import get_current_user
 from db.database import get_db_cursor
+from app.core.sync_service import enqueue_sync_operation
 
 router = APIRouter(tags=["Meal Plans"])
 
@@ -61,6 +63,7 @@ async def create_meal_plan(
     """
     Create and persist a new meal plan composed of recommended recipes/meals.
     Guarantees user ownership (user_id derived exclusively from JWT).
+    Enqueues mutation to local sync_queue.
     """
     user_id = user["id"]
     plan_id = f"plan_{uuid.uuid4().hex[:12]}"
@@ -74,14 +77,33 @@ async def create_meal_plan(
     with get_db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO meal_plans (id, user_id, date, target_calories, items, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO meal_plans (id, user_id, date, target_calories, items, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (plan_id, user_id, plan_date, target_cal, items_json, plan_status, created_at),
+            (plan_id, user_id, plan_date, target_cal, items_json, plan_status, created_at, created_at),
         )
         cur.execute("SELECT * FROM meal_plans WHERE id = ?", (plan_id,))
         row = cur.fetchone()
-        return _row_to_plan(row)
+
+    # Enqueue mutation for cloud synchronization
+    enqueue_sync_operation(
+        user_id=user_id,
+        entity_type="meal_plan",
+        entity_id=plan_id,
+        operation="UPSERT",
+        payload={
+            "id": plan_id,
+            "user_id": user_id,
+            "date": plan_date,
+            "target_calories": target_cal,
+            "items": plan_data.get("items", []),
+            "status": plan_status,
+            "created_at": created_at,
+            "updated_at": created_at,
+        },
+    )
+
+    return _row_to_plan(row)
 
 
 @router.get("/meal-plans/{plan_id}")

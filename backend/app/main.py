@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
-from app.routers import auth, foods
+from app.routers import auth, foods, sync
 from routes.users import router as users_router
 from routes.feedback import router as feedback_router
 from routes.recommendations import router as recommendations_router
@@ -51,6 +51,7 @@ app.add_middleware(
 # ─── Routers ─────────────────────────────────────────────────────────────────
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth & Profile"])
 app.include_router(foods.router, prefix="/api/foods", tags=["Foods Database"])
+app.include_router(sync.router)
 app.include_router(catalog_foods_router)
 app.include_router(users_router)
 app.include_router(feedback_router)
@@ -79,4 +80,5 @@ async def detailed_health() -> dict[str, str]:
         "api": "healthy",
         "database": "sqlite_ready",
         "auth": "local_jwt_session_ready",
+        "sync": "cloud_sync_ready",
     }

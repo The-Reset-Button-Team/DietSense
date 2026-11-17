@@ -64,6 +64,22 @@ def init_db(db_path: str = None) -> None:
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);")
 
+        # 1b. Auth Identities table (Maps internal user_id to local & Supabase providers)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS auth_identities (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                provider TEXT NOT NULL,
+                provider_user_id TEXT NOT NULL,
+                email TEXT NOT NULL COLLATE NOCASE,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(provider, provider_user_id)
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_identities_user_id ON auth_identities(user_id);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_identities_provider_email ON auth_identities(provider, email);")
+
         # 2. Profiles table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS profiles (
@@ -85,6 +101,7 @@ def init_db(db_path: str = None) -> None:
                 goal TEXT NOT NULL DEFAULT 'lose_weight',
                 activity_level TEXT NOT NULL DEFAULT 'lightly_active',
                 preferred_cuisines TEXT NOT NULL DEFAULT '["indian"]',
+                synced_at TEXT,
                 updated_at TEXT NOT NULL
             );
         """)
@@ -99,6 +116,8 @@ def init_db(db_path: str = None) -> None:
                 target_calories INTEGER NOT NULL DEFAULT 2000,
                 items TEXT NOT NULL DEFAULT '[]',
                 status TEXT NOT NULL DEFAULT 'generated',
+                synced_at TEXT,
+                updated_at TEXT,
                 created_at TEXT NOT NULL
             );
         """)
@@ -115,6 +134,8 @@ def init_db(db_path: str = None) -> None:
                 reason TEXT CHECK (reason IS NULL OR reason IN ('time', 'cost', 'taste', 'unavailable')),
                 item_tags TEXT NOT NULL DEFAULT '[]',
                 timestamp TEXT NOT NULL,
+                synced_at TEXT,
+                updated_at TEXT,
                 created_at TEXT NOT NULL
             );
         """)
@@ -131,6 +152,8 @@ def init_db(db_path: str = None) -> None:
                 reason TEXT,
                 feedback_text TEXT,
                 derived_penalty_tag TEXT,
+                synced_at TEXT,
+                updated_at TEXT,
                 created_at TEXT NOT NULL
             );
         """)
@@ -146,8 +169,42 @@ def init_db(db_path: str = None) -> None:
                 quantity TEXT NOT NULL DEFAULT '1 unit',
                 in_stock INTEGER NOT NULL DEFAULT 1,
                 source TEXT NOT NULL DEFAULT 'manual',
+                synced_at TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pantry_items_user_id ON pantry_items(user_id);")
+
+        # 7. Sync Queue table (Pending mutations for cloud sync)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS sync_queue (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                entity_type TEXT NOT NULL,
+                entity_id TEXT NOT NULL,
+                operation TEXT NOT NULL,
+                payload TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                max_retries INTEGER NOT NULL DEFAULT 5,
+                last_error TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+        """)
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_queue_user_status ON sync_queue (user_id, status);")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue (entity_type, entity_id);")
+
+        # 8. Sync Metadata table (User-level sync status & timestamps)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS sync_metadata (
+                user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                last_synced_at TEXT,
+                last_attempt_at TEXT,
+                sync_status TEXT NOT NULL DEFAULT 'idle',
+                last_error TEXT,
+                pending_count INTEGER NOT NULL DEFAULT 0,
+                updated_at TEXT NOT NULL
+            );
+        """)

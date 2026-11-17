@@ -10,8 +10,9 @@ function SignupForm() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
 
-  const { register, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { register, registerWithSupabase, isAuthenticated, isLoading: authLoading } = useAuth();
 
+  const [providerMode, setProviderMode] = useState<"local" | "supabase">("local");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -56,8 +57,8 @@ function SignupForm() {
 
     if (!password) {
       errors.password = "Password is required.";
-    } else if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters.";
     }
 
     if (!confirmPassword) {
@@ -77,11 +78,15 @@ function SignupForm() {
     if (!validate()) return;
 
     setIsSubmitting(true);
-    const result = await register({
+    const regPayload = {
       email,
       password,
       full_name: fullName.trim(),
-    });
+    };
+
+    const result = providerMode === "supabase"
+      ? await registerWithSupabase(regPayload)
+      : await register(regPayload);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -119,6 +124,34 @@ function SignupForm() {
                 : "Join DietSense for evidence-based adaptive meal planning."}
             </p>
           </div>
+
+          {/* Provider Mode Switcher */}
+          {!needsConfirmation && (
+            <div className="flex rounded-xl bg-[#ede4d8] p-1 text-xs font-semibold text-slate-700 mb-5">
+              <button
+                type="button"
+                onClick={() => setProviderMode("local")}
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
+                  providerMode === "local"
+                    ? "bg-white text-slate-900 shadow-sm font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                🔒 Local (Offline)
+              </button>
+              <button
+                type="button"
+                onClick={() => setProviderMode("supabase")}
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
+                  providerMode === "supabase"
+                    ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                ⚡ Supabase Auth
+              </button>
+            </div>
+          )}
 
           {/* Error Banner */}
           {errorMessage && (
@@ -205,7 +238,7 @@ function SignupForm() {
 
               <div>
                 <label htmlFor="signup-password" className="block text-xs font-semibold text-slate-700 mb-1">
-                  Password (min. 8 characters)
+                  Password
                 </label>
                 <input
                   id="signup-password"
@@ -216,7 +249,7 @@ function SignupForm() {
                     setPassword(e.target.value);
                     if (fieldErrors.password) setFieldErrors({ ...fieldErrors, password: undefined });
                   }}
-                  placeholder="••••••••"
+                  placeholder="At least 6 characters"
                   aria-invalid={!!fieldErrors.password}
                   className={`w-full px-3.5 py-2 rounded-xl bg-white border text-xs text-slate-800 transition-all focus:outline-none focus:ring-2 focus:ring-[#1d4ed8] ${
                     fieldErrors.password ? "border-red-400 bg-red-50/20" : "border-[#d8c8b8]"
@@ -238,11 +271,9 @@ function SignupForm() {
                   value={confirmPassword}
                   onChange={(e) => {
                     setConfirmPassword(e.target.value);
-                    if (fieldErrors.confirmPassword) {
-                      setFieldErrors({ ...fieldErrors, confirmPassword: undefined });
-                    }
+                    if (fieldErrors.confirmPassword) setFieldErrors({ ...fieldErrors, confirmPassword: undefined });
                   }}
-                  placeholder="••••••••"
+                  placeholder="Re-enter your password"
                   aria-invalid={!!fieldErrors.confirmPassword}
                   className={`w-full px-3.5 py-2 rounded-xl bg-white border text-xs text-slate-800 transition-all focus:outline-none focus:ring-2 focus:ring-[#1d4ed8] ${
                     fieldErrors.confirmPassword ? "border-red-400 bg-red-50/20" : "border-[#d8c8b8]"
@@ -256,7 +287,11 @@ function SignupForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 rounded-xl bg-[#581825] text-white text-xs font-semibold hover:bg-[#421018] shadow-md transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-3"
+                className={`w-full py-2.5 rounded-xl text-white text-xs font-semibold shadow-md transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-4 ${
+                  providerMode === "supabase"
+                    ? "bg-[#1d4ed8] hover:bg-[#1e40af]"
+                    : "bg-[#581825] hover:bg-[#421018]"
+                }`}
               >
                 {isSubmitting ? (
                   <>
@@ -264,7 +299,7 @@ function SignupForm() {
                     <span>Creating Account...</span>
                   </>
                 ) : (
-                  "Create Account"
+                  `Register with ${providerMode === "supabase" ? "Supabase Auth" : "Local Account"}`
                 )}
               </button>
 

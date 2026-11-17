@@ -2,6 +2,7 @@
 DietSense — User & Profile Routes
 Handles user onboarding, profile retrieval, and settings updates in local SQLite.
 Supports GET /profile, PUT /profile, GET /users/profile, and POST /users/profile.
+Enqueues profile mutations to sync_queue for cloud synchronization.
 """
 
 from fastapi import APIRouter, HTTPException, Depends
@@ -12,6 +13,7 @@ from datetime import datetime, timezone
 
 from app.core.dependencies import get_current_user
 from db.database import get_db_cursor
+from app.core.sync_service import enqueue_sync_operation
 
 router = APIRouter(tags=["Users & Profile"])
 
@@ -104,7 +106,7 @@ async def get_user_profile(user: Dict[str, Any] = Depends(get_current_user)):
         "dietary_pref": "vegetarian",
         "allergies": [],
         "target_calories": 2000,
-        "budget_per_meal": 100,
+        "budget_per_meal": 100.0,
         "prep_time_limit": 30,
         "is_solo_cook": True,
         "active_meal_frequency": "3_meals",
@@ -120,7 +122,7 @@ async def update_user_profile(
 ):
     """
     Create or update user onboarding profile (diet, allergies, calories, budget, prep-time).
-    Persists directly to SQLite database.
+    Persists directly to SQLite database and enqueues to sync_queue.
     """
     user_id = user["id"]
     email = user.get("email") or f"{user_id}@dietsense.local"
@@ -235,4 +237,14 @@ async def update_user_profile(
 
         cur.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
         updated_row = cur.fetchone()
-        return _row_to_profile(updated_row)
+
+    # Enqueue profile mutation for sync
+    enqueue_sync_operation(
+        user_id=user_id,
+        entity_type="profile",
+        entity_id=user_id,
+        operation="UPSERT",
+        payload=dict(updated_row),
+    )
+
+    return _row_to_profile(updated_row)

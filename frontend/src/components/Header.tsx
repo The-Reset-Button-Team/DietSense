@@ -3,6 +3,7 @@
 import React from "react";
 import { GoalType } from "@/types";
 import { useAuth } from "@/context/AuthContext";
+import { SyncStatusIndicator } from "@/components/SyncStatusIndicator";
 
 interface HeaderProps {
   goal: GoalType;
@@ -16,7 +17,7 @@ export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth
   return (
     <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-[#e9dfd5]">
       <div>
-        <div className="flex items-center gap-2 mb-2.5">
+        <div className="flex flex-wrap items-center gap-2 mb-2.5">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-medium tracking-wide shadow-sm">
             <span className="w-2 h-2 rounded-full bg-[#581825] animate-pulse"></span>
             <span>DietSense Atmos · Solo Cook & AI Pantry Studio</span>
@@ -33,6 +34,9 @@ export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth
             <span>{isAuthenticated ? user?.full_name : "Sign In"}</span>
             <span className="text-[10px] text-slate-400">⚙️</span>
           </button>
+
+          {/* Cloud Sync Status Indicator */}
+          <SyncStatusIndicator />
         </div>
 
         <h1 className="text-2xl sm:text-3xl font-serif text-[#421018] tracking-tight">

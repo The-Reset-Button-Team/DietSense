@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/context/AuthContext";
+import { SyncProvider } from "@/context/SyncContext";
 import { AtmosphereShader } from "@/components/shader/AtmosphereShader";
 
 export const metadata: Metadata = {
@@ -18,8 +19,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-[#faf7f2] font-sans antialiased relative overflow-x-hidden selection:bg-[#581825] selection:text-white">
         <AuthProvider>
-          <AtmosphereShader />
-          {children}
+          <SyncProvider>
+            <AtmosphereShader />
+            {children}
+          </SyncProvider>
         </AuthProvider>
       </body>
     </html>

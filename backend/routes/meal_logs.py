@@ -2,7 +2,7 @@
 DietSense — Meal Logs & Adherence Routes
 Captures meal outcomes (eaten vs skipped with reason), verifies user ownership,
 and provides real calculated adherence analytics for Recharts visualizations.
-Persists data to local SQLite database.
+Persists data to local SQLite database and enqueues to sync_queue.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -13,6 +13,7 @@ import uuid
 
 from app.core.dependencies import get_current_user
 from db.database import get_db_cursor
+from app.core.sync_service import enqueue_sync_operation
 
 router = APIRouter(tags=["Meal Logs & Analytics"])
 
@@ -69,6 +70,7 @@ async def create_meal_log(
     Record meal outcome (eaten or skipped with reason) into SQLite.
     Validates skip reason against: 'time', 'cost', 'taste', 'unavailable'.
     Persisted securely under user_id derived exclusively from JWT.
+    Enqueues mutation for cloud sync.
     """
     user_id = user["id"]
 
@@ -92,19 +94,39 @@ async def create_meal_log(
     now = datetime.now(timezone.utc).isoformat()
     meal_id = str(log_data.get("meal_id", ""))
     reason_val = reason if raw_status == "skipped" else None
-    item_tags_json = json.dumps(log_data.get("item_tags", []))
+    item_tags = log_data.get("item_tags", [])
+    item_tags_json = json.dumps(item_tags)
     timestamp = log_data.get("timestamp") or now
 
     with get_db_cursor() as cur:
         cur.execute(
             """
-            INSERT INTO meal_logs (id, user_id, meal_id, status, reason, item_tags, timestamp, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO meal_logs (id, user_id, meal_id, status, reason, item_tags, timestamp, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (log_id, user_id, meal_id, raw_status, reason_val, item_tags_json, timestamp, now),
+            (log_id, user_id, meal_id, raw_status, reason_val, item_tags_json, timestamp, now, now),
         )
         cur.execute("SELECT * FROM meal_logs WHERE id = ?", (log_id,))
         created_row = cur.fetchone()
+
+    # Enqueue mutation for cloud synchronization
+    enqueue_sync_operation(
+        user_id=user_id,
+        entity_type="meal_log",
+        entity_id=log_id,
+        operation="UPSERT",
+        payload={
+            "id": log_id,
+            "user_id": user_id,
+            "meal_id": meal_id,
+            "status": raw_status,
+            "reason": reason_val,
+            "item_tags": item_tags,
+            "timestamp": timestamp,
+            "created_at": now,
+            "updated_at": now,
+        },
+    )
 
     log_entry = _row_to_log(created_row)
     return {"status": "success", "logged": log_entry}
@@ -142,7 +164,6 @@ async def get_adherence_analytics(user: Dict[str, Any] = Depends(get_current_use
         if r in reason_counts:
             reason_counts[r] += 1
 
-    # Group daily trends by date string
     daily_groups: Dict[str, Dict[str, Any]] = {}
     for l in logs:
         ts = l.get("timestamp") or l.get("created_at") or datetime.now(timezone.utc).isoformat()

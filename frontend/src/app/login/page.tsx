@@ -10,8 +10,9 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const nextUrl = searchParams.get("next") || "/";
 
-  const { login, resetPassword, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, loginWithSupabase, resetPassword, isAuthenticated, isLoading: authLoading } = useAuth();
 
+  const [providerMode, setProviderMode] = useState<"local" | "supabase">("local");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,8 +42,8 @@ function LoginForm() {
 
     if (!password) {
       errors.password = "Password is required.";
-    } else if (password.length < 8) {
-      errors.password = "Password must be at least 8 characters.";
+    } else if (password.length < 6) {
+      errors.password = "Password must be at least 6 characters.";
     }
 
     setFieldErrors(errors);
@@ -56,7 +57,9 @@ function LoginForm() {
     if (!validate()) return;
 
     setIsSubmitting(true);
-    const result = await login(email, password);
+    const result = providerMode === "supabase"
+      ? await loginWithSupabase(email, password)
+      : await login(email, password);
     setIsSubmitting(false);
 
     if (result.success) {
@@ -112,6 +115,34 @@ function LoginForm() {
             </p>
           </div>
 
+          {/* Provider Mode Switcher */}
+          {!isForgotPassword && (
+            <div className="flex rounded-xl bg-[#ede4d8] p-1 text-xs font-semibold text-slate-700 mb-5">
+              <button
+                type="button"
+                onClick={() => setProviderMode("local")}
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
+                  providerMode === "local"
+                    ? "bg-white text-slate-900 shadow-sm font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                🔒 Local (Offline)
+              </button>
+              <button
+                type="button"
+                onClick={() => setProviderMode("supabase")}
+                className={`flex-1 py-1.5 rounded-lg transition-all ${
+                  providerMode === "supabase"
+                    ? "bg-[#1d4ed8] text-white shadow-sm font-bold"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                ⚡ Supabase Auth
+              </button>
+            </div>
+          )}
+
           {/* Error Banner */}
           {errorMessage && (
             <div
@@ -132,7 +163,7 @@ function LoginForm() {
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">Check Your Inbox</h3>
                   <p className="text-xs text-slate-600 mt-1">
-                    We sent a password reset link to <strong className="font-mono">{email}</strong>.
+                    If an account exists for <strong className="font-mono">{email}</strong>, a password reset link has been dispatched.
                   </p>
                 </div>
                 <button
@@ -262,7 +293,11 @@ function LoginForm() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full py-2.5 rounded-xl bg-[#581825] text-white text-xs font-semibold hover:bg-[#421018] shadow-md transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+                className={`w-full py-2.5 rounded-xl text-white text-xs font-semibold shadow-md transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2 ${
+                  providerMode === "supabase"
+                    ? "bg-[#1d4ed8] hover:bg-[#1e40af]"
+                    : "bg-[#581825] hover:bg-[#421018]"
+                }`}
               >
                 {isSubmitting ? (
                   <>
@@ -270,7 +305,7 @@ function LoginForm() {
                     <span>Signing In...</span>
                   </>
                 ) : (
-                  "Sign In"
+                  `Sign In with ${providerMode === "supabase" ? "Supabase Auth" : "Local Account"}`
                 )}
               </button>
 
