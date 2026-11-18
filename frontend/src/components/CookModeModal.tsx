@@ -76,7 +76,7 @@ export const CookModeModal: React.FC<CookModeModalProps> = ({
 
   // ── Timer interval ───────────────────────────────────────────────────────
   useEffect(() => {
-    if (isRunning && remainingSeconds > 0) {
+    if (isRunning) {
       intervalRef.current = setInterval(() => {
         setRemainingSeconds((prev) => {
           if (prev <= 1) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { aiApi } from "@/lib/ai-client";
 import { CookingInstructionResponse } from "@/types/ai";
 
@@ -23,7 +23,7 @@ export const CookingInstructionsModal: React.FC<CookingInstructionsModalProps> =
   const [data, setData] = useState<CookingInstructionResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchInstructions = () => {
+  const fetchInstructions = useCallback(() => {
     if (!isOpen || foodId === null) return;
     setLoading(true);
     setError(null);
@@ -38,11 +38,11 @@ export const CookingInstructionsModal: React.FC<CookingInstructionsModalProps> =
         setError(err?.message || "Failed to generate cooking instructions.");
         setLoading(false);
       });
-  };
+  }, [isOpen, foodId, servings, skillLevel, foodName]);
 
   useEffect(() => {
     fetchInstructions();
-  }, [isOpen, foodId, servings, skillLevel]);
+  }, [fetchInstructions]);
 
   if (!isOpen) return null;
 

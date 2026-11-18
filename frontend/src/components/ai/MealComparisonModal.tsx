@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { aiApi } from "@/lib/ai-client";
 import { MealComparisonResponse } from "@/types/ai";
 
@@ -31,7 +31,7 @@ export const MealComparisonModal: React.FC<MealComparisonModalProps> = ({
   const [data, setData] = useState<MealComparisonResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const runComparison = () => {
+  const runComparison = useCallback(() => {
     if (selectedIds.length < 2) {
       setError("Please select at least 2 meals to compare.");
       return;
@@ -49,13 +49,13 @@ export const MealComparisonModal: React.FC<MealComparisonModalProps> = ({
         setError(err?.message || "Failed to compare meals.");
         setLoading(false);
       });
-  };
+  }, [selectedIds, priority]);
 
   useEffect(() => {
     if (isOpen) {
       runComparison();
     }
-  }, [isOpen, priority, selectedIds]);
+  }, [isOpen, runComparison]);
 
   const toggleFoodSelection = (id: number) => {
     if (selectedIds.includes(id)) {

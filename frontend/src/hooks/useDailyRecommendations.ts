@@ -109,6 +109,8 @@ export function useDailyRecommendations({
   }, []);
 
   // Main fetch effect
+  const allergiesKey = JSON.stringify(profile?.allergies);
+
   useEffect(() => {
     if (!enabled || !profile) {
       setSlots({});
@@ -171,7 +173,7 @@ export function useDailyRecommendations({
     profile?.id,
     profile?.dietary_pref,
     profile?.dietary_preference,
-    JSON.stringify(profile?.allergies),
+    allergiesKey,
     profile?.budget_per_meal,
     profile?.prep_time_limit,
     profile?.goal,

@@ -48,7 +48,7 @@ export const AIExplanationModal: React.FC<AIExplanationModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [isOpen, foodId]);
+  }, [isOpen, foodId, foodName]);
 
   if (!isOpen) return null;
 

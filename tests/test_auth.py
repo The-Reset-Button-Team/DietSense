@@ -68,7 +68,7 @@ def test_auth_malformed_token_returns_401():
 
 def test_auth_invalid_signature_returns_401():
     """Token signed with wrong secret is rejected with 401."""
-    token = generate_token("user-123", secret="wrong-secret-key")
+    token = generate_token("user-123", secret="wrong-secret-key-32-chars-minimum!")
     headers = {"Authorization": f"Bearer {token}"}
     response = client.get("/api/auth/me", headers=headers)
     assert response.status_code == 401

@@ -141,7 +141,7 @@ def test_local_registration_and_login_flow():
 
     # 5. Authenticated /api/auth/me using Cookie
     cookie_value = login_res.cookies[settings.session_cookie_name]
-    me_res = client.get("/api/auth/me", cookies={settings.session_cookie_name: cookie_value})
+    me_res = client.get("/api/auth/me", headers={"Cookie": f"{settings.session_cookie_name}={cookie_value}"})
     assert me_res.status_code == 200
     assert me_res.json()["id"] == user_id
     assert me_res.json()["email"] == unique_email.lower()

@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { apiClient } from "@/lib/api-client";
 import { useAuth } from "@/context/AuthContext";
 import { CalculatedMealItem } from "@/lib/nutrition";
@@ -121,22 +121,24 @@ export const SwapView: React.FC<SwapViewProps> = ({
     return slotBase === selectedSlot || m.recipe?.slotLabel?.toLowerCase().includes(selectedSlot.replace("_", " "));
   });
 
-  const currentMeal: SwapItem = currentMealItem
-    ? {
-        name: currentMealItem.backendName || currentMealItem.recipe.name,
-        calories: currentMealItem.calories ?? 0,
-        protein_g: currentMealItem.protein ?? 0,
-        carbs_g: currentMealItem.carbs ?? 0,
-        fat_g: currentMealItem.fat ?? 0,
-        fiber_g: currentMealItem.fibre ?? 0,
-      }
-    : {
-        name: `Current ${SLOT_LABELS[selectedSlot] || selectedSlot} meal`,
-        calories: Math.round(targetCalories / 3),
-        protein_g: 20,
-        carbs_g: 50,
-        fat_g: 10,
-      };
+  const currentMeal: SwapItem = useMemo(() => {
+    return currentMealItem
+      ? {
+          name: currentMealItem.backendName || currentMealItem.recipe.name,
+          calories: currentMealItem.calories ?? 0,
+          protein_g: currentMealItem.protein ?? 0,
+          carbs_g: currentMealItem.carbs ?? 0,
+          fat_g: currentMealItem.fat ?? 0,
+          fiber_g: currentMealItem.fibre ?? 0,
+        }
+      : {
+          name: `Current ${SLOT_LABELS[selectedSlot] || selectedSlot} meal`,
+          calories: Math.round(targetCalories / 3),
+          protein_g: 20,
+          carbs_g: 50,
+          fat_g: 10,
+        };
+  }, [currentMealItem, selectedSlot, targetCalories]);
 
   const fetchSwaps = useCallback(async () => {
     if (!isAuthenticated) return;
@@ -163,7 +165,7 @@ export const SwapView: React.FC<SwapViewProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [isAuthenticated, selectedSlot, targetCalories, currentMeal.name]);
+  }, [isAuthenticated, selectedSlot, targetCalories, currentMeal]);
 
   // Auto-fetch when slot changes
   useEffect(() => {

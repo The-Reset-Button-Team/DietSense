@@ -23,7 +23,6 @@ joblib>=1.4.0
 
 # ─── Database & HTTP ──────────────────────────────────────────────────────────
 # Note: SQLite 3 is built into the Python standard library.
-sqlalchemy>=2.0.0
 httpx>=0.25.0
 psycopg2-binary>=2.9.0
 supabase>=2.0.0
