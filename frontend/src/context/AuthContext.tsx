@@ -17,6 +17,8 @@ export interface UserProfileData {
   daily_calorie_target: number;
   is_solo_cook: boolean;
   active_meal_frequency: string;
+  dietary_preference?: string;
+  allergies?: string[];
   auth_providers?: string[];
 }
 

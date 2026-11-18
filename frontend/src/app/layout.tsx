@@ -5,9 +5,9 @@ import { SyncProvider } from "@/context/SyncContext";
 import { AtmosphereShader } from "@/components/shader/AtmosphereShader";
 
 export const metadata: Metadata = {
-  title: "DietSense — Adaptive AI Meal Planning",
+  title: "DietSense — Artisanal & Evidence-Based Nutrition Platform",
   description:
-    "Evidence-based, personalized meal planning for obesity prevention. Powered by USDA/ICMR-NIN nutrition data and adaptive AI.",
+    "Evidence-based, personalized meal planning and metabolic tracking powered by USDA & ICMR-NIN verified nutrition data and adaptive AI.",
 };
 
 export default function RootLayout({
@@ -17,7 +17,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#faf7f2] font-sans antialiased relative overflow-x-hidden selection:bg-[#581825] selection:text-white">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      </head>
+      <body className="min-h-screen bg-surface font-body-md text-on-surface antialiased relative selection:bg-primary-fixed selection:text-on-primary-fixed">
         <AuthProvider>
           <SyncProvider>
             <AtmosphereShader />

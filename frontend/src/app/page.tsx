@@ -301,17 +301,18 @@ function MainApp() {
   );
 
   return (
-    <main className="min-h-screen text-slate-800 p-3 sm:p-6 lg:p-10 flex flex-col items-center justify-start font-sans antialiased">
-      <div className="relative w-full max-w-5xl overflow-hidden rounded-3xl border border-[#e8ded3]/80 bg-[#faf7f2]/95 backdrop-blur-xl p-5 sm:p-8 shadow-2xl text-slate-800 my-auto">
-        {/* Header with Auth Capsule Trigger */}
-        <Header
-          goal={goal}
-          targetCalories={targetCalories}
-          onOpenAuth={() => setIsAuthModalOpen(true)}
-        />
+    <div className="min-h-screen bg-surface font-body-md text-on-surface antialiased flex flex-col">
+      {/* Header with Auth Capsule Trigger */}
+      <Header
+        goal={goal}
+        targetCalories={targetCalories}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+      />
 
-        {/* Navigation Tabs */}
-        <TabNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      {/* Navigation Tabs */}
+      <TabNav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      <main className="w-full max-w-7xl mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin py-space-md flex-1">
 
         {/* Tab 1: Daily Meal Plan & Recipes */}
         {activeTab === "today" && (
@@ -455,14 +456,17 @@ function MainApp() {
         <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
 
         {/* Atmosphere Footer with Dataset Disclaimer */}
-        <div className="relative z-10 mt-6 pt-4 border-t border-[#e9dfd5] flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 font-light gap-2">
+        <footer className="mt-12 pt-6 border-t border-surface-container-highest flex flex-col sm:flex-row items-center justify-between text-body-sm text-on-surface-variant font-light gap-2">
           <span>DietSense · Evidence-Based Nutrition · USDA &amp; ICMR-NIN verified</span>
-          <span className="text-[#581825] font-serif font-medium">
+          <span className="text-primary font-serif font-medium">
             Dataset estimates only. Not medical advice or diagnosis.
           </span>
-        </div>
-      </div>
-    </main>
+        </footer>
+      </main>
+
+      {/* Global Auth Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+    </div>
   );
 }
 

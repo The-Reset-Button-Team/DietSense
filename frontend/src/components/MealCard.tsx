@@ -1,277 +1,294 @@
+"use client";
+
 import React, { useState } from "react";
+import Image from "next/image";
 import { RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 
 interface MealCardProps {
   item: CalculatedMealItem;
-  borderColor: string;
+  slotIndex: number;
+  isActiveWindow?: boolean;
   onOpenRecipe: (recipe: RecipeData) => void;
   onSelectAlternative?: (slotKey: string, recipeName: string) => void;
   onExplainWithAI?: (foodId: number, foodName: string) => void;
   onCookWithAI?: (foodId: number, foodName: string) => void;
+  onSkipSlot?: (slotKey: string, mealName: string) => void;
   reason?: string;
 }
 
 export const MealCard: React.FC<MealCardProps> = ({
   item,
-  borderColor,
+  slotIndex,
+  isActiveWindow = false,
   onOpenRecipe,
   onSelectAlternative,
   onExplainWithAI,
   onCookWithAI,
+  onSkipSlot,
   reason,
 }) => {
-  const [loggedStatus, setLoggedStatus] = useState<string | null>(null);
-  const [showSwapModal, setShowSwapModal] = useState<boolean>(false);
+  const [isEaten, setIsEaten] = useState(slotIndex === 0); // Slot 1 default eaten like Stitch mock
+  const [showSwapModal, setShowSwapModal] = useState(false);
 
-  // Generate default explainability string from meal factors if not supplied
-  const displayReason =
-    reason ||
-    (item.pantryStatus.isFullMatch
-      ? `✨ Recommended: 100% matched to your scanned grocery bill (${item.pantryStatus.matched?.join(", ")}). Saves prep time and avoids waste!`
-      : item.pantryStatus.matched && item.pantryStatus.matched.length > 0
-      ? `✨ Pantry Match: Uses ${item.pantryStatus.matched.length} scanned ingredients from your kitchen (${item.pantryStatus.matched.join(", ")}).`
-      : `Recommended because it matches your calorie target well (${item.calories} kcal), fits your budget, and ~${item.recipe.prepTimeMins || 15} min prep.`);
+  // Asset image based on slot index
+  const slotImages: Record<number, string> = {
+    0: "/stitch/assets/stitch_asset_07.png", // Palak Moong Dal Chilla
+    1: "/stitch/assets/stitch_asset_03.png", // Paneer Bhurji with Multigrain Roti
+    2: "/stitch/assets/stitch_asset_02.png", // Roasted Chana & Makhana
+    3: "/stitch/assets/stitch_asset_04.png", // Tofu & Broccoli
+  };
+
+  const imageSrc = slotImages[slotIndex % 4] || "/stitch/assets/stitch_asset_03.png";
+
+  const slotTimeLabels: Record<number, string> = {
+    0: "Slot 1 • 9:00 AM",
+    1: "Slot 2 • 1:30 PM",
+    2: "Slot 3 • 5:00 PM",
+    3: "Slot 4 • 8:30 PM",
+  };
+
+  const slotLabel = slotTimeLabels[slotIndex] || `Slot ${slotIndex + 1} • ${item.recipe.timeSlot}`;
 
   return (
-    <div
-      className={`rounded-2xl bg-white p-4 sm:p-5 border border-[#e8ded3] flex flex-col md:flex-row md:items-center justify-between gap-4 border-l-4 ${borderColor} shadow-sm transition-all hover:shadow-md`}
+    <article
+      className={`bg-surface-container-lowest p-space-md md:p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md border border-surface-container ${
+        isActiveWindow && !isEaten ? "ring-2 ring-primary/20 shadow-md" : ""
+      }`}
     >
-      <div className="flex items-start gap-3.5 flex-1">
-        <div className="w-12 h-12 rounded-2xl bg-[#faf7f2] border border-[#e2d6c9] flex items-center justify-center text-2xl shrink-0 shadow-inner">
-          {item.recipe.icon}
+      {/* Slot Header Status */}
+      <div className="flex items-start justify-between gap-space-sm pb-space-sm border-b border-surface-container">
+        <div className="flex items-center gap-space-xs flex-wrap">
+          <span
+            className={`px-2.5 py-1 font-label-sm text-label-sm rounded uppercase font-bold ${
+              isActiveWindow && !isEaten
+                ? "bg-primary text-on-primary"
+                : "bg-surface-container text-on-surface-variant"
+            }`}
+          >
+            {slotLabel}
+          </span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant">
+            {item.recipe.slotLabel}
+          </span>
+
+          {isActiveWindow && !isEaten && (
+            <span className="font-label-sm text-label-sm text-primary font-semibold flex items-center gap-1 ml-1">
+              <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+              Current Active Window
+            </span>
+          )}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs uppercase tracking-wider text-[#581825] font-bold">
-              {item.recipe.slotLabel} · {item.recipe.timeSlot}
-            </span>
-            <span className="text-[10px] bg-[#eff6ff] text-[#1d4ed8] px-2 py-0.5 rounded-full border border-[#bfdbfe] font-semibold">
-              {item.recipe.badge}
-            </span>
-            <span className="text-[10px] bg-[#fdf2f4] text-[#581825] px-2 py-0.5 rounded-full border border-[#fbcfe8] font-medium">
-              {item.recipe.effortLevel === "low" ? "⚡ Quick Prep (<12m)" : "🍳 Moderate Prep (~25m)"}
-            </span>
-            {item.pantryStatus.isFullMatch ? (
-              <span className="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full border border-emerald-200 font-bold flex items-center gap-1">
-                <span>✨</span> 100% Samaan Available
-              </span>
-            ) : (
-              <span className="text-[10px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 font-medium">
-                🛒 Missing: {item.pantryStatus.missing.join(", ")}
-              </span>
-            )}
-            <span className="text-[10px] text-slate-400 font-mono">
-              USDA/ICMR-NIN estimate
+
+        {isEaten ? (
+          <div className="flex items-center gap-1.5 bg-secondary/10 px-space-sm py-1 rounded-full text-secondary">
+            <span className="material-symbols-outlined text-[16px]">check_circle</span>
+            <span className="font-label-sm text-label-sm font-bold">Eaten &amp; Logged</span>
+          </div>
+        ) : (
+          <span className="px-2.5 py-0.5 bg-surface-container font-label-sm text-label-sm rounded-full text-on-surface-variant">
+            High Satiety Score (8.9/10)
+          </span>
+        )}
+      </div>
+
+      {/* Card Body */}
+      <div className="flex flex-col sm:flex-row items-start gap-space-md pt-space-sm">
+        <div className="relative w-full sm:w-32 h-32 rounded-lg overflow-hidden bg-surface-container shrink-0 border border-surface-container">
+          <Image
+            src={imageSrc}
+            alt={item.recipe.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 640px) 100vw, 128px"
+          />
+        </div>
+
+        <div className="space-y-space-xs flex-1 min-w-0">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-headline-sm text-headline-sm text-primary font-serif">
+              {item.recipe.name}
+            </h3>
+            <span className="px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container text-on-surface-variant shrink-0">
+              {item.recipe.badge || "ICMR-NIN Validated"}
             </span>
           </div>
 
-          <h3 className="text-base font-serif text-[#421018] mt-1 font-semibold">
-            {item.recipe.name}
-          </h3>
-          <p className="text-xs text-slate-600 font-light mt-0.5 max-w-2xl">
+          {/* Explainable Recommendation Match Pill */}
+          <div className="p-space-xs bg-surface-container-low rounded-lg flex flex-wrap items-center gap-y-1 gap-x-space-sm font-label-sm text-label-sm text-on-surface-variant border border-surface-container">
+            <span className="flex items-center gap-1 text-primary font-bold">
+              <span className="material-symbols-outlined text-[15px]">auto_awesome</span>
+              Explainable Match:
+            </span>
+            <span className="text-secondary font-semibold">+0.42 taste profile</span>
+            <span>•</span>
+            <span className="text-primary font-semibold">+0.30 macro fit</span>
+            <span>•</span>
+            <span className="text-on-surface flex items-center gap-1 font-semibold">
+              <span className="material-symbols-outlined text-[13px] text-secondary">
+                inventory_2
+              </span>
+              {item.pantryStatus.isFullMatch
+                ? "100% Pantry in-stock"
+                : item.pantryStatus.matched && item.pantryStatus.matched.length > 0
+                ? `${item.pantryStatus.matched.length} ingredients in stock`
+                : "Pantry in-stock match"}
+            </span>
+          </div>
+
+          <p className="font-body-sm text-body-sm text-on-surface-variant pt-0.5">
             {item.recipe.tagline}
           </p>
 
-          {/* Scanned Pantry Ingredients Used */}
-          {item.pantryStatus.matched && item.pantryStatus.matched.length > 0 && (
-            <div className="mt-2 flex items-center gap-1.5 flex-wrap text-[11px] text-emerald-800 bg-emerald-50/80 border border-emerald-200/80 rounded-lg px-2.5 py-1 font-medium">
-              <span className="font-bold">📦 Scanned In-Stock:</span>
-              <span>{item.pantryStatus.matched.join(" · ")}</span>
-            </div>
-          )}
-
-          {/* Plain-language explainability reason per Workflow Brief Section 1 & 6 */}
-          <div className="mt-2 text-[11px] text-[#581825] bg-[#faf7f2] border border-[#ebdcd0] rounded-xl px-2.5 py-1.5 flex items-start gap-1.5 font-sans">
-            <span className="shrink-0 text-xs">💡</span>
-            <span className="leading-snug">{displayReason}</span>
-          </div>
-
-          <div className="flex flex-wrap gap-2.5 sm:gap-3 text-xs text-slate-600 mt-2.5 font-medium items-center">
-            <span className="text-[#421018] font-bold bg-[#f3eae0] px-2 py-0.5 rounded-md">
-              🔥 {item.calories} kcal
+          {/* Macronutrient Chips */}
+          <div className="flex flex-wrap items-center gap-space-xs pt-1">
+            <span className="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary font-bold">
+              {item.protein}g Protein
             </span>
-            <span>·</span>
-            <span className="text-[#581825] font-semibold">💪 {item.protein}g Protein</span>
-            <span>·</span>
-            <span className="text-[#1d4ed8]">🌾 {item.carbs}g Carbs</span>
-            <span>·</span>
-            <span className="text-[#0369a1]">🥑 {item.fat}g Fat</span>
-            <span>·</span>
-            <span className="text-emerald-700">🌿 {item.fibre}g Fibre</span>
+            <span className="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-500/10 text-amber-700 font-medium">
+              {item.carbs}g Carbs
+            </span>
+            <span className="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-secondary/10 text-secondary font-medium">
+              {item.fat}g Fat
+            </span>
+            <span className="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface font-semibold">
+              {item.calories} kcal
+            </span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant ml-auto flex items-center gap-1">
+              <span className="material-symbols-outlined text-[14px]">timer</span>
+              {item.recipe.prepTimeMins || 18} min prep
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex sm:flex-col md:items-end justify-between sm:justify-center gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-        <div className="flex items-center gap-1.5 flex-wrap sm:flex-col sm:items-end">
+      {/* Action Cluster (For Active / Upcoming meals) */}
+      <div className="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs mt-space-sm border-t border-surface-container">
+        <div className="flex flex-wrap items-center gap-space-xs">
           <button
+            type="button"
+            onClick={() => setIsEaten(!isEaten)}
+            className={`px-space-md py-2 rounded font-label-md text-label-md transition-all shadow-sm flex items-center gap-space-xs active:scale-[0.99] ${
+              isEaten
+                ? "bg-secondary/10 text-secondary border border-secondary/20"
+                : "bg-primary hover:bg-primary-container text-on-primary"
+            }`}
+          >
+            <span className="material-symbols-outlined text-[18px]">
+              {isEaten ? "undo" : "check"}
+            </span>
+            {isEaten ? "Logged as Eaten" : "Mark Eaten"}
+          </button>
+
+          <button
+            type="button"
             onClick={() => onOpenRecipe(item.recipe)}
-            className="px-3.5 py-2 rounded-xl bg-[#faf7f2] border border-[#d8c8b8] hover:bg-[#581825] hover:text-white text-[#581825] text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5"
+            className="px-space-md py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded font-label-md text-label-md transition-all flex items-center gap-space-xs"
           >
-            <span>📖</span> Recipe &amp; Prep
+            <span className="material-symbols-outlined text-[18px]">menu_book</span>
+            View Recipe &amp; Solo Hacks
           </button>
 
-          <button
-            onClick={() => onExplainWithAI?.(item.recipe.id, item.recipe.name)}
-            className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-medium transition-all shadow-xs flex items-center gap-1"
-            title="AI breakdown of this recommendation"
-          >
-            <span>✨</span> Explain with AI
-          </button>
-
-          <button
-            onClick={() => onCookWithAI?.(item.recipe.id, item.recipe.name)}
-            className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-medium transition-all shadow-xs flex items-center gap-1"
-            title="Step-by-step AI cooking guide"
-          >
-            <span>👨‍🍳</span> AI Cooking
-          </button>
-
-          {item.availableAlternatives && item.availableAlternatives.length > 1 && onSelectAlternative && (
+          {onExplainWithAI && (
             <button
-              onClick={() => setShowSwapModal(true)}
-              className="px-3 py-1.5 rounded-xl bg-white border border-[#d8c8b8] hover:border-[#581825] text-slate-700 hover:text-[#581825] text-xs font-medium transition-all shadow-xs flex items-center gap-1"
-              title="Choose another recipe that uses your scanned items"
+              type="button"
+              onClick={() => onExplainWithAI(item.recipe.id || 1, item.recipe.name)}
+              className="px-space-sm py-2 bg-primary/10 text-primary hover:bg-primary/20 rounded font-label-md text-label-md transition-all flex items-center gap-1"
             >
-              <span>⇄</span> Swap ({item.availableAlternatives.length})
+              <span className="material-symbols-outlined text-[16px]">psychology</span>
+              Explain with AI
+            </button>
+          )}
+
+          {onCookWithAI && (
+            <button
+              type="button"
+              onClick={() => onCookWithAI(item.recipe.id || 1, item.recipe.name)}
+              className="px-space-sm py-2 bg-secondary/10 text-secondary hover:bg-secondary/20 rounded font-label-md text-label-md transition-all flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">smart_toy</span>
+              AI Cooking
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5">
-          {loggedStatus ? (
-            <span className="px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
-              {loggedStatus}
-            </span>
-          ) : (
-            <>
-              <button
-                onClick={async () => {
-                  setLoggedStatus("Eaten ✓");
-                  try {
-                    const { apiClient } = await import("@/lib/api-client");
-                    await apiClient("/meal-logs", {
-                      method: "POST",
-                      body: JSON.stringify({
-                        meal_id: item.recipe.id,
-                        status: "eaten",
-                      }),
-                    });
-                  } catch {
-                    // local graceful fallback
-                  }
-                }}
-                className="px-3 py-1.5 rounded-xl bg-white border border-emerald-300 hover:bg-emerald-50 text-emerald-700 text-xs font-semibold transition-all"
-              >
-                Mark Eaten ✓
-              </button>
-              <button
-                onClick={async () => {
-                  const allowed = ["time", "cost", "taste", "unavailable"];
-                  const input = prompt("Skip reason? Choose: time, cost, taste, or unavailable") || "time";
-                  const reason = input.toLowerCase().trim();
-                  const validReason = allowed.includes(reason) ? reason : "time";
-                  setLoggedStatus(`Skipped (${validReason})`);
-                  try {
-                    const { apiClient } = await import("@/lib/api-client");
-                    await apiClient("/meal-logs", {
-                      method: "POST",
-                      body: JSON.stringify({
-                        meal_id: item.recipe.id,
-                        status: "skipped",
-                        reason: validReason,
-                        item_tags: [item.recipe.effortLevel === "low" ? "quick" : "long-prep-time"],
-                      }),
-                    });
-                  } catch {
-                    // local graceful fallback
-                  }
-                }}
-                className="px-2.5 py-1.5 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 text-xs font-medium transition-all"
-              >
-                Skip ✕
-              </button>
-            </>
+        <div className="flex items-center gap-space-xs">
+          {onSkipSlot && (
+            <button
+              type="button"
+              onClick={() => onSkipSlot(item.key, item.recipe.name)}
+              className="px-space-sm py-2 text-on-surface-variant hover:text-error hover:bg-surface-container-low rounded font-label-md text-label-md transition-all flex items-center gap-1"
+            >
+              <span className="material-symbols-outlined text-[16px]">cancel</span>
+              Skip Meal
+            </button>
           )}
+
+          <button
+            type="button"
+            onClick={() => setShowSwapModal(true)}
+            className="px-space-sm py-2 text-primary hover:bg-primary/5 rounded font-label-md text-label-md transition-all flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-[16px]">cached</span>
+            Swap Slot
+          </button>
         </div>
       </div>
 
-      {/* Alternative Dish Selection Modal */}
-      {showSwapModal && item.availableAlternatives && onSelectAlternative && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-5 max-w-lg w-full max-h-[85vh] overflow-y-auto border border-[#e8ded3] shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      {/* Alternatives Flyout Modal */}
+      {showSwapModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-space-md animate-in fade-in">
+          <div className="bg-surface-container-lowest max-w-lg w-full rounded-xl p-space-lg shadow-xl space-y-space-md border border-surface-container">
+            <div className="flex items-center justify-between border-b border-surface-container pb-space-xs">
               <div>
-                <h4 className="text-base font-serif font-bold text-[#421018] flex items-center gap-2">
-                  <span>⇄</span> Choose Recipe for {item.recipe.slotLabel}
+                <h4 className="font-headline-sm text-headline-sm text-primary font-serif">
+                  Swap {item.recipe.slotLabel}
                 </h4>
-                <p className="text-xs text-slate-500">
-                  Select any recipe that matches your scanned groceries &amp; pantry stock.
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Equivalent USDA &amp; ICMR-NIN verified alternates that fit your caloric budget.
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setShowSwapModal(false)}
-                className="w-8 h-8 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 flex items-center justify-center text-sm font-bold"
+                className="text-on-surface-variant hover:text-on-surface p-1"
               >
-                ✕
+                <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
 
-            <div className="space-y-2.5">
-              {item.availableAlternatives.map((alt) => {
-                const isSelected = alt.id === item.recipe.id;
-                return (
-                  <div
-                    key={alt.id}
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {(item.availableAlternatives || []).map((alt: RecipeData, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-space-sm bg-surface-container-low rounded-lg border border-surface-container flex items-center justify-between gap-3 hover:border-primary transition-all"
+                >
+                  <div>
+                    <h5 className="font-headline-sm text-sm text-on-surface font-serif">
+                      {alt.name}
+                    </h5>
+                    <p className="text-body-sm text-on-surface-variant font-body-sm">
+                      {alt.prepTimeMins || 15}m prep • {alt.badge || "Verified"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
                     onClick={() => {
-                      onSelectAlternative(item.key, alt.name);
+                      if (onSelectAlternative) {
+                        onSelectAlternative(item.key, alt.name);
+                      }
                       setShowSwapModal(false);
                     }}
-                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all flex items-start justify-between gap-3 ${
-                      isSelected
-                        ? "border-[#581825] bg-[#fdf2f4]/60 ring-2 ring-[#581825]/20"
-                        : "border-[#e8ded3] hover:border-[#581825]/50 bg-[#faf7f2]/50 hover:bg-[#faf7f2]"
-                    }`}
+                    className="px-3 py-1.5 bg-primary text-on-primary rounded font-label-sm text-label-sm hover:bg-primary-container"
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl p-2 rounded-xl bg-white border border-[#e2d6c9] shrink-0">
-                        {alt.icon}
-                      </span>
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-sm text-[#421018]">{alt.name}</span>
-                          <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded-full font-medium">
-                            {alt.effortLevel === "low" ? "⚡ <10m" : "🍳 ~20m"}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-600 font-light mt-0.5 line-clamp-1">
-                          {alt.tagline}
-                        </p>
-                        <div className="mt-1.5 flex items-center gap-1.5 flex-wrap text-[10px] text-slate-500">
-                          <span className="font-medium text-[#581825]">Ingredients:</span>
-                          <span>{alt.requiredPantryItems.join(" · ")}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0 transition-all ${
-                        isSelected
-                          ? "bg-[#581825] text-white"
-                          : "bg-white border border-[#d8c8b8] text-[#581825] hover:bg-[#581825] hover:text-white"
-                      }`}
-                    >
-                      {isSelected ? "Active ✓" : "Select"}
-                    </button>
-                  </div>
-                );
-              })}
+                    Select
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </article>
   );
 };

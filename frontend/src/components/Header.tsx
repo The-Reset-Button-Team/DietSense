@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import Image from "next/image";
 import { GoalType } from "@/types";
 import { useAuth } from "@/context/AuthContext";
-import { SyncStatusIndicator } from "@/components/SyncStatusIndicator";
+import { useSync } from "@/context/SyncContext";
 
 interface HeaderProps {
   goal: GoalType;
@@ -13,59 +14,174 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth }) => {
   const { user, isAuthenticated } = useAuth();
+  const { syncState, isSyncing, triggerSync } = useSync();
+  const isOnline = syncState.status !== "offline";
+  const pendingCount = syncState.pending_count;
+  const lastSynced = syncState.last_synced_at;
+  const syncNow = triggerSync;
+  const [syncPopoverOpen, setSyncPopoverOpen] = useState(false);
+
+  const goalText =
+    goal === "lose_weight"
+      ? "Cut (-400 kcal)"
+      : goal === "gain_weight"
+      ? "Surplus (+300 kcal)"
+      : "Maintain (TDEE)";
 
   return (
-    <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-5 pb-6 border-b border-[#e9dfd5]">
-      <div>
-        <div className="flex flex-wrap items-center gap-2 mb-2.5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#f3eae0] border border-[#d8c8b8] text-[#581825] text-xs font-medium tracking-wide shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-[#581825] animate-pulse"></span>
-            <span>DietSense Atmos · Solo Cook & AI Pantry Studio</span>
+    <header className="sticky top-0 w-full z-40 bg-surface/90 backdrop-blur-xl border-b border-surface-container-highest shadow-[0_1px_8px_rgba(0,0,0,0.04)]">
+      <div className="max-w-7xl mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin pt-space-sm pb-space-xs">
+        <div className="flex items-center justify-between gap-space-md">
+          {/* Brand & Greeting */}
+          <div className="flex items-center gap-space-md">
+            <a
+              href="#"
+              className="flex items-center gap-space-sm focus:outline-none focus:ring-1 focus:ring-primary rounded"
+            >
+              <div className="relative h-8 w-8 shrink-0">
+                <Image
+                  src="/stitch/assets/stitch_asset_15.png"
+                  alt="DietSense Brand Logo"
+                  width={32}
+                  height={32}
+                  className="h-8 w-auto object-contain"
+                  priority
+                />
+              </div>
+              <span className="font-headline-sm text-headline-sm text-primary tracking-tight font-serif font-bold">
+                DietSense
+              </span>
+            </a>
+
+            <div className="hidden sm:flex items-center pl-space-md bg-surface-container-low px-space-md py-1 rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.02)]">
+              <span className="font-headline-md text-headline-md italic text-primary font-serif">
+                Namaste,&nbsp;
+              </span>
+              <span className="font-headline-md text-headline-md text-on-surface font-serif">
+                {user?.full_name || "Daksh"}
+              </span>
+            </div>
           </div>
 
-          {/* User Profile Capsule Button */}
-          <button
-            onClick={onOpenAuth}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#bfdbfe] text-[#1d4ed8] text-xs font-semibold hover:bg-[#eff6ff] transition-all shadow-sm"
-          >
-            <span className="w-4 h-4 rounded-full bg-[#1d4ed8] text-white flex items-center justify-center text-[9px]">
-              {user?.full_name?.charAt(0).toUpperCase() || "A"}
-            </span>
-            <span>{isAuthenticated ? user?.full_name : "Sign In"}</span>
-            <span className="text-[10px] text-slate-400">⚙️</span>
-          </button>
+          {/* Right Action Cluster: Goal Pill, Sync Hub Popover, User Avatar */}
+          <div className="flex items-center gap-space-sm md:gap-space-md">
+            {/* Clinical Target Pill */}
+            <div className="hidden lg:flex items-center gap-space-xs px-space-md py-1 bg-surface-container-lowest rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.03)] border border-surface-container">
+              <span className="material-symbols-outlined text-[16px] text-primary">
+                local_fire_department
+              </span>
+              <span className="font-label-md text-label-md text-primary font-bold">
+                {goalText}
+              </span>
+              <span className="text-on-surface-variant font-label-md text-label-md">•</span>
+              <span className="font-metric-num text-[14px] leading-5 text-on-surface">
+                {targetCalories.toLocaleString()} kcal/day
+              </span>
+            </div>
 
-          {/* Cloud Sync Status Indicator */}
-          <SyncStatusIndicator />
+            {/* Database Sync Hub Popover */}
+            <div className="relative">
+              <button
+                type="button"
+                aria-label="Database sync status"
+                onClick={() => setSyncPopoverOpen(!syncPopoverOpen)}
+                className="flex items-center gap-space-xs px-space-sm md:px-space-md py-1 bg-surface-container-low hover:bg-surface-container-high hover:text-on-surface rounded-full transition-all focus:outline-none focus:ring-1 focus:ring-primary border border-surface-container text-on-surface"
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ring-2 ${
+                    isSyncing
+                      ? "bg-amber-500 ring-amber-500/20 animate-spin"
+                      : isOnline
+                      ? "bg-secondary ring-secondary/20 animate-pulse"
+                      : "bg-surface-dim ring-surface-dim/20"
+                  }`}
+                />
+                <span className="font-label-md text-label-md text-secondary font-semibold hidden sm:inline">
+                  {isSyncing ? "Syncing..." : isOnline ? "Synced" : "Offline"}
+                </span>
+                <span className="material-symbols-outlined text-[16px] text-on-surface-variant">
+                  keyboard_arrow_down
+                </span>
+              </button>
+
+              {syncPopoverOpen && (
+                <div className="absolute right-0 mt-2 w-72 p-space-md bg-surface-container-lowest rounded-xl shadow-[0_8px_24px_-4px_rgba(66,16,24,0.08),0_2px_6px_-1px_rgba(66,16,24,0.04)] border border-surface-container z-50 animate-in fade-in zoom-in-95 duration-150">
+                  <div className="flex items-center justify-between pb-space-xs mb-space-sm border-b border-surface-container">
+                    <span className="font-label-lg text-label-lg text-on-surface font-semibold">
+                      Database Sync Hub
+                    </span>
+                    <span className="font-label-sm text-label-sm text-secondary bg-secondary-container/40 px-2 py-0.5 rounded-full">
+                      {isOnline ? "Live" : "Standby"}
+                    </span>
+                  </div>
+
+                  <div className="space-y-2 mb-space-md text-body-sm font-body-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-space-xs text-on-surface">
+                        <span className="w-2 h-2 rounded-full bg-secondary" />
+                        Local SQLite
+                      </span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">
+                        v4.1.2 • Optimal
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-space-xs text-on-surface">
+                        <span className="w-2 h-2 rounded-full bg-secondary" />
+                        Supabase Cloud
+                      </span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">
+                        {lastSynced ? "Just now" : "Ready"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between opacity-70">
+                      <span className="flex items-center gap-space-xs text-on-surface">
+                        <span className="w-2 h-2 rounded-full bg-surface-dim" />
+                        Offline Queue
+                      </span>
+                      <span className="font-label-sm text-label-sm text-on-surface-variant">
+                        {pendingCount} pending
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await syncNow();
+                    }}
+                    disabled={isSyncing}
+                    className="w-full py-1.5 px-space-md bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container rounded font-label-md text-label-md transition-colors flex items-center justify-center gap-space-xs disabled:opacity-50"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">sync</span>
+                    {isSyncing ? "Syncing..." : "Force Ledger Re-sync"}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Profile Avatar Capsule */}
+            <button
+              type="button"
+              onClick={onOpenAuth}
+              aria-label="User Account"
+              className="flex items-center pl-space-xs rounded-full hover:ring-2 hover:ring-primary/20 transition-all focus:outline-none"
+            >
+              <div className="relative w-8 h-8 rounded-full overflow-hidden ring-1 ring-outline-variant/60">
+                <Image
+                  src="/stitch/assets/stitch_asset_10.png"
+                  alt="Profile"
+                  width={32}
+                  height={32}
+                  className="w-8 h-8 rounded-full object-cover"
+                />
+              </div>
+            </button>
+          </div>
         </div>
-
-        <h1 className="text-2xl sm:text-3xl font-serif text-[#421018] tracking-tight">
-          Namaste, <span className="text-[#1d4ed8] font-sans font-normal">{user?.full_name || "arvykrane"}</span>
-        </h1>
-        <p className="text-sm text-slate-600 mt-1 font-light max-w-xl">
-          Cook for yourself with zero stress: upload your grocery list, set meal routine, and follow easy Hinglish recipes.
-        </p>
       </div>
-
-      {/* Dynamic Target Card */}
-      <div className="flex items-center gap-3.5 bg-white/95 border border-[#e2d6c9] rounded-2xl p-3.5 px-5 shadow-sm backdrop-blur-md shrink-0">
-        <div className="w-12 h-12 rounded-xl bg-[#eff6ff] border border-[#bfdbfe] flex items-center justify-center text-2xl shrink-0">
-          🔥
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">
-            {goal === "lose_weight"
-              ? "Goal: Cut (-400 kcal)"
-              : goal === "gain_weight"
-              ? "Goal: Surplus (+300 kcal)"
-              : "Goal: Maintain (TDEE)"}
-          </p>
-          <p className="text-lg text-[#421018] font-serif font-bold">
-            {targetCalories.toLocaleString()}{" "}
-            <span className="text-xs font-sans text-slate-500 font-normal">kcal / day</span>
-          </p>
-        </div>
-      </div>
-    </div>
+    </header>
   );
 };
