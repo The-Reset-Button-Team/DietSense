@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { MealFrequency, RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
+import { SavedMealPlan, SavedMealPlanItem, WeeklyDayPlan, MealPlanStatus } from "@/hooks/useMealPlans";
 import { MealCard } from "./MealCard";
 
 interface MealPlanViewProps {
@@ -31,6 +32,14 @@ interface MealPlanViewProps {
   onRetryRecommendations?: () => void;
   shuffleSlot?: (slotId: string) => void;
   shufflingSlots?: Set<string>;
+  // Meal plan persistence props
+  savedPlan?: SavedMealPlan | null;
+  savedPlans?: SavedMealPlan[];
+  weeklySchedule?: WeeklyDayPlan[];
+  isSavingPlan?: boolean;
+  onSaveTodayPlan?: (status?: MealPlanStatus) => Promise<SavedMealPlan | null>;
+  onUpdatePlanStatus?: (planId: string, status: MealPlanStatus) => Promise<SavedMealPlan | null>;
+  onDeletePlan?: (planId: string) => Promise<boolean>;
 }
 
 export const MealPlanView: React.FC<MealPlanViewProps> = ({
@@ -59,6 +68,13 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   onRetryRecommendations,
   shuffleSlot,
   shufflingSlots = new Set(),
+  savedPlan = null,
+  savedPlans = [],
+  weeklySchedule = [],
+  isSavingPlan = false,
+  onSaveTodayPlan,
+  onUpdatePlanStatus,
+  onDeletePlan,
 }) => {
   // Modal states
   const [skipModalOpen, setSkipModalOpen] = useState(false);
@@ -66,6 +82,10 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   const [skipReason, setSkipReason] = useState("time");
   const [hinglishModalOpen, setHinglishModalOpen] = useState(false);
   const [safetyAuditToast, setSafetyAuditToast] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [weeklyModalOpen, setWeeklyModalOpen] = useState(false);
+  const [inspectPlan, setInspectPlan] = useState<SavedMealPlan | null>(null);
+  const [planToast, setPlanToast] = useState<string | null>(null);
 
   // Calorie & macro calculations
   const consumedCals = Math.min(totalPlannedCals, 1240);
@@ -90,7 +110,6 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
 
   const handleConfirmSkip = () => {
     setSkipModalOpen(false);
-    // In production, triggers backend adaptive penalty & macro redistribution
   };
 
   const runAllergenAudit = () => {
@@ -98,8 +117,41 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
     setTimeout(() => setSafetyAuditToast(false), 3500);
   };
 
+  const handleSavePlanWithStatus = async (status: MealPlanStatus) => {
+    if (savedPlan && onUpdatePlanStatus) {
+      const res = await onUpdatePlanStatus(savedPlan.id, status);
+      if (res) {
+        setPlanToast(`Meal plan status updated to '${status}' in SQLite.`);
+        setTimeout(() => setPlanToast(null), 3500);
+      }
+    } else if (onSaveTodayPlan) {
+      const res = await onSaveTodayPlan(status);
+      if (res) {
+        setPlanToast(`Today's meal plan saved with status '${status}' to SQLite.`);
+        setTimeout(() => setPlanToast(null), 3500);
+      }
+    }
+  };
+
+  const currentPlanStatus: MealPlanStatus | "unsaved" = savedPlan?.status || "unsaved";
+
   return (
     <div className="space-y-space-lg pb-24">
+      {/* Toast Notification */}
+      {planToast && (
+        <div className="fixed top-20 right-6 z-50 bg-surface-container-lowest p-space-md rounded-xl shadow-xl border border-secondary text-body-sm animate-in slide-in-from-top-4 flex items-center gap-3">
+          <span className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+            <span className="material-symbols-outlined text-[18px]">verified</span>
+          </span>
+          <div>
+            <h5 className="font-label-md text-label-md text-on-surface font-bold">
+              Database Sync Complete
+            </h5>
+            <p className="text-body-sm text-on-surface-variant">{planToast}</p>
+          </div>
+        </div>
+      )}
+
       {/* Recommendation Error Banner */}
       {recommendationError && (
         <div className="flex items-center justify-between gap-3 px-space-md py-space-sm bg-error-container/20 border border-error/20 rounded-lg text-body-sm">
@@ -118,15 +170,44 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           )}
         </div>
       )}
+
       {/* Top Editorial Header & Clinical Status Indicator */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md pt-space-xs pb-space-sm border-b border-surface-container-highest">
         <div className="space-y-1">
-          <div className="flex items-center gap-space-xs text-primary">
+          <div className="flex items-center gap-space-xs text-primary flex-wrap">
             <span className="material-symbols-outlined text-[18px]">calendar_today</span>
             <span className="font-label-sm text-label-sm uppercase tracking-wider text-primary font-bold">
               Clinical Regimen • Today
             </span>
+
+            {/* Plan Persistence Status Badge */}
+            <span className="mx-1">•</span>
+            {currentPlanStatus === "completed" && (
+              <span className="px-2.5 py-0.5 rounded-full bg-secondary/15 text-secondary font-label-sm text-label-sm font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                Status: Completed
+              </span>
+            )}
+            {currentPlanStatus === "accepted" && (
+              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">task_alt</span>
+                Status: Accepted
+              </span>
+            )}
+            {currentPlanStatus === "generated" && (
+              <span className="px-2.5 py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
+                Status: Generated (Draft)
+              </span>
+            )}
+            {currentPlanStatus === "unsaved" && (
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-700 font-label-sm text-label-sm font-bold flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">pending</span>
+                Live Plan (Unsaved)
+              </span>
+            )}
           </div>
+
           <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight font-serif">
             Today’s Prescriptive Plan
           </h1>
@@ -137,23 +218,62 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-space-sm bg-surface-container-low p-space-sm rounded-lg shadow-sm border border-surface-container shrink-0">
-          <div className="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
-            <span className="material-symbols-outlined text-[22px]">health_metrics</span>
-          </div>
-          <div className="pr-space-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold">
-                Clinical Target
+        {/* Persistence & Calendar Action Cluster */}
+        <div className="flex flex-wrap items-center gap-space-xs">
+          {/* History Button */}
+          <button
+            type="button"
+            onClick={() => setHistoryModalOpen(true)}
+            className="px-3 py-2 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-lg text-label-md font-label-md border border-surface-container flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[18px]">history</span>
+            <span>History ({savedPlans.length})</span>
+          </button>
+
+          {/* Weekly Schedule Button */}
+          <button
+            type="button"
+            onClick={() => setWeeklyModalOpen(true)}
+            className="px-3 py-2 bg-surface-container-low hover:bg-surface-container text-on-surface rounded-lg text-label-md font-label-md border border-surface-container flex items-center gap-1.5 transition-all shadow-sm"
+          >
+            <span className="material-symbols-outlined text-[18px]">date_range</span>
+            <span>Weekly View</span>
+          </button>
+
+          {/* Accept / Complete Plan Buttons */}
+          {currentPlanStatus !== "completed" && (
+            <button
+              type="button"
+              onClick={() =>
+                handleSavePlanWithStatus(currentPlanStatus === "accepted" ? "completed" : "accepted")
+              }
+              disabled={isSavingPlan}
+              className="px-4 py-2 bg-primary hover:bg-primary-container text-on-primary rounded-lg text-label-md font-label-md flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+            >
+              <span className="material-symbols-outlined text-[18px]">
+                {currentPlanStatus === "accepted" ? "done_all" : "check"}
               </span>
-              <span className="inline-block w-1.5 h-1.5 rounded-full bg-secondary" />
+              <span>
+                {isSavingPlan
+                  ? "Saving..."
+                  : currentPlanStatus === "accepted"
+                  ? "Mark Completed"
+                  : "Accept Plan"}
+              </span>
+            </button>
+          )}
+
+          {/* Target Calorie Pill */}
+          <div className="flex items-center gap-space-sm bg-surface-container-low p-2 rounded-lg shadow-sm border border-surface-container shrink-0 ml-1">
+            <div className="w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+              <span className="material-symbols-outlined text-[18px]">health_metrics</span>
             </div>
-            <p className="font-metric-num text-[18px] text-primary leading-tight">
-              {targetCalories.toLocaleString()}{" "}
-              <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">
-                kcal/day
-              </span>
-            </p>
+            <div className="pr-1">
+              <div className="text-[10px] uppercase text-on-surface-variant font-bold">Target</div>
+              <p className="font-metric-num text-[15px] text-primary leading-tight font-bold">
+                {targetCalories.toLocaleString()} kcal
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -419,48 +539,62 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
 
         {/* Persistent 4-Column Clinical Rail & Fast Action Cards */}
         <aside className="lg:col-span-4 space-y-space-md">
-          {/* Interactive Hinglish Recipe Spotlight Card */}
+          {/* Plan Persistence Management Card */}
           <div className="bg-surface-container-lowest p-space-md rounded-xl shadow-sm space-y-space-sm border border-surface-container">
             <div className="flex items-center justify-between">
-              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold uppercase tracking-wider">
-                Fast Solo Cook
+              <span className="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold uppercase tracking-wider flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px]">save</span>
+                Plan Persistence
               </span>
-              <span className="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1">
-                <span className="material-symbols-outlined text-[14px]">check</span> In Pantry (3/4)
+              <span className="text-body-sm text-on-surface-variant text-[11px]">
+                Local SQLite
               </span>
             </div>
 
             <div className="space-y-1">
               <h4 className="font-headline-sm text-headline-sm text-primary font-serif">
-                Palak Paneer Bhurji — 15m Solo Edition
+                Today’s Plan Status
               </h4>
               <p className="font-body-sm text-body-sm text-on-surface-variant">
-                Bachelors &amp; solo-cook engineered quick recipe. No mixer grinder required.
+                Save and track plan progression from generation to completion.
               </p>
             </div>
 
             <div className="p-space-sm bg-surface-container-low rounded-lg space-y-2 border border-surface-container">
-              <div className="flex items-center gap-space-xs font-label-sm text-label-sm text-primary font-bold">
-                <span className="material-symbols-outlined text-[16px]">tips_and_updates</span>
-                Hinglish Lifehack
+              <div className="flex items-center justify-between text-body-sm font-body-sm">
+                <span className="text-on-surface-variant">Plan Status:</span>
+                <span className="font-bold text-primary capitalize">{currentPlanStatus}</span>
               </div>
-              <p className="font-body-sm text-body-sm text-on-surface leading-snug">
-                <span className="font-semibold text-primary">&quot;Pan mein 1 tsp oil garam karo,</span>{" "}
-                jeera aur finely chopped pyaz 2 min sauté karo. Paneer ko haath se crush karke daalo.{" "}
-                <span className="italic text-on-surface-variant">
-                  Cook &amp; eat in the same cast iron skillet to save cleaning time!&quot;
-                </span>
-              </p>
+              <div className="flex items-center justify-between text-body-sm font-body-sm">
+                <span className="text-on-surface-variant">Target Calories:</span>
+                <span className="font-bold">{targetCalories} kcal</span>
+              </div>
+              <div className="flex items-center justify-between text-body-sm font-body-sm">
+                <span className="text-on-surface-variant">Active Slots:</span>
+                <span className="font-bold">{mealPlanDisplayItems.length} meals</span>
+              </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setHinglishModalOpen(true)}
-              className="w-full py-2 bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md rounded transition-colors flex items-center justify-center gap-1"
-            >
-              <span className="material-symbols-outlined text-[16px]">receipt_long</span>
-              Full 3-Step Hinglish Guide
-            </button>
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleSavePlanWithStatus("accepted")}
+                disabled={isSavingPlan}
+                className="py-2 px-3 bg-primary text-on-primary rounded font-label-md text-label-md hover:bg-primary-container transition-all flex items-center justify-center gap-1 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">check</span>
+                Accept Plan
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSavePlanWithStatus("completed")}
+                disabled={isSavingPlan}
+                className="py-2 px-3 bg-secondary/15 text-secondary rounded font-label-md text-label-md hover:bg-secondary/25 transition-all flex items-center justify-center gap-1 border border-secondary/30 disabled:opacity-50"
+              >
+                <span className="material-symbols-outlined text-[16px]">verified</span>
+                Mark Completed
+              </button>
+            </div>
           </div>
 
           {/* Quick Bio-Engineered Satiety & Hydration Digest */}
@@ -514,7 +648,7 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
             <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
               All suggestions continuously validated against your clinical profile:{" "}
               <span className="font-semibold text-on-surface">
-                Lactose Tolerant, Peanut Avoidance, High-Fiber Cut
+                Strict safety gates enforced in SQLite before scoring
               </span>
               .
             </p>
@@ -543,6 +677,16 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           <span>Regenerate Entire Day</span>
         </button>
 
+        <button
+          type="button"
+          onClick={() => handleSavePlanWithStatus("accepted")}
+          disabled={isSavingPlan}
+          className="flex items-center gap-space-xs px-space-md py-2 bg-secondary text-on-secondary rounded-full font-label-md text-label-md transition-all shadow-sm active:scale-95 disabled:opacity-50"
+        >
+          <span className="material-symbols-outlined text-[18px]">save</span>
+          <span>{isSavingPlan ? "Saving..." : "Save Today's Plan"}</span>
+        </button>
+
         <div className="w-px h-6 bg-surface-container" />
 
         <button
@@ -554,6 +698,264 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           <span className="hidden sm:inline">Top</span>
         </button>
       </div>
+
+      {/* ─── Historical Plans Modal ────────────────────────────────────────────── */}
+      {historyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-space-md animate-in fade-in">
+          <div className="bg-surface-container-lowest max-w-2xl w-full rounded-xl p-space-lg shadow-xl space-y-space-md max-h-[85vh] overflow-y-auto border border-surface-container">
+            <div className="flex items-center justify-between border-b border-surface-container pb-space-xs">
+              <div>
+                <h3 className="font-headline-sm text-headline-sm text-primary font-serif flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px]">history</span>
+                  Saved Meal Plans History
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Browse past daily plans persisted in your local SQLite database.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface p-1"
+              >
+                <span className="material-symbols-outlined text-[22px]">close</span>
+              </button>
+            </div>
+
+            {savedPlans.length === 0 ? (
+              <div className="text-center py-12 text-on-surface-variant space-y-2">
+                <span className="material-symbols-outlined text-[42px] opacity-40">calendar_month</span>
+                <p>No saved meal plans yet. Click &apos;Accept Plan&apos; or &apos;Save Today&apos;s Plan&apos; to persist your first plan!</p>
+              </div>
+            ) : (
+              <div className="space-y-space-xs">
+                {savedPlans.map((plan) => (
+                  <div
+                    key={plan.id}
+                    className="p-space-sm bg-surface-container-low rounded-lg border border-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-primary transition-all"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-bold text-primary font-metric-num">{plan.date}</span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[11px] font-label-sm font-bold uppercase ${
+                            plan.status === "completed"
+                              ? "bg-secondary/15 text-secondary"
+                              : plan.status === "accepted"
+                              ? "bg-primary/10 text-primary"
+                              : "bg-surface-container text-on-surface-variant"
+                          }`}
+                        >
+                          {plan.status}
+                        </span>
+                        <span className="text-body-sm text-[12px] text-on-surface-variant">
+                          {plan.target_calories} kcal • {plan.items.length} meals
+                        </span>
+                      </div>
+                      <div className="text-[12px] text-on-surface-variant line-clamp-1">
+                        {plan.items.map((i) => i.name).join(" • ")}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setInspectPlan(plan)}
+                        className="px-3 py-1.5 bg-surface-container hover:bg-surface-container-high text-primary rounded font-label-sm text-label-sm flex items-center gap-1"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">visibility</span>
+                        Inspect
+                      </button>
+
+                      {onDeletePlan && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm(`Delete meal plan for ${plan.date}?`)) {
+                              await onDeletePlan(plan.id);
+                            }
+                          }}
+                          className="p-1.5 text-on-surface-variant hover:text-error rounded"
+                          title="Delete plan"
+                        >
+                          <span className="material-symbols-outlined text-[18px]">delete</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Weekly Schedule Modal ────────────────────────────────────────────── */}
+      {weeklyModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-space-md animate-in fade-in">
+          <div className="bg-surface-container-lowest max-w-4xl w-full rounded-xl p-space-lg shadow-xl space-y-space-md max-h-[85vh] overflow-y-auto border border-surface-container">
+            <div className="flex items-center justify-between border-b border-surface-container pb-space-xs">
+              <div>
+                <h3 className="font-headline-sm text-headline-sm text-primary font-serif flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px]">date_range</span>
+                  Weekly Plan Overview
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  7-day schedule view showing plan persistence and completion status.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setWeeklyModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface p-1"
+              >
+                <span className="material-symbols-outlined text-[22px]">close</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-2">
+              {weeklySchedule.map((day) => {
+                const isToday = day.date === new Date().toISOString().split("T")[0];
+                const dateObj = new Date(day.date);
+                const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
+
+                return (
+                  <div
+                    key={day.date}
+                    className={`p-space-sm rounded-lg border flex flex-col justify-between min-h-[140px] transition-all ${
+                      isToday
+                        ? "bg-primary-fixed/20 border-primary ring-1 ring-primary/30"
+                        : "bg-surface-container-low border-surface-container"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-label-md text-label-md font-bold">{dayName}</span>
+                        {isToday && (
+                          <span className="px-1.5 py-0.2 bg-primary text-on-primary rounded text-[10px] font-bold">
+                            Today
+                          </span>
+                        )}
+                      </div>
+                      <div className="font-metric-num text-[12px] text-on-surface-variant">
+                        {day.date}
+                      </div>
+
+                      {day.plan ? (
+                        <div className="mt-2 space-y-1">
+                          <span
+                            className={`inline-block px-1.5 py-0.5 rounded-full text-[10px] font-label-sm font-bold uppercase ${
+                              day.plan.status === "completed"
+                                ? "bg-secondary/15 text-secondary"
+                                : day.plan.status === "accepted"
+                                ? "bg-primary/10 text-primary"
+                                : "bg-surface-container text-on-surface-variant"
+                            }`}
+                          >
+                            {day.plan.status}
+                          </span>
+                          <div className="text-[11px] font-metric-num text-primary font-bold">
+                            {day.plan.target_calories} kcal
+                          </div>
+                          <div className="text-[11px] text-on-surface-variant line-clamp-2">
+                            {day.plan.items.length} meals planned
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="mt-4 text-[11px] text-on-surface-variant italic">
+                          No plan saved
+                        </div>
+                      )}
+                    </div>
+
+                    {day.plan && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInspectPlan(day.plan);
+                          setWeeklyModalOpen(false);
+                        }}
+                        className="mt-2 text-[11px] text-primary hover:underline font-semibold"
+                      >
+                        View Meals →
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Inspect Single Plan Modal ────────────────────────────────────────── */}
+      {inspectPlan && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-space-md animate-in fade-in">
+          <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl p-space-lg shadow-xl space-y-space-md max-h-[85vh] overflow-y-auto border border-surface-container">
+            <div className="flex items-center justify-between border-b border-surface-container pb-space-xs">
+              <div>
+                <h3 className="font-headline-sm text-headline-sm text-primary font-serif">
+                  Meal Plan: {inspectPlan.date}
+                </h3>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Status: <span className="font-bold capitalize">{inspectPlan.status}</span> • Target: {inspectPlan.target_calories} kcal
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setInspectPlan(null)}
+                className="text-on-surface-variant hover:text-on-surface p-1"
+              >
+                <span className="material-symbols-outlined text-[22px]">close</span>
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {inspectPlan.items.map((meal, idx) => (
+                <div
+                  key={idx}
+                  className="p-space-sm bg-surface-container-low rounded-lg border border-surface-container space-y-1"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-headline-sm text-sm text-primary font-bold">
+                      {meal.slot ? meal.slot.toUpperCase() : `Meal ${idx + 1}`}: {meal.name}
+                    </span>
+                    <span className="font-metric-num text-sm text-on-surface font-bold">
+                      {meal.calories} kcal
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-[11px] text-on-surface-variant">
+                    <span>{meal.protein_g}g Protein</span>
+                    <span>•</span>
+                    <span>{meal.carbs_g}g Carbs</span>
+                    <span>•</span>
+                    <span>{meal.fat_g}g Fat</span>
+                    {meal.fiber_g !== undefined && meal.fiber_g > 0 && (
+                      <>
+                        <span>•</span>
+                        <span>{meal.fiber_g}g Fiber</span>
+                      </>
+                    )}
+                  </div>
+                  {meal.reason && (
+                    <p className="text-[11px] text-secondary italic">{meal.reason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-surface-container">
+              <button
+                type="button"
+                onClick={() => setInspectPlan(null)}
+                className="px-4 py-2 bg-surface-container text-on-surface rounded font-label-md text-label-md"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Adaptive Skip Reason Modal */}
       {skipModalOpen && (
@@ -616,99 +1018,6 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
                 className="px-space-md py-2 bg-primary hover:bg-primary-container text-on-primary rounded font-label-md text-label-md shadow-sm"
               >
                 Confirm &amp; Redistribute Macros
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Hinglish Recipe & Solo-Cook Lifehacks Modal */}
-      {hinglishModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-space-md animate-in fade-in">
-          <div className="bg-surface-container-lowest max-w-xl w-full rounded-xl p-space-lg shadow-xl space-y-space-md max-h-[90vh] overflow-y-auto border border-surface-container">
-            <div className="flex items-start justify-between border-b border-surface-container pb-space-sm">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-label-sm text-label-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded-full font-bold">
-                    3/4 Local In-Stock
-                  </span>
-                  <span className="font-label-sm text-label-sm text-on-surface-variant">
-                    15 min total
-                  </span>
-                </div>
-                <h3 className="font-headline-md text-headline-md text-primary pt-1 font-serif">
-                  Paneer Bhurji: Quick Hinglish Edition
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setHinglishModalOpen(false)}
-                className="text-on-surface-variant hover:text-on-surface p-1"
-              >
-                <span className="material-symbols-outlined text-[22px]">close</span>
-              </button>
-            </div>
-
-            <div className="space-y-space-sm">
-              <h4 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold">
-                1. Ingredients Check
-              </h4>
-              <div className="grid grid-cols-2 gap-2 text-body-sm font-body-sm">
-                <div className="p-2 rounded bg-surface-container-low flex items-center justify-between border border-surface-container">
-                  <span>200g Low Fat Paneer</span>
-                  <span className="material-symbols-outlined text-secondary text-[16px]">
-                    check
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-surface-container-low flex items-center justify-between border border-surface-container">
-                  <span>1 Diced Onion &amp; Tomato</span>
-                  <span className="material-symbols-outlined text-secondary text-[16px]">
-                    check
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-surface-container-low flex items-center justify-between border border-surface-container">
-                  <span>1 Green Chili &amp; Jeera</span>
-                  <span className="material-symbols-outlined text-secondary text-[16px]">
-                    check
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-surface-container-low flex items-center justify-between text-on-surface-variant border border-surface-container">
-                  <span>Fresh Dhaniya / Cilantro</span>
-                  <span className="material-symbols-outlined text-amber-600 text-[16px]">
-                    add
-                  </span>
-                </div>
-              </div>
-
-              <h4 className="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold pt-2">
-                2. 3-Step Solo Prep Guide
-              </h4>
-              <div className="space-y-2 text-body-sm font-body-sm">
-                <div className="p-3 rounded-lg bg-surface-container-low border border-surface-container">
-                  <span className="font-bold text-primary">Step 1 (Tadka):</span> Pan mein 1 tsp oil
-                  ya ghee garam karo. 1/2 tsp jeera aur chopped green chili add karo. Jab crackle
-                  hone lage toh pyaaz daal do.
-                </div>
-                <div className="p-3 rounded-lg bg-surface-container-low border border-surface-container">
-                  <span className="font-bold text-primary">Step 2 (Bhurji Base):</span> 2 minute
-                  saute ke baad tamatar, haldi, thoda namak aur garam masala daalo. Jab tamatar soft
-                  ho jaye toh paneer ko haath se crush karke mix karo.
-                </div>
-                <div className="p-3 rounded-lg bg-surface-container-low border border-surface-container">
-                  <span className="font-bold text-primary">Step 3 (Finish):</span> 3 minute dhak kar
-                  pakao on low flame. Gas band karo aur fresh cilantro garnish karo. Eat directly
-                  with multigrain roti!
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-space-xs flex justify-end">
-              <button
-                type="button"
-                onClick={() => setHinglishModalOpen(false)}
-                className="px-space-md py-2 bg-primary text-on-primary rounded font-label-md text-label-md"
-              >
-                Done / Close
               </button>
             </div>
           </div>

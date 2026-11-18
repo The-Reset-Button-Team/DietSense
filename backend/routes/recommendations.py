@@ -409,6 +409,37 @@ def _normalize_profile(user_profile: Dict[str, Any]) -> Dict[str, Any]:
     return prof
 
 
+def _merge_with_db_profile(user_id: str, user_profile: Dict[str, Any]) -> Dict[str, Any]:
+    """Merges caller profile with user's persisted SQLite profile for missing fields."""
+    prof = dict(user_profile)
+    try:
+        with get_db_cursor() as cur:
+            cur.execute("SELECT * FROM profiles WHERE user_id = ?", (user_id,))
+            db_row = cur.fetchone()
+            if db_row:
+                db_data = dict(db_row)
+                if "dietary_pref" not in prof and "dietary_preference" not in prof and "dietary_pref" in db_data:
+                    prof["dietary_pref"] = db_data["dietary_pref"]
+                if "allergies" not in prof and "allergies" in db_data:
+                    raw_a = db_data["allergies"]
+                    if raw_a:
+                        try:
+                            prof["allergies"] = json.loads(raw_a) if isinstance(raw_a, str) else raw_a
+                        except Exception:
+                            prof["allergies"] = []
+                if "target_calories" not in prof and "calorie_target" not in prof and "target_calories" in db_data:
+                    prof["target_calories"] = int(db_data["target_calories"])
+                if "budget_per_meal" not in prof and "budget_per_meal" in db_data:
+                    prof["budget_per_meal"] = float(db_data["budget_per_meal"])
+                if "prep_time_limit" not in prof and "prep_time_limit" in db_data:
+                    prof["prep_time_limit"] = int(db_data["prep_time_limit"])
+                if "goal" not in prof and db_data.get("goal"):
+                    prof["goal"] = db_data["goal"]
+    except Exception:
+        pass
+    return _normalize_profile(prof)
+
+
 @router.post("/")
 async def generate_recommendations(
     user_profile: Dict[str, Any],
@@ -428,8 +459,8 @@ async def generate_recommendations(
     if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
         user_profile = user_profile["user_profile"]
 
-    user_profile = _normalize_profile(user_profile)
     user_id = current_user["id"]
+    user_profile = _merge_with_db_profile(user_id, user_profile)
     meal_logs = get_user_meal_logs(user_id)
 
     # Load user's in-stock pantry items for ingredient-aware recommendations
@@ -481,7 +512,8 @@ async def generate_slot_recommendations(
         user_profile = user_profile["user_profile"]
 
     is_shuffle = shuffle or bool(user_profile.get("shuffle", False))
-    user_profile = _normalize_profile(user_profile)
+    user_id = current_user["id"]
+    user_profile = _merge_with_db_profile(user_id, user_profile)
 
     top_n = int(user_profile.get("top_n", 5))
     if top_n < 3:
@@ -489,7 +521,6 @@ async def generate_slot_recommendations(
     elif top_n > 5:
         top_n = 5
 
-    user_id = current_user["id"]
     meal_logs = get_user_meal_logs(user_id)
     pantry_items = _get_pantry_items(user_id)
 
@@ -525,8 +556,8 @@ async def generate_daily_recommendations(
     if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
         user_profile = user_profile["user_profile"]
 
-    user_profile = _normalize_profile(user_profile)
     user_id = current_user["id"]
+    user_profile = _merge_with_db_profile(user_id, user_profile)
     meal_logs = get_user_meal_logs(user_id)
     pantry_items = _get_pantry_items(user_id)
 

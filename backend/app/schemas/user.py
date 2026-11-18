@@ -48,6 +48,12 @@ class UserProfileResponse(BaseModel):
     daily_calorie_target: int
     is_solo_cook: bool = True
     active_meal_frequency: str = "3_meals"
+    dietary_pref: str = "vegetarian"
+    dietary_preference: Optional[str] = "vegetarian"
+    allergies: List[str] = []
+    budget_per_meal: float = 100.0
+    prep_time_limit: int = 30
+    preferred_cuisines: List[str] = ["indian"]
     token: Optional[str] = None
     auth_providers: List[str] = ["local"]
 
@@ -61,6 +67,12 @@ class UserUpdateRequest(BaseModel):
     activity_level: Optional[ActivityLevel] = None
     is_solo_cook: Optional[bool] = None
     active_meal_frequency: Optional[str] = None
+    dietary_pref: Optional[str] = None
+    dietary_preference: Optional[str] = None
+    allergies: Optional[List[str]] = None
+    budget_per_meal: Optional[float] = None
+    prep_time_limit: Optional[int] = None
+    preferred_cuisines: Optional[List[str]] = None
 
 class SupabaseLoginRequest(BaseModel):
     email: EmailStr

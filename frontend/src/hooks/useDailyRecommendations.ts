@@ -74,11 +74,11 @@ function buildRequestBody(
   return {
     user_profile: {
       goal: profile.goal,
-      dietary_preference: "vegetarian",
-      allergies: (profile as any).allergies || [],
+      dietary_preference: profile.dietary_preference || profile.dietary_pref || "vegetarian",
+      allergies: profile.allergies || [],
       calorie_target: targetCalories,
-      budget_per_meal: (profile as any).budget_per_meal || 100,
-      prep_time_limit: (profile as any).prep_time_limit || 30,
+      budget_per_meal: profile.budget_per_meal || 100,
+      prep_time_limit: profile.prep_time_limit || 30,
     },
     active_slots: activeSlots,
     pantry_items: inStockNames,
@@ -166,7 +166,18 @@ export function useDailyRecommendations({
       controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, profile?.id, fetchTrigger]);
+  }, [
+    enabled,
+    profile?.id,
+    profile?.dietary_pref,
+    profile?.dietary_preference,
+    JSON.stringify(profile?.allergies),
+    profile?.budget_per_meal,
+    profile?.prep_time_limit,
+    profile?.goal,
+    profile?.daily_calorie_target,
+    fetchTrigger,
+  ]);
 
   // Per-slot shuffle
   const shuffleSlot = useCallback(
@@ -180,11 +191,11 @@ export function useDailyRecommendations({
         const body = {
           user_profile: {
             goal: profile.goal,
-            dietary_preference: "vegetarian",
-            allergies: (profile as any).allergies || [],
+            dietary_preference: profile.dietary_preference || profile.dietary_pref || "vegetarian",
+            allergies: profile.allergies || [],
             calorie_target: targetCalories,
-            budget_per_meal: (profile as any).budget_per_meal || 100,
-            prep_time_limit: (profile as any).prep_time_limit || 30,
+            budget_per_meal: profile.budget_per_meal || 100,
+            prep_time_limit: profile.prep_time_limit || 30,
           },
           pantry_items: pantryItems.filter((p) => p.inStock).map((p) => p.name),
         };

@@ -17,6 +17,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
 import { useDailyRecommendations } from "@/hooks/useDailyRecommendations";
+import { useMealPlans, MealPlanStatus } from "@/hooks/useMealPlans";
 
 import { Header } from "@/components/Header";
 import { TabNav, TabType } from "@/components/TabNav";
@@ -311,6 +312,23 @@ function MainApp() {
   const totalPlannedFat = dailyTotals?.fat_g ?? activeMealItems.reduce((acc, item) => acc + item.fat, 0);
   const totalPlannedFiber = dailyTotals?.fiber_g ?? activeMealItems.reduce((acc, item) => acc + (item.fibre || 0), 0);
 
+  // ─── Meal Plan Persistence (authenticated users only) ──────────────────────
+  const {
+    plans: savedPlans,
+    todayPlan,
+    weeklySchedule,
+    isSaving: isSavingPlan,
+    saveTodayPlan,
+    updateStatus: updatePlanStatus,
+    deletePlan,
+  } = useMealPlans({
+    enabled: isAuthenticated && !!user,
+  });
+
+  const handleSaveTodayPlan = async (status?: MealPlanStatus) => {
+    return saveTodayPlan(activeMealItems, targetCalories, status);
+  };
+
   const inStockPantryNames = useMemo(
     () => pantryItems.filter((i) => i.inStock).map((i) => i.name),
     [pantryItems]
@@ -358,6 +376,13 @@ function MainApp() {
             onRetryRecommendations={refetchRecommendations}
             shuffleSlot={shuffleSlot}
             shufflingSlots={shufflingSlots}
+            savedPlan={todayPlan}
+            savedPlans={savedPlans}
+            weeklySchedule={weeklySchedule}
+            isSavingPlan={isSavingPlan}
+            onSaveTodayPlan={handleSaveTodayPlan}
+            onUpdatePlanStatus={updatePlanStatus}
+            onDeletePlan={deletePlan}
           />
         )}
 

@@ -40,6 +40,7 @@ def _row_to_profile(row: Any) -> Dict[str, Any]:
         "email": row["email"],
         "full_name": row["full_name"],
         "dietary_pref": row["dietary_pref"],
+        "dietary_preference": row["dietary_pref"],
         "allergies": allergies,
         "target_calories": int(row["target_calories"]),
         "budget_per_meal": float(row["budget_per_meal"]),
@@ -140,7 +141,7 @@ async def update_user_profile(
         existing = cur.fetchone()
 
         if existing:
-            dietary_pref = profile_data.get("dietary_pref", existing["dietary_pref"])
+            dietary_pref = profile_data.get("dietary_pref") or profile_data.get("dietary_preference", existing["dietary_pref"])
             allergies = allergies_json if "allergies" in profile_data else existing["allergies"]
             target_calories = profile_data.get("target_calories", existing["target_calories"])
             budget_per_meal = profile_data.get("budget_per_meal", existing["budget_per_meal"])
@@ -217,7 +218,7 @@ async def update_user_profile(
                     user_id,
                     email,
                     full_name,
-                    profile_data.get("dietary_pref", "vegetarian"),
+                    profile_data.get("dietary_pref") or profile_data.get("dietary_preference", "vegetarian"),
                     allergies_json,
                     profile_data.get("target_calories", 2000),
                     profile_data.get("budget_per_meal", 100.0),

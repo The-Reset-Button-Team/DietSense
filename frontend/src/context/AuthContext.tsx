@@ -17,8 +17,12 @@ export interface UserProfileData {
   daily_calorie_target: number;
   is_solo_cook: boolean;
   active_meal_frequency: string;
+  dietary_pref?: string;
   dietary_preference?: string;
   allergies?: string[];
+  budget_per_meal?: number;
+  prep_time_limit?: number;
+  preferred_cuisines?: string[];
   auth_providers?: string[];
 }
 
@@ -42,7 +46,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<AuthResult>;
   updatePassword: (newPassword: string) => Promise<AuthResult>;
-  updateProfile: (updated: Partial<UserProfileData>) => void;
+  changePassword: (oldPassword: string, newPassword: string) => Promise<AuthResult>;
+  updateProfile: (updated: Partial<UserProfileData>) => Promise<void>;
 }
 
 const DEFAULT_PROFILE: Omit<UserProfileData, "id" | "email"> = {
@@ -56,6 +61,12 @@ const DEFAULT_PROFILE: Omit<UserProfileData, "id" | "email"> = {
   daily_calorie_target: 1850,
   is_solo_cook: true,
   active_meal_frequency: "3_meals",
+  dietary_pref: "vegetarian",
+  dietary_preference: "vegetarian",
+  allergies: [],
+  budget_per_meal: 100,
+  prep_time_limit: 30,
+  preferred_cuisines: ["indian"],
   auth_providers: ["local"],
 };
 
@@ -82,6 +93,30 @@ export function mapAuthError(error: any): string {
   return error.message || "An authentication error occurred. Please try again.";
 }
 
+function mapUserData(data: any): UserProfileData {
+  return {
+    id: data.id,
+    email: data.email,
+    full_name: data.full_name || data.email?.split("@")[0] || DEFAULT_PROFILE.full_name,
+    age: data.age || DEFAULT_PROFILE.age,
+    gender: (data.gender as Gender) || DEFAULT_PROFILE.gender,
+    height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
+    weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
+    goal: (data.goal as GoalType) || DEFAULT_PROFILE.goal,
+    activity_level: (data.activity_level as ActivityLevel) || DEFAULT_PROFILE.activity_level,
+    daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
+    is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
+    active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
+    dietary_pref: data.dietary_pref || data.dietary_preference || DEFAULT_PROFILE.dietary_pref,
+    dietary_preference: data.dietary_preference || data.dietary_pref || DEFAULT_PROFILE.dietary_preference,
+    allergies: data.allergies || DEFAULT_PROFILE.allergies,
+    budget_per_meal: data.budget_per_meal !== undefined ? Number(data.budget_per_meal) : DEFAULT_PROFILE.budget_per_meal,
+    prep_time_limit: data.prep_time_limit !== undefined ? Number(data.prep_time_limit) : DEFAULT_PROFILE.prep_time_limit,
+    preferred_cuisines: data.preferred_cuisines || DEFAULT_PROFILE.preferred_cuisines,
+    auth_providers: data.auth_providers || ["local"],
+  };
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -91,21 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = await apiClient<any>("/api/auth/me");
       if (data && data.id) {
-        const userProf: UserProfileData = {
-          id: data.id,
-          email: data.email,
-          full_name: data.full_name || data.email?.split("@")[0] || DEFAULT_PROFILE.full_name,
-          age: data.age || DEFAULT_PROFILE.age,
-          gender: (data.gender as Gender) || DEFAULT_PROFILE.gender,
-          height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
-          weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
-          goal: (data.goal as GoalType) || DEFAULT_PROFILE.goal,
-          activity_level: (data.activity_level as ActivityLevel) || DEFAULT_PROFILE.activity_level,
-          daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
-          is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
-          active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
-          auth_providers: data.auth_providers || ["local"],
-        };
+        const userProf = mapUserData(data);
         setProfile(userProf);
         if (data.token) {
           setApiAuthToken(data.token);
@@ -143,22 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setApiAuthToken(data.token);
       }
 
-      const userProf: UserProfileData = {
-        id: data.id,
-        email: data.email,
-        full_name: data.full_name || data.email?.split("@")[0] || DEFAULT_PROFILE.full_name,
-        age: data.age || DEFAULT_PROFILE.age,
-        gender: (data.gender as Gender) || DEFAULT_PROFILE.gender,
-        height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
-        weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
-        goal: (data.goal as GoalType) || DEFAULT_PROFILE.goal,
-        activity_level: (data.activity_level as ActivityLevel) || DEFAULT_PROFILE.activity_level,
-        daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
-        is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
-        active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
-        auth_providers: data.auth_providers || ["local"],
-      };
-
+      const userProf = mapUserData(data);
       setProfile(userProf);
       setIsLoading(false);
       return { success: true };
@@ -195,22 +201,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setApiAuthToken(res.token);
       }
 
-      const userProf: UserProfileData = {
-        id: res.id,
-        email: res.email,
-        full_name: res.full_name,
-        age: res.age,
-        gender: res.gender as Gender,
-        height_cm: res.height_cm,
-        weight_kg: res.weight_kg,
-        goal: res.goal as GoalType,
-        activity_level: res.activity_level as ActivityLevel,
-        daily_calorie_target: res.daily_calorie_target,
-        is_solo_cook: res.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
-        active_meal_frequency: res.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
-        auth_providers: res.auth_providers || ["local"],
-      };
-
+      const userProf = mapUserData(res);
       setProfile(userProf);
       setIsLoading(false);
       return { success: true, needsEmailConfirmation: false };
@@ -236,21 +227,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setApiAuthToken(data.token);
       }
 
-      const userProf: UserProfileData = {
-        id: data.id,
-        email: data.email,
-        full_name: data.full_name || data.email?.split("@")[0] || DEFAULT_PROFILE.full_name,
-        age: data.age || DEFAULT_PROFILE.age,
-        gender: (data.gender as Gender) || DEFAULT_PROFILE.gender,
-        height_cm: data.height_cm || DEFAULT_PROFILE.height_cm,
-        weight_kg: data.weight_kg || DEFAULT_PROFILE.weight_kg,
-        goal: (data.goal as GoalType) || DEFAULT_PROFILE.goal,
-        activity_level: (data.activity_level as ActivityLevel) || DEFAULT_PROFILE.activity_level,
-        daily_calorie_target: data.daily_calorie_target || DEFAULT_PROFILE.daily_calorie_target,
-        is_solo_cook: data.is_solo_cook ?? DEFAULT_PROFILE.is_solo_cook,
-        active_meal_frequency: data.active_meal_frequency || DEFAULT_PROFILE.active_meal_frequency,
-        auth_providers: data.auth_providers || ["supabase"],
-      };
+      const userProf = mapUserData(data);
+      if (data.auth_providers) {
+        userProf.auth_providers = data.auth_providers;
+      } else if (!userProf.auth_providers || userProf.auth_providers.length === 0) {
+        userProf.auth_providers = ["supabase"];
+      }
 
       setProfile(userProf);
       setIsLoading(false);
@@ -373,24 +355,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const updatePassword = async (newPassword: string): Promise<AuthResult> => {
-    return { success: true };
+  const changePassword = async (oldPassword: string, newPassword: string): Promise<AuthResult> => {
+    try {
+      await apiClient("/api/auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({
+          current_password: oldPassword,
+          new_password: newPassword,
+        }),
+      });
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: mapAuthError(err) };
+    }
   };
 
-  const updateProfile = (updated: Partial<UserProfileData>) => {
+  const updatePassword = async (newPassword: string): Promise<AuthResult> => {
+    return changePassword("", newPassword);
+  };
+
+  const updateProfile = async (updated: Partial<UserProfileData>): Promise<void> => {
     setProfile((prev) => {
-      const merged = prev ? { ...prev, ...updated } : ({ ...DEFAULT_PROFILE, ...updated, id: "local_user", email: "local@dietsense.local" } as UserProfileData);
-      apiClient("/api/auth/profile", {
+      return prev
+        ? { ...prev, ...updated }
+        : ({ ...DEFAULT_PROFILE, ...updated, id: "local_user", email: "local@dietsense.local" } as UserProfileData);
+    });
+
+    try {
+      const saved = await apiClient<any>("/api/auth/profile", {
         method: "PUT",
         body: JSON.stringify(updated),
-      }).catch(() => {
-        apiClient("/profile", {
+      });
+      if (saved && saved.id) {
+        setProfile(mapUserData(saved));
+      }
+    } catch {
+      try {
+        const saved = await apiClient<any>("/profile", {
           method: "PUT",
           body: JSON.stringify(updated),
-        }).catch(() => {});
-      });
-      return merged;
-    });
+        });
+        if (saved && saved.id) {
+          setProfile(mapUserData(saved));
+        }
+      } catch {}
+    }
   };
 
   return (
@@ -409,6 +418,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         resetPassword,
         updatePassword,
+        changePassword,
         updateProfile,
       }}
     >

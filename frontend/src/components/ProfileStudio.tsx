@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { GoalType, Gender, MealFrequency, EffortLevel } from "@/types";
 import { ActiveSlotsMap } from "@/lib/nutrition";
 import { useAuth } from "@/context/AuthContext";
@@ -37,6 +37,8 @@ interface ProfileStudioProps {
   fatGrams: number;
 }
 
+export type DietaryType = "vegetarian" | "vegan" | "eggetarian" | "pescatarian" | "omnivore";
+
 export const ProfileStudio: React.FC<ProfileStudioProps> = ({
   isSoloCook,
   setIsSoloCook,
@@ -68,14 +70,56 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
   proteinGrams,
   fatGrams,
 }) => {
-  const { user, updateProfile } = useAuth();
-  const [dietaryType, setDietaryType] = useState<"omnivore" | "vegetarian" | "vegan">(
-    (user?.dietary_preference as any) || "vegetarian"
+  const { user, updateProfile, changePassword, logout } = useAuth();
+
+  // Dietary and allergen state
+  const [dietaryType, setDietaryType] = useState<DietaryType>(
+    (user?.dietary_preference || user?.dietary_pref || "vegetarian") as DietaryType
   );
   const [allergens, setAllergens] = useState<string[]>(
     user?.allergies || ["peanuts"]
   );
+
+  // Budget & Prep Time preferences
+  const [budgetPerMeal, setBudgetPerMeal] = useState<number>(
+    user?.budget_per_meal !== undefined ? Number(user?.budget_per_meal) : 100
+  );
+  const [prepTimeLimit, setPrepTimeLimit] = useState<number>(
+    user?.prep_time_limit !== undefined ? Number(user?.prep_time_limit) : 30
+  );
+
+  // Account management state
+  const [fullName, setFullName] = useState<string>(user?.full_name || "");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordStatusMsg, setPasswordStatusMsg] = useState<string | null>(null);
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
   const [isSaved, setIsSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Sync state if auth user updates
+  useEffect(() => {
+    if (user) {
+      if (user.dietary_preference || user.dietary_pref) {
+        setDietaryType((user.dietary_preference || user.dietary_pref) as DietaryType);
+      }
+      if (user.allergies) {
+        setAllergens(user.allergies);
+      }
+      if (user.budget_per_meal !== undefined) {
+        setBudgetPerMeal(Number(user.budget_per_meal));
+      }
+      if (user.prep_time_limit !== undefined) {
+        setPrepTimeLimit(Number(user.prep_time_limit));
+      }
+      if (user.full_name) {
+        setFullName(user.full_name);
+      }
+    }
+  }, [user]);
 
   const toggleAllergen = (id: string) => {
     if (allergens.includes(id)) {
@@ -87,24 +131,62 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
 
   const handleSave = async () => {
     try {
+      setSaveError(null);
       if (updateProfile) {
         await updateProfile({
+          full_name: fullName.trim() || user?.full_name || "User",
           age,
           gender,
           weight_kg: weight,
           height_cm: height,
           goal,
+          dietary_pref: dietaryType,
           dietary_preference: dietaryType,
           allergies: allergens,
+          budget_per_meal: budgetPerMeal,
+          prep_time_limit: prepTimeLimit,
           is_solo_cook: isSoloCook,
           active_meal_frequency: mealFrequency,
         });
       }
       setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 3000);
-    } catch {
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 3000);
+      setTimeout(() => setIsSaved(false), 3500);
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save profile changes.");
+      setTimeout(() => setSaveError(null), 4000);
+    }
+  };
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordErrorMsg(null);
+    setPasswordStatusMsg(null);
+
+    if (newPassword.length < 6) {
+      setPasswordErrorMsg("New password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordErrorMsg("New passwords do not match.");
+      return;
+    }
+
+    setIsChangingPassword(true);
+    try {
+      const res = await changePassword(currentPassword, newPassword);
+      if (res.success) {
+        setPasswordStatusMsg("Password updated successfully.");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setTimeout(() => setPasswordStatusMsg(null), 4000);
+      } else {
+        setPasswordErrorMsg(res.error || "Failed to change password.");
+      }
+    } catch (err: any) {
+      setPasswordErrorMsg(err?.message || "An error occurred while changing password.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
@@ -117,12 +199,21 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
 
   const allergenList = [
     { id: "peanuts", label: "Peanuts" },
-    { id: "tree_nuts", label: "Tree Nuts (Walnuts, Cashews)" },
-    { id: "shellfish", label: "Shellfish & Crustaceans" },
+    { id: "tree_nuts", label: "Tree Nuts (Walnuts, Cashews, Almonds)" },
     { id: "dairy", label: "Lactose / Dairy" },
     { id: "gluten", label: "Gluten & Wheat" },
     { id: "eggs", label: "Eggs" },
+    { id: "fish", label: "Fish" },
+    { id: "shellfish", label: "Shellfish & Crustaceans" },
     { id: "soy", label: "Soy & Edamame" },
+  ];
+
+  const dietaryOptions: { id: DietaryType; label: string; desc: string }[] = [
+    { id: "vegetarian", label: "Lacto-Vegetarian", desc: "Plant foods + dairy, no meat, fish or eggs" },
+    { id: "eggetarian", label: "Ovo-Vegetarian / Eggetarian", desc: "Plant foods + dairy + eggs, no meat or fish" },
+    { id: "vegan", label: "Strict 100% Vegan", desc: "Exclusively plant foods, 0 animal byproducts" },
+    { id: "pescatarian", label: "Pescatarian", desc: "Vegetarian + fish & seafood" },
+    { id: "omnivore", label: "Omnivore / Balanced", desc: "All food groups including poultry & meat" },
   ];
 
   return (
@@ -137,12 +228,11 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
             </span>
           </div>
           <h1 className="font-headline-lg text-headline-lg text-primary tracking-tight font-serif">
-            Profile Studio &amp; Biometrics
+            Profile Studio &amp; Settings
           </h1>
           <p className="font-body-md text-body-md text-on-surface-variant max-w-2xl">
-            Evidence-based metabolic baseline calculation via the Mifflin-St Jeor equation. Hard
-            allergen exclusions are enforced as absolute boolean gates before any meal scoring
-            takes place.
+            Configure your biometrics, dietary restrictions, financial ceiling, and preparation limits.
+            These settings directly constrain and steer the recommendation engine.
           </p>
         </div>
 
@@ -152,14 +242,21 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
           className="px-space-lg py-2.5 bg-primary hover:bg-primary-container text-on-primary rounded font-label-md text-label-md transition-all shadow-sm flex items-center gap-2 self-start lg:self-auto"
         >
           <span className="material-symbols-outlined text-[18px]">save</span>
-          Save Biometric Profile
+          Save Profile Changes
         </button>
       </div>
 
       {isSaved && (
         <div className="p-space-sm rounded-lg bg-secondary/10 border border-secondary text-secondary font-label-md flex items-center gap-2 animate-in fade-in">
           <span className="material-symbols-outlined text-[18px]">check_circle</span>
-          Biometric calibrations and safety gates synchronized with local SQLite.
+          Profile settings and dietary constraints synchronized with local SQLite.
+        </div>
+      )}
+
+      {saveError && (
+        <div className="p-space-sm rounded-lg bg-error-container text-on-error-container border border-error/30 font-label-md flex items-center gap-2 animate-in fade-in">
+          <span className="material-symbols-outlined text-[18px]">error</span>
+          {saveError}
         </div>
       )}
 
@@ -167,7 +264,191 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
         {/* Left 8-Column Main Studio */}
         <div className="lg:col-span-8 space-y-space-lg">
-          {/* Mifflin-St Jeor Biometric Engine Card */}
+          {/* 1. Dietary Archetype & Hard Safety Gate */}
+          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container space-y-space-md">
+            <div className="flex items-center justify-between pb-space-xs border-b border-surface-container">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px] text-primary">shield</span>
+                  <h2 className="font-headline-sm text-headline-sm text-primary font-serif">
+                    Dietary Preference &amp; Hard Safety Gate
+                  </h2>
+                </div>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Absolute boolean filters applied before scoring. Excluded foods will never appear in recommendations.
+                </p>
+              </div>
+            </div>
+
+            {/* Safety Principle Banner */}
+            <div className="p-space-sm rounded-lg bg-primary/10 border border-primary/20 text-body-sm text-primary leading-snug">
+              <strong>Core Clinical Principle:</strong> Allergen rules and ethical restrictions cannot be overridden by taste scores or pantry bonuses.
+            </div>
+
+            {/* Dietary Preference Selectors */}
+            <div>
+              <label className="font-label-md text-label-md text-on-surface block mb-2 font-bold">
+                Dietary Preference Archetype
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                {dietaryOptions.map((type) => {
+                  const isSelected = dietaryType === type.id;
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => setDietaryType(type.id)}
+                      className={`p-space-sm rounded text-left transition-all border ${
+                        isSelected
+                          ? "bg-primary text-on-primary border-primary font-bold shadow-sm"
+                          : "bg-surface-container text-on-surface-variant border-transparent hover:text-on-surface hover:bg-surface-container-high"
+                      }`}
+                    >
+                      <div className="font-label-md text-label-md font-semibold">{type.label}</div>
+                      <div className={`font-body-sm text-[11px] mt-0.5 ${isSelected ? "text-primary-fixed" : "text-on-surface-variant"}`}>
+                        {type.desc}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Allergen Exclusions */}
+            <div>
+              <label className="font-label-md text-label-md text-on-surface block mb-2 font-bold">
+                Declared Allergens (Strict Boolean Exclusion)
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {allergenList.map((item) => {
+                  const isChecked = allergens.includes(item.id);
+                  return (
+                    <label
+                      key={item.id}
+                      onClick={() => toggleAllergen(item.id)}
+                      className={`p-space-sm rounded border flex items-center justify-between cursor-pointer transition-all ${
+                        isChecked
+                          ? "bg-error-container text-on-error-container border-error/30 font-bold"
+                          : "bg-surface-container-low text-on-surface border-surface-container hover:bg-surface-container"
+                      }`}
+                    >
+                      <span className="font-label-md text-label-md">{item.label}</span>
+                      <span className="material-symbols-outlined text-[18px]">
+                        {isChecked ? "block" : "check"}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Budget & Preparation Time Preferences */}
+          <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container space-y-space-md">
+            <div className="flex items-center justify-between pb-space-xs border-b border-surface-container">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[20px] text-primary">payments</span>
+                  <h2 className="font-headline-sm text-headline-sm text-primary font-serif">
+                    Budget &amp; Preparation Constraints
+                  </h2>
+                </div>
+                <p className="font-body-sm text-body-sm text-on-surface-variant">
+                  Set economic and cooking time targets for meal scoring calculations.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-md">
+              {/* Budget Per Meal */}
+              <div className="space-y-2 p-space-sm bg-surface-container-low rounded-lg border border-surface-container">
+                <div className="flex justify-between items-center">
+                  <label className="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px] text-primary">currency_rupee</span>
+                    Budget Per Meal
+                  </label>
+                  <span className="font-metric-num text-[18px] text-primary font-bold">
+                    ₹{budgetPerMeal}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="40"
+                  max="400"
+                  step="10"
+                  value={budgetPerMeal}
+                  onChange={(e) => setBudgetPerMeal(Number(e.target.value))}
+                  className="w-full h-2 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-body-sm text-[11px] text-on-surface-variant">
+                  <span>₹40 (Frugal)</span>
+                  <span>₹100 (Standard)</span>
+                  <span>₹400 (Premium)</span>
+                </div>
+                <div className="flex gap-1 pt-1">
+                  {[60, 100, 150, 250].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setBudgetPerMeal(preset)}
+                      className={`px-2 py-1 text-[11px] rounded font-label-sm ${
+                        budgetPerMeal === preset
+                          ? "bg-primary text-on-primary font-bold"
+                          : "bg-surface-container text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      ₹{preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Prep Time Limit */}
+              <div className="space-y-2 p-space-sm bg-surface-container-low rounded-lg border border-surface-container">
+                <div className="flex justify-between items-center">
+                  <label className="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px] text-primary">timer</span>
+                    Preparation Time Limit
+                  </label>
+                  <span className="font-metric-num text-[18px] text-primary font-bold">
+                    {prepTimeLimit} mins
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="90"
+                  step="5"
+                  value={prepTimeLimit}
+                  onChange={(e) => setPrepTimeLimit(Number(e.target.value))}
+                  className="w-full h-2 bg-surface-variant rounded-lg appearance-none cursor-pointer accent-primary"
+                />
+                <div className="flex justify-between text-body-sm text-[11px] text-on-surface-variant">
+                  <span>10 min (Quick)</span>
+                  <span>30 min (Default)</span>
+                  <span>90 min (Elaborate)</span>
+                </div>
+                <div className="flex gap-1 pt-1">
+                  {[15, 25, 30, 45, 60].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setPrepTimeLimit(preset)}
+                      className={`px-2 py-1 text-[11px] rounded font-label-sm ${
+                        prepTimeLimit === preset
+                          ? "bg-primary text-on-primary font-bold"
+                          : "bg-surface-container text-on-surface-variant hover:text-on-surface"
+                      }`}
+                    >
+                      {preset}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Mifflin-St Jeor Biometric Engine Card */}
           <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container space-y-space-md">
             <div className="flex items-center justify-between pb-space-xs border-b border-surface-container">
               <div>
@@ -395,85 +676,132 @@ export const ProfileStudio: React.FC<ProfileStudioProps> = ({
             </div>
           </div>
 
-          {/* Hard Safety Gate & Dietary Preferences Card */}
+          {/* 4. Account Management & Security Card */}
           <div className="bg-surface-container-lowest p-space-lg rounded-xl shadow-sm border border-surface-container space-y-space-md">
             <div className="flex items-center justify-between pb-space-xs border-b border-surface-container">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[20px] text-primary">shield</span>
+                  <span className="material-symbols-outlined text-[20px] text-primary">manage_accounts</span>
                   <h2 className="font-headline-sm text-headline-sm text-primary font-serif">
-                    Hard Safety Gate &amp; Dietary Exclusions
+                    Account &amp; Security Management
                   </h2>
                 </div>
                 <p className="font-body-sm text-body-sm text-on-surface-variant">
-                  DietSense enforces safety as an uncompromisable boolean condition before scoring
-                  executes.
+                  Manage your authenticated credentials, display name, and local data isolation.
                 </p>
               </div>
             </div>
 
-            {/* Safety Gate Alert Banner */}
-            <div className="p-space-sm rounded-lg bg-primary/10 border border-primary/20 text-body-sm text-primary leading-snug">
-              <strong>Core Clinical Principle:</strong> Allergen rules and ethical restrictions
-              cannot be overridden by pantry similarity or taste scores. If a food item lacks
-              verified allergen declaration in USDA/ICMR-NIN data, it is excluded by default in
-              strict mode.
-            </div>
+            {/* User Identity Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-space-sm">
+              <div>
+                <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">
+                  Full Name / Alias
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your Name"
+                  className="w-full px-3 py-2 rounded bg-surface-container border border-surface-container text-body-md text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
 
-            {/* Dietary Archetype */}
-            <div>
-              <label className="font-label-md text-label-md text-on-surface block mb-1 font-bold">
-                Dietary Archetype
-              </label>
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { id: "omnivore", label: "Omnivore / Balanced" },
-                  { id: "vegetarian", label: "Lacto-Vegetarian (Indian)" },
-                  { id: "vegan", label: "Strict 100% Vegan" },
-                ].map((type) => (
-                  <button
-                    key={type.id}
-                    type="button"
-                    onClick={() => setDietaryType(type.id as any)}
-                    className={`py-2 px-3 rounded font-label-md text-label-md transition-all text-center border ${
-                      dietaryType === type.id
-                        ? "bg-primary text-on-primary border-primary font-bold shadow-sm"
-                        : "bg-surface-container text-on-surface-variant border-transparent hover:text-on-surface"
-                    }`}
-                  >
-                    {type.label}
-                  </button>
-                ))}
+              <div>
+                <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">
+                  Account Email
+                </label>
+                <input
+                  type="email"
+                  value={user?.email || "offline@dietsense.local"}
+                  disabled
+                  className="w-full px-3 py-2 rounded bg-surface-container-high/50 border border-surface-container text-body-md text-on-surface-variant cursor-not-allowed"
+                />
               </div>
             </div>
 
-            {/* Hard Allergen Exclusion Chips */}
-            <div>
-              <label className="font-label-md text-label-md text-on-surface block mb-2 font-bold">
-                Absolute Allergen Exclusions (Hard Safety Shield)
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {allergenList.map((item) => {
-                  const isChecked = allergens.includes(item.id);
-                  return (
-                    <label
-                      key={item.id}
-                      onClick={() => toggleAllergen(item.id)}
-                      className={`p-space-sm rounded border flex items-center justify-between cursor-pointer transition-all ${
-                        isChecked
-                          ? "bg-error-container text-on-error-container border-error/30 font-bold"
-                          : "bg-surface-container-low text-on-surface border-surface-container hover:bg-surface-container"
-                      }`}
-                    >
-                      <span className="font-label-md text-label-md">{item.label}</span>
-                      <span className="material-symbols-outlined text-[18px]">
-                        {isChecked ? "block" : "check"}
-                      </span>
-                    </label>
-                  );
-                })}
+            {/* Provider and Data Isolation Status */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-space-sm bg-surface-container-low rounded-lg border border-surface-container text-body-sm">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-[18px] text-secondary">database</span>
+                <span>
+                  User ID: <code className="font-mono text-[12px] bg-surface-container px-1 py-0.5 rounded">{user?.id || "local_user"}</code>
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-label-sm bg-secondary/10 text-secondary font-bold">
+                  {(user?.auth_providers || ["local"]).join(", ")} auth
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[11px] font-label-sm bg-primary/10 text-primary font-bold">
+                  Isolated SQLite Storage
+                </span>
               </div>
             </div>
+
+            {/* Change Password Sub-form */}
+            <form onSubmit={handleChangePassword} className="space-y-space-xs pt-space-xs border-t border-surface-container">
+              <h4 className="font-label-md text-label-md font-bold text-on-surface flex items-center gap-1">
+                <span className="material-symbols-outlined text-[16px]">lock_reset</span>
+                Change Account Password
+              </h4>
+
+              {passwordStatusMsg && (
+                <div className="p-2 rounded bg-secondary/10 text-secondary text-body-sm border border-secondary flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">check_circle</span>
+                  {passwordStatusMsg}
+                </div>
+              )}
+
+              {passwordErrorMsg && (
+                <div className="p-2 rounded bg-error-container text-on-error-container text-body-sm border border-error/30 flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[16px]">error</span>
+                  {passwordErrorMsg}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Current Password"
+                  className="px-3 py-2 rounded bg-surface-container border border-surface-container text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New Password (min 6)"
+                  className="px-3 py-2 rounded bg-surface-container border border-surface-container text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm New Password"
+                  className="px-3 py-2 rounded bg-surface-container border border-surface-container text-body-sm text-on-surface focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+
+              <div className="flex justify-between items-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => logout()}
+                  className="px-3 py-1.5 text-error hover:bg-error-container/20 rounded font-label-sm text-label-sm flex items-center gap-1 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[16px]">logout</span>
+                  Sign Out
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isChangingPassword || !newPassword}
+                  className="px-4 py-1.5 bg-primary hover:bg-primary-container text-on-primary rounded font-label-sm text-label-sm disabled:opacity-50 transition-all shadow-sm"
+                >
+                  {isChangingPassword ? "Updating..." : "Update Password"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
 

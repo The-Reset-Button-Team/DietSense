@@ -9,6 +9,7 @@ Hybrid local-first authentication architecture:
 """
 
 import uuid
+from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Depends, Response, Request, status
 from app.schemas.user import (
@@ -87,7 +88,33 @@ def _calculate_target_calories(
 
 def _build_profile_response(user_id: str, email: str, prof: dict, token: str = None) -> UserProfileResponse:
     """Constructs a unified UserProfileResponse including active auth providers."""
+    import json
     providers = get_user_auth_providers(user_id)
+
+    allergies = []
+    raw_allergies = prof.get("allergies")
+    if raw_allergies:
+        if isinstance(raw_allergies, list):
+            allergies = raw_allergies
+        else:
+            try:
+                allergies = json.loads(raw_allergies)
+            except Exception:
+                allergies = [a.strip() for a in str(raw_allergies).split(",") if a.strip()]
+
+    cuisines = ["indian"]
+    raw_cuisines = prof.get("preferred_cuisines")
+    if raw_cuisines:
+        if isinstance(raw_cuisines, list):
+            cuisines = raw_cuisines
+        else:
+            try:
+                cuisines = json.loads(raw_cuisines)
+            except Exception:
+                cuisines = [c.strip() for c in str(raw_cuisines).split(",") if c.strip()]
+
+    diet_pref = prof.get("dietary_pref") or prof.get("dietary_preference") or "vegetarian"
+
     return UserProfileResponse(
         id=user_id,
         email=prof.get("email") or email,
@@ -101,6 +128,12 @@ def _build_profile_response(user_id: str, email: str, prof: dict, token: str = N
         daily_calorie_target=int(prof.get("target_calories", 1850)),
         is_solo_cook=bool(prof.get("is_solo_cook", 1)),
         active_meal_frequency=prof.get("active_meal_frequency", "3_meals"),
+        dietary_pref=diet_pref,
+        dietary_preference=diet_pref,
+        allergies=allergies,
+        budget_per_meal=float(prof.get("budget_per_meal", 100.0)),
+        prep_time_limit=int(prof.get("prep_time_limit", 30)),
+        preferred_cuisines=cuisines,
         token=token,
         auth_providers=providers,
     )
@@ -478,6 +511,42 @@ async def reset_password(req: PasswordResetRequest):
     }
 
 
+@router.post("/change-password")
+async def change_password(
+    req: Dict[str, str],
+    current_user: dict = Depends(get_current_user),
+):
+    """
+    Allows authenticated users to change their local account password.
+    Requires current password verification and validates new password length.
+    """
+    old_password = req.get("old_password") or req.get("current_password")
+    new_password = req.get("new_password")
+
+    if not new_password or len(new_password) < 6:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be at least 6 characters long.",
+        )
+
+    user_id = current_user["id"]
+    with get_db_cursor() as cur:
+        cur.execute("SELECT password_hash FROM users WHERE id = ?", (user_id,))
+        user_row = cur.fetchone()
+        if not user_row:
+            raise HTTPException(status_code=404, detail="User not found")
+
+        if old_password:
+            if not verify_password(old_password, user_row["password_hash"]):
+                raise HTTPException(status_code=400, detail="Current password does not match.")
+
+        new_hash = hash_password(new_password)
+        now = datetime.now(timezone.utc).isoformat()
+        cur.execute("UPDATE users SET password_hash = ?, updated_at = ? WHERE id = ?", (new_hash, now, user_id))
+
+    return {"status": "success", "message": "Password changed successfully."}
+
+
 # ─── LOGOUT & SESSION MANAGEMENT ─────────────────────────────────────────────
 
 @router.post("/logout")
@@ -586,6 +655,33 @@ async def update_profile(
             if val is not None:
                 current_data[key] = val.value if hasattr(val, "value") else val
 
+        import json
+        dietary_pref = req.dietary_pref or req.dietary_preference or current_data.get("dietary_pref", "vegetarian")
+        current_data["dietary_pref"] = dietary_pref
+        current_data["dietary_preference"] = dietary_pref
+
+        if req.allergies is not None:
+            current_data["allergies"] = req.allergies
+            allergies_str = json.dumps(req.allergies)
+        else:
+            allergies_val = current_data.get("allergies", "[]")
+            allergies_str = allergies_val if isinstance(allergies_val, str) else json.dumps(allergies_val)
+
+        if req.budget_per_meal is not None:
+            current_data["budget_per_meal"] = float(req.budget_per_meal)
+        budget_per_meal = float(current_data.get("budget_per_meal", 100.0))
+
+        if req.prep_time_limit is not None:
+            current_data["prep_time_limit"] = int(req.prep_time_limit)
+        prep_time_limit = int(current_data.get("prep_time_limit", 30))
+
+        if req.preferred_cuisines is not None:
+            current_data["preferred_cuisines"] = req.preferred_cuisines
+            cuisines_str = json.dumps(req.preferred_cuisines)
+        else:
+            cuisines_val = current_data.get("preferred_cuisines", '["indian"]')
+            cuisines_str = cuisines_val if isinstance(cuisines_val, str) else json.dumps(cuisines_val)
+
         target_cal = _calculate_target_calories(
             weight_kg=float(current_data["weight_kg"]),
             height_cm=float(current_data["height_cm"]),
@@ -609,6 +705,11 @@ async def update_profile(
                 target_calories = ?,
                 is_solo_cook = ?,
                 active_meal_frequency = ?,
+                dietary_pref = ?,
+                allergies = ?,
+                budget_per_meal = ?,
+                prep_time_limit = ?,
+                preferred_cuisines = ?,
                 updated_at = ?
             WHERE user_id = ?
             """,
@@ -623,6 +724,11 @@ async def update_profile(
                 target_cal,
                 1 if current_data["is_solo_cook"] else 0,
                 current_data["active_meal_frequency"],
+                dietary_pref,
+                allergies_str,
+                budget_per_meal,
+                prep_time_limit,
+                cuisines_str,
                 now,
                 user_id,
             ),
