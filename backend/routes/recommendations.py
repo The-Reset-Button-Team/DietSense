@@ -38,6 +38,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 55.0,
         "fat_g": 9.0,
         "fiber_g": 3.5,
+        "sodium_mg": 260.0,
+        "calcium_mg": 45.0,
+        "iron_mg": 2.1,
         "food_category": "Cereals and Millets",
         "data_source": "ICMR_NIN",
     },
@@ -54,6 +57,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 48.0,
         "fat_g": 7.0,
         "fiber_g": 5.0,
+        "sodium_mg": 180.0,
+        "calcium_mg": 68.0,
+        "iron_mg": 3.4,
         "food_category": "Grain Legumes and Pulses",
         "data_source": "ICMR_NIN",
     },
@@ -70,6 +76,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 78.0,
         "fat_g": 11.0,
         "fiber_g": 7.2,
+        "sodium_mg": 340.0,
+        "calcium_mg": 140.0,
+        "iron_mg": 4.8,
         "food_category": "Cereals and Millets",
         "data_source": "ICMR_NIN",
     },
@@ -86,6 +95,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 42.0,
         "fat_g": 12.0,
         "fiber_g": 2.5,
+        "sodium_mg": 390.0,
+        "calcium_mg": 52.0,
+        "iron_mg": 2.6,
         "food_category": "Poultry",
         "data_source": "USDA",
     },
@@ -102,6 +114,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 65.0,
         "fat_g": 8.0,
         "fiber_g": 6.0,
+        "sodium_mg": 210.0,
+        "calcium_mg": 85.0,
+        "iron_mg": 3.8,
         "food_category": "Cereals and Millets",
         "data_source": "ICMR_NIN",
     },
@@ -118,6 +133,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 24.0,
         "fat_g": 6.0,
         "fiber_g": 4.0,
+        "sodium_mg": 120.0,
+        "calcium_mg": 38.0,
+        "iron_mg": 1.4,
         "food_category": "Nuts and Oilseeds",
         "data_source": "ICMR_NIN",
     },
@@ -134,6 +152,9 @@ SAMPLE_CANDIDATES = [
         "carbs_g": 38.0,
         "fat_g": 14.0,
         "fiber_g": 2.8,
+        "sodium_mg": 320.0,
+        "calcium_mg": 280.0,
+        "iron_mg": 2.2,
         "food_category": "Milk and Milk Products",
         "data_source": "ICMR_NIN",
     },
@@ -193,7 +214,8 @@ def _build_slot_query(slot_id: str, limit: Optional[int] = None, shuffle: bool =
     """
     base_select = """
         SELECT id, name, food_category, calories_kcal, protein_g, carbohydrates_g, fat_g,
-               fiber_g, is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
+               fiber_g, sodium_mg, calcium_mg, iron_mg,
+               is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
         FROM foods
         WHERE calories_kcal > 50
     """
@@ -291,12 +313,21 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
     if "peanuts" in allergens and "nuts" not in allergens:
         allergens.append("nuts")
 
-    fiber_val = 0.0
-    if "fiber_g" in r.keys() and r["fiber_g"] is not None:
-        try:
-            fiber_val = float(r["fiber_g"])
-        except (ValueError, TypeError):
-            fiber_val = 0.0
+    def _extract_nutrient(col: str) -> Optional[float]:
+        """Extract float from row, returning None for missing data and preserving 0.0."""
+        if col in r.keys() and r[col] is not None:
+            try:
+                val = float(r[col])
+                if not (math.isnan(val) or math.isinf(val)):
+                    return round(val, 2)
+            except (ValueError, TypeError):
+                pass
+        return None
+
+    fiber_val = _extract_nutrient("fiber_g")
+    sodium_val = _extract_nutrient("sodium_mg")
+    calcium_val = _extract_nutrient("calcium_mg")
+    iron_val = _extract_nutrient("iron_mg")
 
     return {
         "id": offset + r["id"],
@@ -310,7 +341,16 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
         "protein_g": float(r["protein_g"]),
         "carbs_g": float(r["carbohydrates_g"]),
         "fat_g": float(r["fat_g"]),
-        "fiber_g": fiber_val,
+        "fiber_g": fiber_val if fiber_val is not None else 0.0,
+        "sodium_mg": sodium_val,
+        "calcium_mg": calcium_val,
+        "iron_mg": iron_val,
+        "micronutrients": {
+            "fiber_g": fiber_val,
+            "sodium_mg": sodium_val,
+            "calcium_mg": calcium_val,
+            "iron_mg": iron_val,
+        },
         "food_category": r["food_category"],
         "data_source": str(r["data_source"]) if "data_source" in r.keys() and r["data_source"] else "USDA",
     }
@@ -349,7 +389,8 @@ def load_candidate_foods(slot_id: Optional[str] = None, shuffle: bool = False) -
             order_clause = "ORDER BY RANDOM()" if shuffle else ""
             cur.execute(f"""
                 SELECT id, name, food_category, calories_kcal, protein_g, carbohydrates_g, fat_g,
-                       fiber_g, is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
+                       fiber_g, sodium_mg, calcium_mg, iron_mg,
+                       is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
                 FROM foods
                 WHERE calories_kcal > 50
                 {order_clause}
@@ -602,6 +643,13 @@ async def generate_daily_recommendations(
     total_carbs = 0.0
     total_fat = 0.0
     total_fiber = 0.0
+    total_sodium = 0.0
+    total_calcium = 0.0
+    total_iron = 0.0
+    has_fiber = False
+    has_sodium = False
+    has_calcium = False
+    has_iron = False
 
     for slot_id in ["early_morning", "breakfast", "lunch", "evening_snack", "dinner"]:
         if not active_slots.get(slot_id):
@@ -634,7 +682,32 @@ async def generate_daily_recommendations(
             total_prot += float(first_item.get("protein_g", 0))
             total_carbs += float(first_item.get("carbs_g", 0))
             total_fat += float(first_item.get("fat_g", 0))
-            total_fiber += float(first_item.get("fiber_g", 0))
+
+            micros = first_item.get("micronutrients") or {}
+
+            # Fiber
+            fib = micros.get("fiber_g") if micros.get("fiber_g") is not None else first_item.get("fiber_g")
+            if fib is not None:
+                total_fiber += float(fib)
+                has_fiber = True
+
+            # Sodium
+            sod = micros.get("sodium_mg") if micros.get("sodium_mg") is not None else first_item.get("sodium_mg")
+            if sod is not None:
+                total_sodium += float(sod)
+                has_sodium = True
+
+            # Calcium
+            cal = micros.get("calcium_mg") if micros.get("calcium_mg") is not None else first_item.get("calcium_mg")
+            if cal is not None:
+                total_calcium += float(cal)
+                has_calcium = True
+
+            # Iron
+            irn = micros.get("iron_mg") if micros.get("iron_mg") is not None else first_item.get("iron_mg")
+            if irn is not None:
+                total_iron += float(irn)
+                has_iron = True
 
     return {
         "slots": slot_results,
@@ -643,7 +716,22 @@ async def generate_daily_recommendations(
             "protein_g": round(total_prot, 1),
             "carbs_g": round(total_carbs, 1),
             "fat_g": round(total_fat, 1),
-            "fiber_g": round(total_fiber, 1),
+            "fiber_g": round(total_fiber, 1) if has_fiber else 0.0,
+            "sodium_mg": round(total_sodium, 1) if has_sodium else None,
+            "calcium_mg": round(total_calcium, 1) if has_calcium else None,
+            "iron_mg": round(total_iron, 1) if has_iron else None,
+        },
+        "micronutrients": {
+            "fiber_g": round(total_fiber, 1) if has_fiber else None,
+            "sodium_mg": round(total_sodium, 1) if has_sodium else None,
+            "calcium_mg": round(total_calcium, 1) if has_calcium else None,
+            "iron_mg": round(total_iron, 1) if has_iron else None,
+            "data_completeness": {
+                "fiber_tracked": has_fiber,
+                "sodium_tracked": has_sodium,
+                "calcium_tracked": has_calcium,
+                "iron_tracked": has_iron,
+            },
         },
     }
 
@@ -692,15 +780,32 @@ def _describe_active_rules(user_profile: Dict[str, Any]) -> List[Dict[str, str]]
     return rules
 
 
-def _macro_delta(current: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, float]:
-    """Compute signed macro deltas: candidate − current."""
-    return {
+def _macro_delta(current: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, Any]:
+    """Compute signed macro and micronutrient deltas: candidate − current."""
+    deltas: Dict[str, Any] = {
         "delta_calories": round(float(candidate.get("calories", 0)) - float(current.get("calories", 0)), 1),
         "delta_protein_g": round(float(candidate.get("protein_g", 0)) - float(current.get("protein_g", 0)), 1),
         "delta_carbs_g": round(float(candidate.get("carbs_g", 0)) - float(current.get("carbs_g", 0)), 1),
         "delta_fat_g": round(float(candidate.get("fat_g", 0)) - float(current.get("fat_g", 0)), 1),
         "delta_fiber_g": round(float(candidate.get("fiber_g", 0)) - float(current.get("fiber_g", 0)), 1),
     }
+
+    cand_sod = candidate.get("sodium_mg")
+    cur_sod = current.get("sodium_mg")
+    if cand_sod is not None and cur_sod is not None:
+        deltas["delta_sodium_mg"] = round(float(cand_sod) - float(cur_sod), 1)
+
+    cand_calc = candidate.get("calcium_mg")
+    cur_calc = current.get("calcium_mg")
+    if cand_calc is not None and cur_calc is not None:
+        deltas["delta_calcium_mg"] = round(float(cand_calc) - float(cur_calc), 1)
+
+    cand_iron = candidate.get("iron_mg")
+    cur_iron = current.get("iron_mg")
+    if cand_iron is not None and cur_iron is not None:
+        deltas["delta_iron_mg"] = round(float(cand_iron) - float(cur_iron), 1)
+
+    return deltas
 
 
 def _macro_match_pct(current: Dict[str, Any], candidate: Dict[str, Any]) -> int:

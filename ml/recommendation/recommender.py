@@ -1,22 +1,46 @@
-"""Orchestrator: the one function the API will call."""
+"""
+DietSense ML — Recommender Engine Orchestrator (Phase 8D).
+
+Orchestrates:
+1. Safety Gate (non-negotiable clinical exclusion of allergen & dietary conflicts).
+2. TF-IDF & Cosine Similarity vectorizer against user profile preferences.
+3. Multi-factor Scoring (calories/macro fit, budget fit, prep-time fit).
+4. Adaptive Feedback Layer with logarithmic damping to prevent unstable scoring swings.
+5. Seven-Day Meal Diversity Model to prevent repetitive recommendations.
+6. Ingredient-aware Pantry Availability Bonus (+0.05 post-safety).
+7. Clinically grounded Explainability (reason string + structured factor attribution).
+"""
+
+from typing import List, Dict, Any, Optional
 from ml.scoring.safety_gate import filter_safe
 from ml.recommendation.vectorizer import get_similarity
 from ml.scoring.formula import compute_score
-from ml.explainability.explainers import generate_reason
-from ml.adaptive.reweight import get_user_penalties, apply_penalties
+from ml.explainability.explainers import generate_reason, generate_structured_explanation
+from ml.adaptive.reweight import (
+    get_user_penalties,
+    apply_adaptive_and_diversity,
+)
 
 
-def recommend(user_profile: dict, candidates: list[dict], meal_logs: list[dict] = None, top_n: int = 5, pantry_items: list[str] = None):
+def recommend(
+    user_profile: dict,
+    candidates: list[dict],
+    meal_logs: list[dict] = None,
+    top_n: int = 5,
+    pantry_items: list[str] = None,
+) -> List[Dict[str, Any]]:
     """
     Filters candidates through safety gate, computes similarity, scores candidates,
-    applies adaptive penalties from user's meal logs, attaches explainability reason,
+    applies adaptive feedback penalties/affinities and seven-day diversity decay,
+    applies pantry availability bonus, attaches explainability reason,
     and returns top_n ranked recommendations.
-    Validates top_n, backward compatible with no logs, returns [] if nothing passes the gate.
-    Optionally applies a pantry availability bonus (+0.05) when a candidate's food name
-    words match any pantry item (case-insensitive). Bonus is applied AFTER safety filtering
-    and scoring so it never reintroduces excluded foods. Scores are clamped to [0, 1].
+
+    Strictly preserves:
+    - Non-negotiable safety gate (unsafe foods are excluded before any scoring).
+    - Stable scoring (clamped in [0.0, 1.0] with logarithmic dampening).
+    - Verified nutritional values.
     """
-    # Validate top_n
+    # 1. Validate top_n
     try:
         top_n = int(top_n)
         if top_n <= 0:
@@ -24,20 +48,28 @@ def recommend(user_profile: dict, candidates: list[dict], meal_logs: list[dict] 
     except (ValueError, TypeError):
         top_n = 5
 
+    # 2. Strict Safety Gate (Applied FIRST — Unsafe items are eliminated)
     safe_candidates = filter_safe(candidates, user_profile)
     if not safe_candidates:
         return []
 
+    # 3. Compute TF-IDF similarities
     similarities = get_similarity(user_profile, safe_candidates)
-    penalties = get_user_penalties(meal_logs or [])
+
+    # 4. Compute penalties & diversity context
+    logs = meal_logs or []
+    penalties = get_user_penalties(logs)
 
     # Normalise pantry items once for case-insensitive matching
     pantry_set = {p.lower() for p in pantry_items} if pantry_items else set()
 
     scored = []
     for item, sim in zip(safe_candidates, similarities):
+        # Base formula score (similarity, macro_fit, budget_fit, prep_time_fit)
         breakdown = compute_score(item, user_profile, sim)
-        breakdown = apply_penalties(breakdown, item, penalties)
+
+        # Apply adaptive feedback (Priority 2) and 7-day diversity (Priority 1)
+        breakdown = apply_adaptive_and_diversity(breakdown, item, logs, penalties)
 
         # Apply pantry availability bonus (post-safety, post-scoring)
         pantry_matched = False
@@ -48,15 +80,19 @@ def recommend(user_profile: dict, candidates: list[dict], meal_logs: list[dict] 
                 breakdown["final_score"] = min(breakdown["final_score"] + 0.05, 1.0)
                 breakdown["final_score"] = max(breakdown["final_score"], 0.0)
 
+        # Generate explanations (Priority 4)
         reason = generate_reason(item, user_profile, breakdown)
         if pantry_matched:
             reason += " Pantry match: ingredients available at home."
+
+        structured_exp = generate_structured_explanation(item, user_profile, breakdown)
 
         scored.append({
             "item": item,
             "score": breakdown["final_score"],
             "breakdown": breakdown,
             "reason": reason,
+            "explanation": structured_exp,
         })
 
     # Sort descending by final score
