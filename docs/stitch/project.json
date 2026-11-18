@@ -1,0 +1,255 @@
+{
+  "name": "projects/9122585855714496629",
+  "title": "DietSense Frontend Platform",
+  "visibility": "PRIVATE",
+  "createTime": "2026-11-17T16:28:24.229865Z",
+  "updateTime": "2026-11-17T18:26:04.730956Z",
+  "projectType": "TEXT_TO_UI_PRO",
+  "thumbnailScreenshot": {
+    "name": "projects/9122585855714496629/screens/5c98c690ac8648e9ab9487a5ee07670c/fileEntries/screenshot",
+    "downloadUrl": "https://lh3.googleusercontent.com/aida/ALJJyrBeSTY7oNwKclYUcdtzGRBVPUwQ5PuWyoxRWNzMFkMPurGUgHXcTn5jnGLvEUM45OIbJCTdvSzYxAwMOwUviFEhd1tsYt4azerQOYo_TtDAU-jN09jiKQG9rz5XqKTm1V7hJ1-eMzSNPtuGcwCMm6mRW1sRyzvkRta69IAl7nuw0iwwfK7xE4jSmIbWl8f7VzhFXutbg6WDdCsgUCGBk8rxbTibM9cdYXXZzNoVuno"
+  },
+  "origin": "WEB",
+  "deviceType": "DESKTOP",
+  "designTheme": {
+    "colorMode": "LIGHT",
+    "font": "NEWSREADER",
+    "roundness": "ROUND_FOUR",
+    "customColor": "#581825",
+    "headlineFont": "NEWSREADER",
+    "bodyFont": "HANKEN_GROTESK",
+    "labelFont": "HANKEN_GROTESK",
+    "namedColors": {
+      "on_tertiary": "#ffffff",
+      "on_tertiary_container": "#7390ff",
+      "surface_container_highest": "#e5e2dd",
+      "error_container": "#ffdad6",
+      "inverse_on_surface": "#f3f0eb",
+      "on_secondary_fixed": "#002113",
+      "on_primary": "#ffffff",
+      "on_primary_fixed": "#3d0412",
+      "primary_container": "#581825",
+      "on_secondary": "#ffffff",
+      "outline": "#867274",
+      "on_primary_fixed_variant": "#762f3b",
+      "surface_container": "#f0ede9",
+      "surface_dim": "#dcdad5",
+      "on_tertiary_fixed_variant": "#0039b5",
+      "on_tertiary_fixed": "#001551",
+      "on_error_container": "#93000a",
+      "secondary_container": "#6cf8bb",
+      "tertiary_fixed": "#dce1ff",
+      "primary_fixed": "#ffd9dc",
+      "tertiary_fixed_dim": "#b7c4ff",
+      "on_secondary_fixed_variant": "#005236",
+      "primary_fixed_dim": "#ffb2bb",
+      "outline_variant": "#d9c1c2",
+      "on_error": "#ffffff",
+      "surface_bright": "#fcf9f4",
+      "on_surface": "#1c1c19",
+      "surface": "#fcf9f4",
+      "surface_container_lowest": "#ffffff",
+      "surface_container_low": "#f6f3ee",
+      "tertiary_container": "#00257f",
+      "background": "#fcf9f4",
+      "on_primary_container": "#d77d89",
+      "tertiary": "#00144f",
+      "surface_tint": "#934652",
+      "surface_variant": "#e5e2dd",
+      "inverse_primary": "#ffb2bb",
+      "inverse_surface": "#31302d",
+      "on_background": "#1c1c19",
+      "error": "#ba1a1a",
+      "on_surface_variant": "#534344",
+      "secondary_fixed": "#6ffbbe",
+      "primary": "#3c0311",
+      "secondary_fixed_dim": "#4edea3",
+      "on_secondary_container": "#00714d",
+      "surface_container_high": "#ebe8e3",
+      "secondary": "#006c49"
+    },
+    "designMd": "---\nname: DietSense\ncolors:\n  surface: '#fcf9f4'\n  surface-dim: '#dcdad5'\n  surface-bright: '#fcf9f4'\n  surface-container-lowest: '#ffffff'\n  surface-container-low: '#f6f3ee'\n  surface-container: '#f0ede9'\n  surface-container-high: '#ebe8e3'\n  surface-container-highest: '#e5e2dd'\n  on-surface: '#1c1c19'\n  on-surface-variant: '#534344'\n  inverse-surface: '#31302d'\n  inverse-on-surface: '#f3f0eb'\n  outline: '#867274'\n  outline-variant: '#d9c1c2'\n  surface-tint: '#934652'\n  primary: '#3c0311'\n  on-primary: '#ffffff'\n  primary-container: '#581825'\n  on-primary-container: '#d77d89'\n  inverse-primary: '#ffb2bb'\n  secondary: '#006c49'\n  on-secondary: '#ffffff'\n  secondary-container: '#6cf8bb'\n  on-secondary-container: '#00714d'\n  tertiary: '#00144f'\n  on-tertiary: '#ffffff'\n  tertiary-container: '#00257f'\n  on-tertiary-container: '#7390ff'\n  error: '#ba1a1a'\n  on-error: '#ffffff'\n  error-container: '#ffdad6'\n  on-error-container: '#93000a'\n  primary-fixed: '#ffd9dc'\n  primary-fixed-dim: '#ffb2bb'\n  on-primary-fixed: '#3d0412'\n  on-primary-fixed-variant: '#762f3b'\n  secondary-fixed: '#6ffbbe'\n  secondary-fixed-dim: '#4edea3'\n  on-secondary-fixed: '#002113'\n  on-secondary-fixed-variant: '#005236'\n  tertiary-fixed: '#dce1ff'\n  tertiary-fixed-dim: '#b7c4ff'\n  on-tertiary-fixed: '#001551'\n  on-tertiary-fixed-variant: '#0039b5'\n  background: '#fcf9f4'\n  on-background: '#1c1c19'\n  surface-variant: '#e5e2dd'\ntypography:\n  display-lg:\n    fontFamily: Newsreader\n    fontSize: 48px\n    fontWeight: '400'\n    lineHeight: 56px\n    letterSpacing: -0.02em\n  display-lg-mobile:\n    fontFamily: Newsreader\n    fontSize: 36px\n    fontWeight: '400'\n    lineHeight: 44px\n    letterSpacing: -0.01em\n  headline-lg:\n    fontFamily: Newsreader\n    fontSize: 32px\n    fontWeight: '500'\n    lineHeight: 40px\n    letterSpacing: -0.01em\n  headline-lg-mobile:\n    fontFamily: Newsreader\n    fontSize: 26px\n    fontWeight: '500'\n    lineHeight: 34px\n    letterSpacing: 0em\n  headline-md:\n    fontFamily: Newsreader\n    fontSize: 24px\n    fontWeight: '500'\n    lineHeight: 32px\n  headline-sm:\n    fontFamily: Newsreader\n    fontSize: 20px\n    fontWeight: '600'\n    lineHeight: 28px\n  body-lg:\n    fontFamily: Hanken Grotesk\n    fontSize: 18px\n    fontWeight: '400'\n    lineHeight: 28px\n  body-md:\n    fontFamily: Hanken Grotesk\n    fontSize: 15px\n    fontWeight: '400'\n    lineHeight: 24px\n  body-sm:\n    fontFamily: Hanken Grotesk\n    fontSize: 13px\n    fontWeight: '400'\n    lineHeight: 20px\n  label-lg:\n    fontFamily: Hanken Grotesk\n    fontSize: 14px\n    fontWeight: '600'\n    lineHeight: 20px\n    letterSpacing: 0.01em\n  label-md:\n    fontFamily: Hanken Grotesk\n    fontSize: 12px\n    fontWeight: '600'\n    lineHeight: 16px\n    letterSpacing: 0.04em\n  label-sm:\n    fontFamily: Hanken Grotesk\n    fontSize: 11px\n    fontWeight: '700'\n    lineHeight: 14px\n    letterSpacing: 0.06em\n  metric-num:\n    fontFamily: Hanken Grotesk\n    fontSize: 28px\n    fontWeight: '700'\n    lineHeight: 32px\n    letterSpacing: -0.02em\nrounded:\n  sm: 0.125rem\n  DEFAULT: 0.25rem\n  md: 0.375rem\n  lg: 0.5rem\n  xl: 0.75rem\n  full: 9999px\nspacing:\n  gutter: 1.5rem\n  gutter-mobile: 1rem\n  margin: 3rem\n  margin-tablet: 2rem\n  margin-mobile: 1.25rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2.5rem\n---\n\n## Brand & Style\nThe design system balances the tactile authenticity of culinary journals with the rigor of nutritional science. It speaks to mindful health seekers, clinical nutritionists, and everyday wellness enthusiasts who value both holistic nourishment and empirical clarity.\n\nVisually, the system operates as an **Artisanal Editorial Workspace**:\n- **Warm Tactility:** Surfaces mirror uncoated culinary stock and natural grain linen, counteracting the sterile impersonality typical of clinical tracking apps.\n- **Scientific Exactitude:** Metrics, macronutrient splits, and bio-markers are presented with precise, data-first typography and micro-visual structures.\n- **Intentional Contrast:** Deep enological reds ground the reading experience, while lively botanical greens celebrate fresh vitality, accented by deliberate scientific blues for technical verification.\n\n## Colors\nThe palette evokes an artisanal kitchen notebook layered over a clinical lab report.\n\n- **Primary Wine Palette (`#581825`, `#421018`):** Anchors typographic hierarchy, high-priority interactive buttons, active tab states, and structural dividers. Deep wine communicates heritage, craft, and grounded authority.\n- **Secondary Nutrition Greens (`#10B981`, `#059669`):** Represents biological health, daily targets achieved, positive glycemic responses, and fresh whole-food tags. Never used decoratively without semantic nutritional meaning.\n- **Tertiary Scientific Accents (`#1D4ED8`, `#EFF6FF`):** Reserved for technical metrics, micronutrient data visualizations, clinical research citations, hydration indexes, and system notifications.\n- **Parchment Neutrals (`#FAF7F2`, `#F3EAE0`, `#E2D6C9`):** `#FAF7F2` acts as the global canvas, `#F3EAE0` creates layered card elevations, and `#E2D6C9` defines hairline rules and tactile border definitions.\n\n## Typography\nThe typographic pairing reflects the synthesis between editorial culinary literature and quantitative nutrition tracking:\n\n- **Editorial Serifs (Newsreader):** Used exclusively for headlines, reflective journal prompts, recipe titles, and narrative insights. Emphasizes warm authority and an unhurried, thoughtful cadence.\n- **Precise Sans (Hanken Grotesk):** Deployed for all informational scaffolding, numeric reads, nutritional facts, tracking widgets, and micro-labels. Its geometric clarity prevents fatigue when scanning dense macro breakdowns.\n- **Tabular Numerics:** All dynamic dietary figures and progress scores must implement `font-variant-numeric: tabular-nums` to maintain vertical alignment in tables and macro widgets.\n\n## Layout & Spacing\nThe layout adheres to a classical editorial grid structure that gracefully downscales into focused single-column feeds:\n\n- **Grid Architecture:** Desktop views employ a 12-column fluid grid system bounded by a max-width of `1280px`. Tablet transitions to an 8-column system, and mobile collapses to a 4-column column configuration.\n- **Rhythm & Breathing Room:** Generous section spacing (`space-xl`) isolates primary metric cards from daily journal entries, recreating the spatial pacing of magazine spreads.\n- **Split Dashboard Layouts:** Desktop screens split 8:4, placing daily logging, meals, and narrative digests on the broader 8-column canvas, while reserving the 4-column rail for persistent macro gauges, hydration tracking, and biomarker trends.\n\n## Elevation & Depth\nThis design system avoids high-tech dropshadows and heavy blurs in favor of **Tonal Layering and Physical Paper Metaphors**:\n\n- **Layer Tiers:** Elevation is achieved through tone rather than distance. The default canvas sits at `#FAF7F2`. Surface level 1 (cards, meal logs) rests on `#FFFFFF` with a 1px continuous hairline of `#E2D6C9`. Surface level 2 (expanded dialogs, flyout drawers) utilizes `#F3EAE0` bordered with `#D8C7B5`.\n- **Soft Ambient Shadows:** When an interactive element rises on drag or modal display, use an organic, warm-tinted shadow: `0 8px 24px -4px rgba(66, 16, 24, 0.06), 0 2px 6px -1px rgba(66, 16, 24, 0.04)`.\n- **Low-Contrast Ghost Outlines:** Cards and modules rely on subtle internal borders (`1px solid #E2D6C9`) to maintain crisp boundaries without computational visual weight.\n\n## Shapes\nA soft, restrained corner radius (`0.25rem` standard, scaling to `0.5rem` for cards) provides structural stability reminiscent of tailored stationery and index catalog cards.\n\n- **Standard Elements (inputs, buttons, cards):** Built on `roundedness: 1` (`4px` / `0.25rem` for controls, `8px` / `0.5rem` for card bounds). This maintains an editorial crispness that distinguishes it from overly playful consumer trackers.\n- **Specialized Pill Shapes:** Macronutrient badges (Carbs, Protein, Fat, Fiber) and filter chips leverage full pill geometry (`9999px`) to create an immediate tactile distinction between discrete data tags and structural cards.\n\n## Components\n\n### Buttons\n- **Primary:** Background in `#581825` with text in `#FAF7F2`. Hover deepens to `#421018`. Active state scales subtly (`scale(0.99)`).\n- **Secondary:** Transparent background with a `1px` border in `#581825` and text in `#581825`. Hover shifts background to `rgba(88, 24, 37, 0.05)`.\n- **Subtle / Ghost:** Text in `#581825`, background transparent. Hover applies `#F3EAE0`.\n\n### Macro Pills & Tags\n- Compact, capsule-shaped tokens displaying dietary variables:\n  - **Protein:** Tinted `#581825` at 8% fill, `#581825` text, hairline border.\n  - **Carbohydrates:** Warm harvest tint (`#D97706` at 10% fill, `#B45309` text).\n  - **Fats:** Soft ochre (`#CA8A04` at 10% fill, `#A16207` text).\n  - **Fiber / Micronutrients:** Vibrant botanical green (`#10B981` at 10% fill, `#059669` text).\n- Font is set in `label-sm` with letter spacing for instantaneous recognition.\n\n### Input Fields & Selectors\n- Constructed with `#FFFFFF` or `#FAF7F2` backgrounds enclosed by `1px solid #E2D6C9`.\n- Focused state transitions border color to `#581825` with an offset outline ring: `0 0 0 1px #581825`.\n- Placeholder text in `#8C7E72`, shifting to `#1C1917` when user input is active.\n\n### Cards & Journal Containers\n- Built on `#FFFFFF` with a `1px solid #E2D6C9` boundary. Padding is set to `space-md` or `space-lg`.\n- Headers within cards use `headline-sm` in Newsreader, followed immediately by clean numeric or textual summaries in Hanken Grotesk.\n- Interactive cards feature a subtle hover transition where the border darkens to `#CDBCAE`.\n\n### Data Visualizations & Charts\n- **Line & Area Curves (e.g., Glycemic Load, Caloric Intake):** Uses smooth spline curves. Stroke width set to `2.5px` in `#10B981` or `#1D4ED8` with a gradient falloff to `rgba(255, 255, 255, 0)`.\n- **Grid Lines:** Muted dashed rules using `#E2D6C9` at 60% opacity.\n- **Tooltip Flyouts:** Styled as miniature recipe cards: `#FAF7F2` parchment background, `#581825` header text, tabular metric numbers, and `1px solid #E2D6C9`.\n\n### Status Badges\n- Used for metabolic state, meal confirmation, and dietary alerts:\n  - **Optimal / Logged:** `#10B981` fill at 12%, `#059669` text, paired with a solid 6px dot indicator.\n  - **Clinical / Research Note:** `#EFF6FF` background, `#1D4ED8` text, `#BFDBFE` border.\n  - **Attention / Deficit:** `#FEF2F2` background, `#991B1B` text, `#FECACA` border.",
+    "colorVariant": "FIDELITY",
+    "overridePrimaryColor": "#581825",
+    "overrideSecondaryColor": "#10b981",
+    "overrideTertiaryColor": "#1d4ed8",
+    "overrideNeutralColor": "#faf7f2",
+    "spacingScale": 2,
+    "typography": {
+      "label-lg": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "14px",
+        "fontWeight": "600",
+        "lineHeight": "20px",
+        "letterSpacing": "0.01em"
+      },
+      "headline-md": {
+        "fontFamily": "Newsreader",
+        "fontSize": "24px",
+        "fontWeight": "500",
+        "lineHeight": "32px"
+      },
+      "body-sm": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "13px",
+        "fontWeight": "400",
+        "lineHeight": "20px"
+      },
+      "body-md": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "15px",
+        "fontWeight": "400",
+        "lineHeight": "24px"
+      },
+      "display-lg": {
+        "fontFamily": "Newsreader",
+        "fontSize": "48px",
+        "fontWeight": "400",
+        "lineHeight": "56px",
+        "letterSpacing": "-0.02em"
+      },
+      "headline-lg": {
+        "fontFamily": "Newsreader",
+        "fontSize": "32px",
+        "fontWeight": "500",
+        "lineHeight": "40px",
+        "letterSpacing": "-0.01em"
+      },
+      "label-md": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "12px",
+        "fontWeight": "600",
+        "lineHeight": "16px",
+        "letterSpacing": "0.04em"
+      },
+      "label-sm": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "11px",
+        "fontWeight": "700",
+        "lineHeight": "14px",
+        "letterSpacing": "0.06em"
+      },
+      "metric-num": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "28px",
+        "fontWeight": "700",
+        "lineHeight": "32px",
+        "letterSpacing": "-0.02em"
+      },
+      "display-lg-mobile": {
+        "fontFamily": "Newsreader",
+        "fontSize": "36px",
+        "fontWeight": "400",
+        "lineHeight": "44px",
+        "letterSpacing": "-0.01em"
+      },
+      "headline-sm": {
+        "fontFamily": "Newsreader",
+        "fontSize": "20px",
+        "fontWeight": "600",
+        "lineHeight": "28px"
+      },
+      "headline-lg-mobile": {
+        "fontFamily": "Newsreader",
+        "fontSize": "26px",
+        "fontWeight": "500",
+        "lineHeight": "34px",
+        "letterSpacing": "0em"
+      },
+      "body-lg": {
+        "fontFamily": "Hanken Grotesk",
+        "fontSize": "18px",
+        "fontWeight": "400",
+        "lineHeight": "28px"
+      }
+    },
+    "spacing": {
+      "margin-tablet": "2rem",
+      "space-sm": "0.5rem",
+      "gutter": "1.5rem",
+      "space-xl": "2.5rem",
+      "space-lg": "1.5rem",
+      "gutter-mobile": "1rem",
+      "space-xs": "0.25rem",
+      "margin": "3rem",
+      "space-md": "1rem",
+      "margin-mobile": "1.25rem"
+    },
+    "headlineFontFamily": "Newsreader",
+    "bodyFontFamily": "Hanken Grotesk",
+    "labelFontFamily": "Hanken Grotesk"
+  },
+  "screenInstances": [
+    {
+      "id": "0ccad3e7-fe7a-4048-be74-46bb91666612",
+      "sourceScreen": "projects/9122585855714496629/screens/1026640521270912539",
+      "width": 780,
+      "height": 1768,
+      "label": "ARCHITECTURE.md",
+      "type": "SCREEN_INSTANCE"
+    },
+    {
+      "id": "1e84da26018b45e4aec5563a0ebecc83",
+      "sourceScreen": "projects/9122585855714496629/screens/1e84da26018b45e4aec5563a0ebecc83",
+      "x": 4056,
+      "width": 1280,
+      "height": 2024,
+      "label": "Profile Studio & Biometrics \u2014 DietSense"
+    },
+    {
+      "id": "2f4a11cb-19a0-455a-b07a-d883b46a0d30",
+      "sourceScreen": "projects/9122585855714496629/screens/1026640521270914593",
+      "x": 844,
+      "width": 780,
+      "height": 1768,
+      "label": "README.md",
+      "type": "SCREEN_INSTANCE"
+    },
+    {
+      "id": "362b2683c9a645c2b82d42beeb0387a5",
+      "sourceScreen": "projects/9122585855714496629/screens/362b2683c9a645c2b82d42beeb0387a5",
+      "x": 6735,
+      "y": 100,
+      "width": 1280,
+      "height": 2360,
+      "label": "AI Pantry & Grocery Scanner \u2014 DietSense"
+    },
+    {
+      "id": "5c98c690ac8648e9ab9487a5ee07670c",
+      "sourceScreen": "projects/9122585855714496629/screens/5c98c690ac8648e9ab9487a5ee07670c",
+      "x": 2712,
+      "width": 1280,
+      "height": 1823,
+      "label": "Today's Plan \u2014 DietSense"
+    },
+    {
+      "id": "assets_e34968f5156a4d77887aa86d142e77d3",
+      "x": 1688,
+      "width": 960,
+      "height": 540,
+      "sourceAsset": "assets/e34968f5156a4d77887aa86d142e77d3",
+      "type": "DESIGN_SYSTEM_INSTANCE"
+    },
+    {
+      "id": "dfc5de9d2853440d83d1470b61e67de8",
+      "sourceScreen": "projects/9122585855714496629/screens/dfc5de9d2853440d83d1470b61e67de8",
+      "x": 5400,
+      "width": 1280,
+      "height": 2242,
+      "label": "Progress & Analytics \u2014 DietSense"
+    }
+  ],
+  "metadata": {
+    "userRole": "OWNER"
+  },
+  "sharingSettings": {
+    "permissions": [
+      {
+        "id": "516255174649",
+        "role": "OWNER",
+        "email": "prasoonbodke007@gmail.com"
+      }
+    ],
+    "accessType": "RESTRICTED"
+  }
+}

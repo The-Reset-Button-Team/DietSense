@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><meta content="web_standard" name="shell-type"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:ital,wght@0,300..900;1,300..900&amp;family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base{html,body{margin:0;padding:0;}body{overscroll-behavior:none;}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config={darkMode:"class",theme:{extend:{"colors":{"on-tertiary-fixed-variant":"#0039b5","on-primary-fixed-variant":"#762f3b","on-secondary-fixed-variant":"#005236","on-primary-container":"#d77d89","secondary-fixed-dim":"#4edea3","on-surface-variant":"#534344","surface-container-low":"#f6f3ee","surface-bright":"#fcf9f4","primary-container":"#581825","tertiary-container":"#00257f","tertiary-fixed":"#dce1ff","surface-variant":"#e5e2dd","surface-container-lowest":"#ffffff","on-secondary-container":"#00714d","inverse-surface":"#31302d","inverse-on-surface":"#f3f0eb","outline":"#867274","error-container":"#ffdad6","on-surface":"#1c1c19","on-secondary-fixed":"#002113","on-tertiary":"#ffffff","on-background":"#1c1c19","on-tertiary-fixed":"#001551","surface":"#fcf9f4","background":"#fcf9f4","tertiary-fixed-dim":"#b7c4ff","surface-tint":"#934652","secondary-fixed":"#6ffbbe","surface-container-highest":"#e5e2dd","primary-fixed":"#ffd9dc","secondary":"#006c49","error":"#ba1a1a","secondary-container":"#6cf8bb","outline-variant":"#d9c1c2","primary":"#3c0311","on-primary-fixed":"#3d0412","on-tertiary-container":"#7390ff","tertiary":"#00144f","on-primary":"#ffffff","on-error":"#ffffff","surface-container":"#f0ede9","surface-container-high":"#ebe8e3","on-secondary":"#ffffff","on-error-container":"#93000a","inverse-primary":"#ffb2bb","primary-fixed-dim":"#ffb2bb","surface-dim":"#dcdad5"},"borderRadius":{"DEFAULT":"0.125rem","lg":"0.25rem","xl":"0.5rem","full":"0.75rem"},"spacing":{"margin-mobile":"1.25rem","space-sm":"0.5rem","margin-tablet":"2rem","space-xl":"2.5rem","space-xs":"0.25rem","margin":"3rem","space-md":"1rem","gutter":"1.5rem","space-lg":"1.5rem","gutter-mobile":"1rem"},"fontFamily":{"headline-md":["Newsreader"],"display-lg":["Newsreader"],"headline-lg-mobile":["Newsreader"],"label-md":["Hanken Grotesk"],"label-lg":["Hanken Grotesk"],"label-sm":["Hanken Grotesk"],"display-lg-mobile":["Newsreader"],"body-md":["Hanken Grotesk"],"headline-sm":["Newsreader"],"headline-lg":["Newsreader"],"body-lg":["Hanken Grotesk"],"metric-num":["Hanken Grotesk"],"body-sm":["Hanken Grotesk"]},"fontSize":{"headline-md":["24px",{"lineHeight":"32px","fontWeight":"500"}],"display-lg":["48px",{"lineHeight":"56px","letterSpacing":"-0.02em","fontWeight":"400"}],"headline-lg-mobile":["26px",{"lineHeight":"34px","letterSpacing":"0em","fontWeight":"500"}],"label-md":["12px",{"lineHeight":"16px","letterSpacing":"0.04em","fontWeight":"600"}],"label-lg":["14px",{"lineHeight":"20px","letterSpacing":"0.01em","fontWeight":"600"}],"label-sm":["11px",{"lineHeight":"14px","letterSpacing":"0.06em","fontWeight":"700"}],"display-lg-mobile":["36px",{"lineHeight":"44px","letterSpacing":"-0.01em","fontWeight":"400"}],"body-md":["15px",{"lineHeight":"24px","fontWeight":"400"}],"headline-sm":["20px",{"lineHeight":"28px","fontWeight":"600"}],"headline-lg":["32px",{"lineHeight":"40px","letterSpacing":"-0.01em","fontWeight":"500"}],"body-lg":["18px",{"lineHeight":"28px","fontWeight":"400"}],"metric-num":["28px",{"lineHeight":"32px","letterSpacing":"-0.02em","fontWeight":"700"}],"body-sm":["13px",{"lineHeight":"20px","fontWeight":"400"}]}}}};</script></head><body class="bg-surface font-body-md text-on-surface min-h-screen selection:bg-primary-fixed selection:text-on-primary-fixed"><header class="fixed top-0 w-full z-50 bg-surface/90 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-28 max-w-7xl mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin flex flex-col justify-between pt-space-sm pb-space-xs"><div class="flex items-center justify-between gap-space-md"><div class="flex items-center gap-space-md"><a class="flex items-center gap-space-sm focus:outline-none focus:ring-1 focus:ring-primary rounded" href="#"><img alt="DietSense Brand Logo" class="h-8 w-auto object-contain" src="/stitch/assets/stitch_asset_15.png"/><span class="font-headline-sm text-headline-sm text-primary tracking-tight">DietSense</span></a><div class="hidden sm:flex items-center pl-space-md bg-surface-container-low px-space-md py-1 rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.02)]"><span class="font-headline-md text-headline-md italic text-primary">Namaste, </span><span class="font-headline-md text-headline-md text-on-surface">Daksh</span></div></div><div class="flex items-center gap-space-sm md:gap-space-md"><div class="hidden lg:flex items-center gap-space-xs px-space-md py-1 bg-surface-container-lowest rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.03)]"><span class="material-symbols-outlined text-[16px] text-primary">local_fire_department</span><span class="font-label-md text-label-md text-primary font-bold">Cut (-400 kcal)</span><span class="text-on-surface-variant font-label-md text-label-md">•</span><span class="font-metric-num text-[14px] leading-5 text-on-surface">1,850 kcal/day</span></div><div class="relative group"><button aria-label="Sync status popover" class="flex items-center gap-space-xs px-space-sm md:px-space-md py-1 bg-surface-container-low hover:bg-surface-container-high hover:text-on-surface rounded-full transition-all focus:outline-none focus:ring-1 focus:ring-primary" type="button"><span class="w-2 h-2 rounded-full bg-secondary ring-2 ring-secondary/20 animate-pulse"></span><span class="font-label-md text-label-md text-secondary font-semibold hidden sm:inline">Synced</span><span class="material-symbols-outlined text-[16px] text-on-surface-variant group-hover:text-on-surface">keyboard_arrow_down</span></button><div class="absolute right-0 mt-2 w-72 p-space-md bg-surface-container-lowest rounded-xl shadow-[0_8px_24px_-4px_rgba(66,16,24,0.08),0_2px_6px_-1px_rgba(66,16,24,0.04)] opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all z-50"><div class="flex items-center justify-between pb-space-xs mb-space-sm"><span class="font-label-lg text-label-lg text-on-surface font-semibold">Database Sync Hub</span><span class="font-label-sm text-label-sm text-secondary bg-secondary-container/40 px-2 py-0.5 rounded-full">Live</span></div><div class="space-y-2 mb-space-md"><div class="flex items-center justify-between text-body-sm font-body-sm"><span class="flex items-center gap-space-xs text-on-surface"><span class="w-2 h-2 rounded-full bg-secondary"></span>Local SQLite</span><span class="font-label-sm text-label-sm text-on-surface-variant">v4.1.2 • Optimal</span></div><div class="flex items-center justify-between text-body-sm font-body-sm"><span class="flex items-center gap-space-xs text-on-surface"><span class="w-2 h-2 rounded-full bg-secondary"></span>Supabase Cloud</span><span class="font-label-sm text-label-sm text-on-surface-variant">2s ago</span></div><div class="flex items-center justify-between text-body-sm font-body-sm opacity-60"><span class="flex items-center gap-space-xs text-on-surface"><span class="w-2 h-2 rounded-full bg-surface-dim"></span>Offline Cache</span><span class="font-label-sm text-label-sm text-on-surface-variant">Standby</span></div></div><button class="w-full py-1.5 px-space-md bg-primary hover:bg-primary-container text-on-primary hover:text-on-primary-container rounded font-label-md text-label-md transition-colors flex items-center justify-center gap-space-xs" type="button"><span class="material-symbols-outlined text-[16px]">sync</span>Force Ledger Re-sync</button></div></div><div class="flex items-center pl-space-xs"><img alt="Profile" class="w-8 h-8 rounded-full object-cover ring-1 ring-outline-variant/60" src="/stitch/assets/stitch_asset_10.png"/></div></div></div><nav class="flex items-center gap-space-xs sm:gap-space-sm overflow-x-auto py-1" data-active-classes="bg-primary-container text-on-primary font-medium rounded shadow-[0_1px_4px_rgba(88,24,37,0.1)]"><a class="font-label-lg text-label-lg px-space-md py-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all whitespace-nowrap" data-path="todays-plan" href="#">Today's Plan</a><a class="font-label-lg text-label-lg px-space-md py-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all whitespace-nowrap" data-path="ai-pantry-and-scanner" href="#">AI Pantry &amp; Scanner</a><a class="font-label-lg text-label-lg px-space-md py-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all whitespace-nowrap" data-path="progress-and-analytics" href="#">Progress &amp; Analytics</a><a class="font-label-lg text-label-lg px-space-md py-1.5 text-on-surface-variant hover:text-on-surface hover:bg-surface-container transition-all whitespace-nowrap" data-path="profile-studio" href="#">Profile Studio</a></nav></div></header><main class="w-full pt-28 bg-surface"><div class="flex flex-col w-full">
+<div class="max-w-7xl mx-auto w-full px-margin-mobile md:px-margin-tablet lg:px-margin py-space-md space-y-space-lg">
+<!-- Top Editorial Header & Clinical Status Indicator -->
+<div class="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md pt-space-xs pb-space-sm border-b border-surface-container-highest">
+<div class="space-y-1">
+<div class="flex items-center gap-space-xs text-primary">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span class="font-label-sm text-label-sm uppercase tracking-wider text-primary font-bold">Clinical Regimen • Thursday, Oct 24</span>
+</div>
+<h1 class="font-headline-lg text-headline-lg text-primary tracking-tight">Today’s Prescriptive Plan</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-2xl">
+          Caloric ceiling adjusted to Mifflin-St Jeor metabolic target with an intentional <span class="font-semibold text-primary">400 kcal cutting deficit</span>. Meals matched against verified regional biodatabases.
+        </p>
+</div>
+<div class="flex items-center gap-space-sm bg-surface-container-low p-space-sm rounded-lg shadow-sm">
+<div class="w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[22px]">health_metrics</span>
+</div>
+<div class="pr-space-sm">
+<div class="flex items-center gap-1.5">
+<span class="font-label-sm text-label-sm uppercase text-on-surface-variant font-bold">Clinical Target</span>
+<span class="inline-block w-1.5 h-1.5 rounded-full bg-secondary"></span>
+</div>
+<p class="font-metric-num text-[18px] text-primary leading-tight">1,850 <span class="font-body-sm text-body-sm text-on-surface-variant font-normal">kcal/day</span></p>
+</div>
+</div>
+</div>
+<!-- 1. Macro Distribution Bar & Target Summary Spread -->
+<section class="bg-surface-container-lowest p-space-md md:p-space-lg rounded-xl shadow-sm space-y-space-md">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm">
+<div class="space-y-0.5">
+<div class="flex items-center gap-2">
+<h2 class="font-headline-sm text-headline-sm text-on-surface">Target Macro Allocation</h2>
+<span class="px-2 py-0.5 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">67% Day Completed</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">USDA FDC &amp; ICMR-NIN 2017 Verified Nutrient Composition</p>
+</div>
+<div class="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant">
+<span class="w-2.5 h-2.5 rounded-full bg-primary"></span> Protein
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-600 ml-2"></span> Carbs
+          <span class="w-2.5 h-2.5 rounded-full bg-secondary ml-2"></span> Fats
+        </div>
+</div>
+<!-- Segmented Composite Bar -->
+<div class="space-y-space-xs">
+<div class="h-3 w-full bg-surface-container rounded-full overflow-hidden flex shadow-inner">
+<div class="h-full bg-primary transition-all duration-500" style="width: 36%;" title="Protein 36%"></div>
+<div class="h-full bg-amber-600 transition-all duration-500" style="width: 40%;" title="Carbohydrates 40%"></div>
+<div class="h-full bg-secondary transition-all duration-500" style="width: 24%;" title="Healthy Fats 24%"></div>
+</div>
+<div class="flex justify-between items-center font-label-sm text-label-sm text-on-surface-variant pt-0.5">
+<span>0 kcal</span>
+<span class="font-semibold text-primary">1,240 kcal consumed (610 kcal remaining)</span>
+<span>1,850 kcal ceiling</span>
+</div>
+</div>
+<!-- 4-Column Micro Gauge Cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-space-sm md:gap-space-md pt-space-xs">
+<!-- Energy -->
+<div class="bg-surface-container-low p-space-sm md:p-space-md rounded-lg space-y-1">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase font-bold tracking-wider">Calories</span>
+<span class="material-symbols-outlined text-[16px] text-primary">local_fire_department</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-metric-num text-[22px] md:text-metric-num text-primary">1,240</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">/ 1,850 kcal</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-primary h-1.5 rounded-full" style="width: 67%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block text-right pt-0.5">67% cut budget</span>
+</div>
+<!-- Protein -->
+<div class="bg-surface-container-low p-space-sm md:p-space-md rounded-lg space-y-1">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase font-bold tracking-wider text-primary">Protein</span>
+<span class="material-symbols-outlined text-[16px] text-primary">fitness_center</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-metric-num text-[22px] md:text-metric-num text-primary">112g</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">/ 135g target</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-primary h-1.5 rounded-full" style="width: 83%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-secondary font-semibold block text-right pt-0.5">83% (23g to goal)</span>
+</div>
+<!-- Carbs -->
+<div class="bg-surface-container-low p-space-sm md:p-space-md rounded-lg space-y-1">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase font-bold tracking-wider text-amber-700">Carbohydrates</span>
+<span class="material-symbols-outlined text-[16px] text-amber-600">grain</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-metric-num text-[22px] md:text-metric-num text-on-surface">124g</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">/ 185g target</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-amber-600 h-1.5 rounded-full" style="width: 67%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block text-right pt-0.5">67% (61g remaining)</span>
+</div>
+<!-- Fats -->
+<div class="bg-surface-container-low p-space-sm md:p-space-md rounded-lg space-y-1">
+<div class="flex items-center justify-between text-on-surface-variant">
+<span class="font-label-sm text-label-sm uppercase font-bold tracking-wider text-secondary">Healthy Fats</span>
+<span class="material-symbols-outlined text-[16px] text-secondary">opacity</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-metric-num text-[22px] md:text-metric-num text-on-surface">34g</span>
+<span class="font-body-sm text-body-sm text-on-surface-variant">/ 45g target</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 mt-2">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 75%;"></div>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant block text-right pt-0.5">75% (11g remaining)</span>
+</div>
+</div>
+</section>
+<!-- 2. Meal Frequency Segmented Control Rail -->
+<section class="bg-surface-container p-space-sm rounded-xl space-y-2">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-space-xs px-1">
+<div class="flex items-center gap-space-xs text-on-surface">
+<span class="material-symbols-outlined text-[18px] text-primary">schedule</span>
+<span class="font-label-md text-label-md uppercase font-bold">Metabolic Feeding Cadence</span>
+</div>
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="w-2 h-2 rounded-full bg-secondary animate-pulse"></span>
+<span class="font-label-sm text-label-sm font-semibold">Dynamically rebalances USDA &amp; ICMR-NIN verified calories across remaining slots</span>
+</div>
+</div>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-1.5 bg-surface-container-low p-1 rounded-lg">
+<button class="frequency-pill px-space-sm py-2 rounded text-center transition-all font-label-md text-label-md text-on-surface-variant hover:text-on-surface" type="button">
+          2 Meals (16:8 IF)
+        </button>
+<button class="frequency-pill px-space-sm py-2 rounded text-center transition-all font-label-md text-label-md text-on-surface-variant hover:text-on-surface" type="button">
+          3 Meals (Classic)
+        </button>
+<button class="frequency-pill px-space-sm py-2 rounded text-center transition-all font-label-md text-label-md bg-primary-container text-on-primary font-bold shadow-sm" type="button">
+          4 Meals (Standard)
+        </button>
+<button class="frequency-pill px-space-sm py-2 rounded text-center transition-all font-label-md text-label-md text-on-surface-variant hover:text-on-surface" type="button">
+          5 Meals (High Energy)
+        </button>
+</div>
+</section>
+<!-- 3. Daily Meal Slot Cards & Main Journal Grid (8:4 Desktop Ratio) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- Primary 8-Column Meal Ledger -->
+<div class="lg:col-span-8 space-y-space-md">
+<!-- Slot 1: Breakfast (Eaten) -->
+<article class="bg-surface-container-lowest p-space-md md:p-space-lg rounded-xl shadow-sm transition-all hover:shadow-md">
+<div class="flex items-start justify-between gap-space-sm pb-space-sm border-b border-surface-container">
+<div class="flex items-center gap-space-xs">
+<span class="px-2.5 py-1 bg-surface-container font-label-sm text-label-sm rounded uppercase font-bold text-on-surface-variant">Slot 1 • 9:00 AM</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Breakfast</span>
+</div>
+<div class="flex items-center gap-1.5 bg-secondary/10 px-space-sm py-1 rounded-full text-secondary">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span class="font-label-sm text-label-sm font-bold">Eaten &amp; Logged</span>
+</div>
+</div>
+<div class="flex flex-col sm:flex-row items-start gap-space-md pt-space-sm">
+<img class="w-full sm:w-28 h-28 rounded-lg object-cover bg-surface-container flex-shrink-0" data-alt="A warm top-down aesthetic culinary shot of crisp Indian Palak Moong Dal Chilla crepes rolled delicately on an artisanal stoneware platter beside a small bowl of emerald green fresh mint chutney with natural soft morning lighting." src="/stitch/assets/stitch_asset_07.png"/>
+<div class="space-y-space-xs flex-1">
+<div class="flex flex-wrap items-center gap-space-xs">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Palak Moong Dal Chilla with Mint Chutney</h3>
+<span class="px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container text-on-surface-variant">ICMR-NIN Validated</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                High-fiber split yellow moong batter infused with pureed baby spinach, cumin, and fresh ginger. Paired with no-sugar curd mint dip.
+              </p>
+<div class="flex flex-wrap items-center gap-space-xs pt-1">
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary font-bold">22g Protein</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-500/10 text-amber-700">34g Carbs</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-secondary/10 text-secondary">7g Fat</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant">385 kcal</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-auto flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> 18 min prep
+                </span>
+</div>
+</div>
+</div>
+</article>
+<!-- Slot 2: Lunch (Current Active with Rich Actions & Explainable Match) -->
+<article class="bg-surface-container-lowest p-space-md md:p-space-lg rounded-xl shadow-md space-y-space-md ring-2 ring-primary/20">
+<div class="flex items-start justify-between gap-space-sm pb-space-sm border-b border-surface-container">
+<div class="flex items-center gap-space-xs">
+<span class="px-2.5 py-1 bg-primary text-on-primary font-label-sm text-label-sm rounded uppercase font-bold">Slot 2 • 1:30 PM</span>
+<span class="font-label-sm text-label-sm text-primary font-semibold flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-primary animate-ping"></span> Current Active Window
+              </span>
+</div>
+<span class="px-2.5 py-0.5 bg-surface-container font-label-sm text-label-sm rounded-full text-on-surface-variant">High Satiety Score (8.9/10)</span>
+</div>
+<div class="flex flex-col sm:flex-row items-start gap-space-md">
+<img class="w-full sm:w-36 h-36 rounded-lg object-cover bg-surface-container flex-shrink-0" data-alt="A rustic ceramic bowl containing scrambled Indian paneer bhurji garnished with chopped fresh cilantro and green chilies, placed next to toasted warm multigrain roti and a refreshing diced cucumber tomato kachumber salad on a linen tablecloth." src="/stitch/assets/stitch_asset_03.png"/>
+<div class="space-y-space-xs flex-1">
+<div class="flex items-center justify-between">
+<h3 class="font-headline-sm text-headline-sm text-primary">Paneer Bhurji with Multigrain Roti &amp; Cucumber Kachumber</h3>
+</div>
+<!-- Explainable Recommendation Match Pill -->
+<div class="p-space-xs bg-surface-container-low rounded-lg flex flex-wrap items-center gap-y-1 gap-x-space-sm font-label-sm text-label-sm text-on-surface-variant">
+<span class="flex items-center gap-1 text-primary font-bold">
+<span class="material-symbols-outlined text-[15px]">auto_awesome</span> Explainable Match:
+                </span>
+<span class="text-secondary font-semibold">+0.42 taste profile</span>
+<span>•</span>
+<span class="text-primary font-semibold">+0.30 macro fit</span>
+<span>•</span>
+<span class="text-on-surface flex items-center gap-1 font-semibold">
+<span class="material-symbols-outlined text-[13px] text-secondary">inventory_2</span> Pantry in-stock match
+                </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant pt-1">
+                200g low-fat crumbled cottage cheese pan-tossed with sweet red onions, turmeric, and vine tomatoes. Served with 2 fiber-dense rotis.
+              </p>
+<div class="flex flex-wrap items-center gap-space-xs pt-1">
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary font-bold">38g Protein</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-500/10 text-amber-700">46g Carbs</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-secondary/10 text-secondary">16g Fat</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface font-semibold">540 kcal</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-auto flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> 22 min prep
+                </span>
+</div>
+</div>
+</div>
+<!-- Active Action Cluster -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pt-space-xs border-t border-surface-container">
+<div class="flex flex-wrap items-center gap-space-xs">
+<button class="px-space-md py-2 bg-primary hover:bg-primary-container text-on-primary rounded font-label-md text-label-md transition-all shadow-sm flex items-center gap-space-xs active:scale-[0.99]" id="mark-eaten-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">check</span> Mark Eaten
+              </button>
+<button class="px-space-md py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded font-label-md text-label-md transition-all flex items-center gap-space-xs" id="open-recipe-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">menu_book</span> View Recipe &amp; Solo Hacks
+              </button>
+</div>
+<div class="flex items-center gap-space-xs">
+<button class="px-space-sm py-2 text-on-surface-variant hover:text-error hover:bg-surface-container-low rounded font-label-md text-label-md transition-all flex items-center gap-1" id="skip-meal-btn" type="button">
+<span class="material-symbols-outlined text-[16px]">cancel</span> Skip Meal
+              </button>
+<button class="px-space-sm py-2 text-primary hover:bg-primary/5 rounded font-label-md text-label-md transition-all flex items-center gap-1" id="swap-slot-btn" type="button">
+<span class="material-symbols-outlined text-[16px]">cached</span> Swap Slot
+              </button>
+</div>
+</div>
+</article>
+<!-- Slot 3: Evening Snack -->
+<article class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-xs">
+<div class="flex items-start justify-between gap-space-sm pb-space-xs border-b border-surface-container">
+<div class="flex items-center gap-space-xs">
+<span class="px-2.5 py-1 bg-surface-container font-label-sm text-label-sm rounded uppercase font-bold text-on-surface-variant">Slot 3 • 5:00 PM</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Metabolic Refuel</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Upcoming</span>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-space-md pt-space-xs">
+<img class="w-full sm:w-20 h-20 rounded-lg object-cover bg-surface-container flex-shrink-0" data-alt="Warm golden spiced roasted chana and fluffy popped makhana seeds seasoned with chaat masala in a clay terracotta bowl beside a steaming cup of cardamom infused ginger masala tea without sugar." src="/stitch/assets/stitch_asset_02.png"/>
+<div class="flex-1 space-y-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Roasted Chana &amp; Salted Makhana Trail Mix with Masala Chai</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">No added sugar, spiced with crushed green cardamom, black pepper, and Himalayan pink salt.</p>
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary">11g Protein</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-500/10 text-amber-700">22g Carbs</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-secondary/10 text-secondary">4g Fat</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant">195 kcal</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-auto flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> 5 min prep
+                </span>
+</div>
+</div>
+</div>
+</article>
+<!-- Slot 4: Dinner -->
+<article class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm transition-all hover:shadow-md space-y-space-xs">
+<div class="flex items-start justify-between gap-space-sm pb-space-xs border-b border-surface-container">
+<div class="flex items-center gap-space-xs">
+<span class="px-2.5 py-1 bg-surface-container font-label-sm text-label-sm rounded uppercase font-bold text-on-surface-variant">Slot 4 • 8:30 PM</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Dinner</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant">Upcoming</span>
+</div>
+<div class="flex flex-col sm:flex-row items-center gap-space-md pt-space-xs">
+<img class="w-full sm:w-20 h-20 rounded-lg object-cover bg-surface-container flex-shrink-0" data-alt="Pan-seared firm organic tofu cubes with crisp vibrant green sautéed broccoli florets glazed in garlic ginger tamari sauce served on an artisanal dark earthenware plate." src="/stitch/assets/stitch_asset_04.png"/>
+<div class="flex-1 space-y-1">
+<h3 class="font-headline-sm text-headline-sm text-on-surface">Tofu &amp; Sautéed Broccoli in Garlic Ginger Tamari</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Rich in glucosinolates and complete amino acids, supporting overnight muscular recovery during caloric restriction.</p>
+<div class="flex flex-wrap items-center gap-space-xs">
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary">34g Protein</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-500/10 text-amber-700">22g Carbs</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-secondary/10 text-secondary">7g Fat</span>
+<span class="px-2 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant">440 kcal</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant ml-auto flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> 20 min prep
+                </span>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Persistent 4-Column Clinical Rail & Fast Action Cards -->
+<aside class="lg:col-span-4 space-y-space-md">
+<!-- Interactive Hinglish Recipe Spotlight Card -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm space-y-space-sm">
+<div class="flex items-center justify-between">
+<span class="px-2.5 py-0.5 rounded-full bg-primary/10 text-primary font-label-sm text-label-sm font-bold uppercase tracking-wider">Fast Solo Cook</span>
+<span class="font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span> In Pantry (3/4)
+            </span>
+</div>
+<div class="space-y-1">
+<h4 class="font-headline-sm text-headline-sm text-primary">Palak Paneer Bhurji — 15m Solo Edition</h4>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Bachelors &amp; solo-cook engineered quick recipe. No mixer grinder required.</p>
+</div>
+<div class="p-space-sm bg-surface-container-low rounded-lg space-y-2">
+<div class="flex items-center gap-space-xs font-label-sm text-label-sm text-primary font-bold">
+<span class="material-symbols-outlined text-[16px]">tips_and_updates</span> Hinglish Lifehack
+            </div>
+<p class="font-body-sm text-body-sm text-on-surface leading-snug">
+<span class="font-semibold text-primary">"Pan mein 1 tsp oil garam karo,</span> jeera aur finely chopped pyaz 2 min sauté karo. Paneer ko haath se crush karke daalo. <span class="italic text-on-surface-variant">Cook &amp; eat in the same cast iron skillet to save cleaning time!"</span>
+</p>
+</div>
+<button class="w-full py-2 bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md rounded transition-colors flex items-center justify-center gap-1" onclick="document.getElementById('hinglish-recipe-modal').classList.remove('hidden')" type="button">
+<span class="material-symbols-outlined text-[16px]">receipt_long</span> Full 3-Step Hinglish Guide
+          </button>
+</div>
+<!-- Quick Bio-Engineered Satiety & Hydration Digest -->
+<div class="bg-surface-container-lowest p-space-md rounded-xl shadow-sm space-y-space-sm">
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Daily Bio-Ledger</h4>
+<div class="space-y-space-xs">
+<div class="flex items-center justify-between text-body-sm font-body-sm pb-1 border-b border-surface-container">
+<span class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-blue-600">water_drop</span> Water Intake
+              </span>
+<span class="font-label-md text-label-md text-on-surface">2.4L / 3.5L</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm pb-1 border-b border-surface-container">
+<span class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-secondary">compost</span> Dietary Fiber
+              </span>
+<span class="font-label-md text-label-md text-on-surface">28g / 35g</span>
+</div>
+<div class="flex items-center justify-between text-body-sm font-body-sm">
+<span class="text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-amber-600">bolt</span> Glycemic Buffer
+              </span>
+<span class="font-label-sm text-label-sm bg-secondary/15 text-secondary font-bold px-2 py-0.5 rounded-full">Optimal (Low GI)</span>
+</div>
+</div>
+</div>
+<!-- Regenerate / Allergen Gate Engine Card -->
+<div class="bg-surface-container p-space-md rounded-xl space-y-space-sm">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+<span class="font-headline-sm text-headline-sm">Clinical Safety Gate</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+            All suggestions continuously validated against Daksh’s clinical profile: <span class="font-semibold text-on-surface">Lactose Tolerant, Peanut Avoidance, High-Fiber Cut</span>.
+          </p>
+<button class="w-full py-2 bg-surface-container-lowest hover:bg-surface-container-high text-primary font-label-md text-label-md rounded shadow-sm transition-all flex items-center justify-center gap-2" id="allergen-audit-btn" type="button">
+<span class="material-symbols-outlined text-[16px]">policy</span> Run Allergen &amp; Sodium Audit
+          </button>
+</div>
+</aside>
+</div>
+<!-- 5. Quick Action Floating Pill (Floating Desktop & Mobile Bottom Bar) -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-surface-container-lowest/95 backdrop-blur-md px-space-md py-space-sm rounded-full shadow-[0_8px_24px_-4px_rgba(66,16,24,0.15),0_2px_6px_-1px_rgba(66,16,24,0.06)] flex items-center gap-space-sm">
+<button class="flex items-center gap-space-xs px-space-md py-2 bg-primary hover:bg-primary-container text-on-primary rounded-full font-label-md text-label-md transition-all shadow-sm active:scale-95" id="regenerate-day-btn" type="button">
+<span class="material-symbols-outlined text-[18px]">neurology</span>
+<span>Regenerate Entire Day</span>
+</button>
+<div class="w-px h-6 bg-surface-container"></div>
+<button class="flex items-center gap-1 text-on-surface-variant hover:text-on-surface font-label-md text-label-md px-2 py-1" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" type="button">
+<span class="material-symbols-outlined text-[18px]">expand_less</span>
+<span class="hidden sm:inline">Top</span>
+</button>
+</div>
+</div>
+<!-- Adaptive Skip Reason Modal (Hidden by Default) -->
+<div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-space-md" id="skip-modal">
+<div class="bg-surface-container-lowest max-w-md w-full rounded-xl p-space-lg shadow-xl space-y-space-md">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="font-headline-sm text-headline-sm text-primary">Adaptive Meal Skip</h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Why are you skipping Lunch? We will rebalance macros.</p>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface" onclick="document.getElementById('skip-modal').classList.add('hidden')" type="button">
+<span class="material-symbols-outlined text-[20px]">close</span>
+</button>
+</div>
+<div class="space-y-space-xs font-label-md text-label-md">
+<label class="flex items-center gap-space-sm p-space-sm rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors">
+<input checked="" class="accent-primary" name="skip-reason" type="radio" value="time"/>
+<span>Short on time / In a meeting</span>
+</label>
+<label class="flex items-center gap-space-sm p-space-sm rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors">
+<input class="accent-primary" name="skip-reason" type="radio" value="groceries"/>
+<span>Missing paneer or groceries in fridge</span>
+</label>
+<label class="flex items-center gap-space-sm p-space-sm rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors">
+<input class="accent-primary" name="skip-reason" type="radio" value="taste"/>
+<span>Not craving this meal profile today</span>
+</label>
+<label class="flex items-center gap-space-sm p-space-sm rounded bg-surface-container-low hover:bg-surface-container cursor-pointer transition-colors">
+<input class="accent-primary" name="skip-reason" type="radio" value="budget"/>
+<span>Saving calories for an evening social dinner</span>
+</label>
+</div>
+<div class="flex items-center justify-end gap-space-xs pt-space-xs">
+<button class="px-space-md py-2 text-on-surface-variant hover:bg-surface-container rounded font-label-md text-label-md" onclick="document.getElementById('skip-modal').classList.add('hidden')" type="button">Cancel</button>
+<button class="px-space-md py-2 bg-primary hover:bg-primary-container text-on-primary rounded font-label-md text-label-md shadow-sm" id="confirm-skip-btn" type="button">Confirm &amp; Redistribute 540 kcal</button>
+</div>
+</div>
+</div>
+<!-- Hinglish Recipe & Solo-Cook Lifehacks Modal (Interactive Preview) -->
+<div class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm hidden flex items-center justify-center p-space-md" id="hinglish-recipe-modal">
+<div class="bg-surface-container-lowest max-w-xl w-full rounded-xl p-space-lg shadow-xl space-y-space-md max-h-[921px] overflow-y-auto">
+<div class="flex items-start justify-between border-b border-surface-container pb-space-sm">
+<div>
+<div class="flex items-center gap-2">
+<span class="font-label-sm text-label-sm text-secondary bg-secondary/10 px-2 py-0.5 rounded-full font-bold">3/4 Local In-Stock</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant">22 min total</span>
+</div>
+<h3 class="font-headline-md text-headline-md text-primary pt-1">Paneer Bhurji: Quick Hinglish Edition</h3>
+</div>
+<button class="text-on-surface-variant hover:text-on-surface p-1" onclick="document.getElementById('hinglish-recipe-modal').classList.add('hidden')" type="button">
+<span class="material-symbols-outlined text-[22px]">close</span>
+</button>
+</div>
+<div class="space-y-space-sm">
+<h4 class="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold">1. Ingredients Check</h4>
+<div class="grid grid-cols-2 gap-2 text-body-sm font-body-sm">
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between">
+<span>200g Low Fat Paneer</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">check</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between">
+<span>1 Diced Onion &amp; Tomato</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">check</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between">
+<span>1 Green Chili &amp; Jeera</span>
+<span class="material-symbols-outlined text-secondary text-[16px]">check</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low flex items-center justify-between text-on-surface-variant">
+<span>Fresh Cilantro</span>
+<span class="font-label-sm text-label-sm text-amber-700">Optional</span>
+</div>
+</div>
+<h4 class="font-label-md text-label-md uppercase tracking-wider text-on-surface-variant font-bold pt-2">2. Solo-Cook Hinglish Steps</h4>
+<ol class="space-y-2 text-body-sm font-body-sm text-on-surface list-decimal list-inside">
+<li class="pl-1">
+<span class="font-semibold text-primary">Tadka Time:</span> Kadai ya pan mein 1 tsp oil/ghee garam karo. Usme thoda jeera aur hari mirch daalo jab tak crackle na ho.
+          </li>
+<li class="pl-1">
+<span class="font-semibold text-primary">Sauté:</span> Barik kata hua pyaz daal ke 2-3 minute chalao jab tak translucent na ho jaye. Phir haldi, namak aur lal mirch add karo.
+          </li>
+<li class="pl-1">
+<span class="font-semibold text-primary">Crush &amp; Toss:</span> Paneer ko grinder mein mat peeso! Haath se rough crumble karke pan mein daalo and 3 minute medium flame par mix karo.
+          </li>
+</ol>
+<div class="p-space-sm bg-surface-container-high rounded-lg space-y-1">
+<div class="flex items-center gap-1 text-primary font-bold font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">dishwasher_gen</span> Minimal Dishes Lifehack
+          
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+            Roti direct gas burner pe sek lo without tongs agar chimta nahi mila, and plate use karne ke badle use the pan as your dining bowl. Saves 15 mins dishwashing!
+          </p>
+</div>
+</div>
+<div class="flex justify-end pt-space-xs">
+<button class="px-space-md py-2 bg-primary text-on-primary rounded font-label-md text-label-md" onclick="document.getElementById('hinglish-recipe-modal').classList.add('hidden')" type="button">Close &amp; Return to Plan</button>
+</div>
+</div>
+</div>
+<!-- Toast Notification Feedback Component -->
+<div class="fixed top-32 right-6 z-50 bg-inverse-surface text-inverse-on-surface px-space-md py- space-xs rounded-lg shadow-lg hidden flex items-center gap-space-xs font-label-md text-label-md transition-all" id="action-toast">
+<span class="material-symbols-outlined text-[18px] text-secondary" id="toast-icon">check_circle</span>
+<span id="toast-message">Meal logged successfully.</span>
+</div>
+<script>
+    // Meal Frequency Toggle Handler
+    document.querySelectorAll('.frequency-pill').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.frequency-pill').forEach(b => {
+          b.className = 'frequency-pill px-space-sm py-2 rounded text-center transition-all font-label-md text-label-md text-on-surface-variant hover:text-on-surface';
+        });
+        this.className = 'frequency-pill px-space-sm py-2 rounded text-center transition-all font-label-md text-label-md bg-primary-container text-on-primary font-bold shadow-sm';
+        showToast('Meal distribution updated: ' + this.innerText.trim());
+      });
+    });
+
+    // Modal Triggers
+    const openRecipeBtn = document.getElementById('open-recipe-btn');
+    const recipeModal = document.getElementById('hinglish-recipe-modal');
+    if (openRecipeBtn && recipeModal) {
+      openRecipeBtn.addEventListener('click', () => {
+        recipeModal.classList.remove('hidden');
+      });
+    }
+
+    const skipMealBtn = document.getElementById('skip-meal-btn');
+    const skipModal = document.getElementById('skip-modal');
+    if (skipMealBtn && skipModal) {
+      skipMealBtn.addEventListener('click', () => {
+        skipModal.classList.remove('hidden');
+      });
+    }
+
+    // Mark Eaten Action
+    const markEatenBtn = document.getElementById('mark-eaten-btn');
+    if (markEatenBtn) {
+      markEatenBtn.addEventListener('click', function() {
+        this.classList.remove('bg-primary', 'hover:bg-primary-container', 'text-on-primary');
+        this.classList.add('bg-secondary/15', 'text-secondary', 'cursor-default');
+        this.innerHTML = '<span class="material-symbols-outlined text-[18px]">done_all</span> Logged as Eaten';
+        showToast('Lunch marked eaten! 540 kcal committed to SQLite ledger.');
+      });
+    }
+
+    // Skip Confirmation
+    const confirmSkipBtn = document.getElementById('confirm-skip-btn');
+    if (confirmSkipBtn && skipModal) {
+      confirmSkipBtn.addEventListener('click', () => {
+        skipModal.classList.add('hidden');
+        showToast('Lunch skipped. 540 kcal distributed into Evening Snack & Dinner.');
+      });
+    }
+
+    // Slot Swap
+    const swapSlotBtn = document.getElementById('swap-slot-btn');
+    if (swapSlotBtn) {
+      swapSlotBtn.addEventListener('click', () => {
+        swapSlotBtn.classList.add('animate-spin');
+        setTimeout(() => {
+          swapSlotBtn.classList.remove('animate-spin');
+          showToast('Swapped with: Soya Chunks Pulao + Spiced Raita (530 kcal, 36g P)');
+        }, 600);
+      });
+    }
+
+    // Global Regenerate
+    const regenBtn = document.getElementById('regenerate-day-btn');
+    if (regenBtn) {
+      regenBtn.addEventListener('click', () => {
+        showToast('Recalibrating daily ledger across 14,181 ICMR/USDA items...');
+      });
+    }
+
+    // Allergen Audit
+    const allergenBtn = document.getElementById('allergen-audit-btn');
+    if (allergenBtn) {
+      allergenBtn.addEventListener('click', () => {
+        showToast('Audit complete: 0 allergens triggered, Sodium at 1,420mg (Within cut range).');
+      });
+    }
+
+    // Helper Toast
+    function showToast(msg) {
+      const toast = document.getElementById('action-toast');
+      const toastMsg = document.getElementById('toast-message');
+      if (toast && toastMsg) {
+        toastMsg.innerText = msg;
+        toast.classList.remove('hidden');
+        setTimeout(() => {
+          toast.classList.add('hidden');
+        }, 3200);
+      }
+    }
+  </script>
+</div></div></main><footer class="w-full bg-surface-container-low shadow-[0_-1px_6px_rgba(0,0,0,0.02)] mt-space-xl"><div class="max-w-7xl mx-auto px-margin-mobile md:px-margin-tablet lg:px-margin py-space-xl"><div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-space-lg pb-space-lg"><div class="space-y-space-xs max-w-xl"><div class="flex items-center gap-space-xs text-primary font-headline-sm text-headline-sm"><span class="material-symbols-outlined text-[20px]">verified</span>Clinical Nutrition Provenance</div><p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">DietSense calculates biometrics via the Mifflin-St Jeor equation and standardizes macronutrient distribution referencing 14,181 scientifically verified food items vetted from USDA FoodData Central and ICMR-NIN Indian Food Composition Tables (IFCT 2017).</p></div><div class="flex flex-wrap items-center gap-space-sm"><span class="px-space-md py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">ICMR-NIN 2017 Verified</span><span class="px-space-md py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-on-surface-variant">USDA FDC Standard</span><span class="px-space-md py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-secondary font-bold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>Supabase Edge Sync</span></div></div><div class="flex flex-col sm:flex-row items-center justify-between gap-space-sm pt-space-md text-on-surface-variant font-label-sm text-label-sm"><p>© 2025 DietSense Clinical Adaptive Engine. All rights reserved.</p><div class="flex items-center gap-space-md"><span class="text-on-surface-variant">Mifflin-St Jeor Validated</span><span class="text-on-surface-variant">HIPAA &amp; NDHM Ready</span></div></div></div></footer></body></html>

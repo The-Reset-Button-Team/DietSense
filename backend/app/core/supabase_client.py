@@ -13,8 +13,11 @@ import time
 from functools import lru_cache
 from typing import Optional
 
-import psycopg2
-import psycopg2.extras
+try:
+    import psycopg2
+    import psycopg2.extras
+except ImportError:
+    psycopg2 = None
 
 from app.core.config import settings
 
@@ -56,7 +59,7 @@ def get_pg_connection(autocommit: bool = False, timeout: int = 10):
     if not db_url:
         db_url = os.environ.get("SUPABASE_DB_URL", "")
 
-    if not db_url:
+    if not db_url or psycopg2 is None:
         return None
 
     try:
@@ -72,6 +75,8 @@ def get_pg_cursor(conn=None):
     Returns a RealDictCursor from a PostgreSQL connection.
     If no connection is provided, creates a new one.
     """
+    if psycopg2 is None:
+        return None, None
     if conn is None:
         conn = get_pg_connection()
     if conn is None:
