@@ -150,6 +150,12 @@ export interface PantryItem {
   category: string;
   quantity: string;
   inStock: boolean;
+  expiry_date?: string | null;
+  days_until_expiry?: number | null;
+  freshness_status?: "fresh" | "expiring_soon" | "expired" | "unspecified";
+  freshness_indicator?: string;
+  freshness_color?: string;
+  matched_food_id?: number | null;
 }
 
 // ─── Meal Plans ──────────────────────────────────────────────────────────────

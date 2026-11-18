@@ -191,13 +191,14 @@ function MainApp() {
     setPantryItems((prev) => [newItem, ...prev]);
   };
 
-  const handleAddBatchPantryItems = (items: Array<{ name: string; category?: string; quantity?: string }>) => {
+  const handleAddBatchPantryItems = (items: Array<{ name: string; category?: string; quantity?: string; expiry_date?: string }>) => {
     const newItems: PantryItem[] = items.map((item, idx) => ({
       id: `${Date.now()}_${idx}`,
       name: item.name,
       category: item.category || "Scanned Item",
       quantity: item.quantity || "1 unit",
       inStock: true,
+      expiry_date: item.expiry_date,
     }));
     setPantryItems((prev) => {
       const existingNames = new Set(prev.map((p) => p.name.toLowerCase()));
@@ -210,6 +211,13 @@ function MainApp() {
       const trulyNew = newItems.filter((i) => !existingNames.has(i.name.toLowerCase()));
       return [...trulyNew, ...updatedExisting];
     });
+
+    if (user) {
+      apiClient("/api/pantry/", {
+        method: "POST",
+        body: JSON.stringify({ items }),
+      }).catch(() => {});
+    }
   };
 
   // Selected custom recipe per slot (overrides auto-selection if user manually swaps)

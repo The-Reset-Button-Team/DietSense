@@ -169,12 +169,23 @@ def init_db(db_path: str = None) -> None:
                 quantity TEXT NOT NULL DEFAULT '1 unit',
                 in_stock INTEGER NOT NULL DEFAULT 1,
                 source TEXT NOT NULL DEFAULT 'manual',
+                expiry_date TEXT,
+                matched_food_id INTEGER,
                 synced_at TEXT,
                 created_at TEXT NOT NULL,
                 updated_at TEXT NOT NULL
             );
         """)
         cur.execute("CREATE INDEX IF NOT EXISTS idx_pantry_items_user_id ON pantry_items(user_id);")
+
+        try:
+            cur.execute("ALTER TABLE pantry_items ADD COLUMN expiry_date TEXT;")
+        except Exception:
+            pass
+        try:
+            cur.execute("ALTER TABLE pantry_items ADD COLUMN matched_food_id INTEGER;")
+        except Exception:
+            pass
 
         # 7. Sync Queue table (Pending mutations for cloud sync)
         cur.execute("""
