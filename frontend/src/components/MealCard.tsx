@@ -17,6 +17,7 @@ interface MealCardProps {
   reason?: string;
   onShuffleSlot?: (slotId: string) => void;
   isShuffling?: boolean;
+  onStartCookMode?: (item: CalculatedMealItem) => void;
 }
 
 export const MealCard: React.FC<MealCardProps> = ({
@@ -31,6 +32,7 @@ export const MealCard: React.FC<MealCardProps> = ({
   reason,
   onShuffleSlot,
   isShuffling = false,
+  onStartCookMode,
 }) => {
   const [isEaten, setIsEaten] = useState(slotIndex === 0); // Slot 1 default eaten like Stitch mock
   const [showSwapModal, setShowSwapModal] = useState(false);
@@ -227,6 +229,17 @@ export const MealCard: React.FC<MealCardProps> = ({
             <span className="material-symbols-outlined text-[18px]">menu_book</span>
             View Recipe &amp; Solo Hacks
           </button>
+
+          {onStartCookMode && (
+            <button
+              type="button"
+              onClick={() => onStartCookMode(item)}
+              className="px-space-sm py-2 bg-[#581825] text-white hover:bg-[#421018] rounded font-label-md text-label-md transition-all flex items-center gap-1 text-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">restaurant</span>
+              Cook Mode
+            </button>
+          )}
 
           {onExplainWithAI && (
             <button

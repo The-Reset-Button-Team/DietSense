@@ -6,6 +6,7 @@ Mutations are enqueued into the local sync_queue for cloud synchronization.
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import Response, PlainTextResponse
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone, timedelta
 import json
@@ -310,3 +311,318 @@ async def delete_meal_plan(
     )
 
     return {"status": "success", "message": f"Meal plan {plan_id} deleted"}
+
+
+# ─── Phase 8F: Export Endpoints ──────────────────────────────────────────────
+
+def _resolve_plan(plan_id: str, user_id: str, cur) -> Dict[str, Any]:
+    """Resolves plan_id ('today', 'current', or actual ID) to a plan dict."""
+    if plan_id in ("today", "current"):
+        cur.execute(
+            "SELECT * FROM meal_plans WHERE user_id = ? ORDER BY date DESC, created_at DESC LIMIT 1",
+            (user_id,),
+        )
+    else:
+        cur.execute(
+            "SELECT * FROM meal_plans WHERE id = ? AND user_id = ?",
+            (plan_id, user_id),
+        )
+    row = cur.fetchone()
+    if not row:
+        raise HTTPException(status_code=404, detail="Meal plan not found or access denied")
+    return _row_to_plan(row)
+
+
+@router.get("/meal-plans/{plan_id}/export/text", response_class=PlainTextResponse)
+@router.get("/meal_plans/{plan_id}/export/text", response_class=PlainTextResponse)
+async def export_meal_plan_text(
+    plan_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Export a meal plan as a formatted plain-text summary."""
+    user_id = user["id"]
+    with get_db_cursor() as cur:
+        plan = _resolve_plan(plan_id, user_id, cur)
+
+    items: List[Dict[str, Any]] = plan.get("items", [])
+    date_str = plan.get("date", "N/A")
+    plan_status = plan.get("status", "generated")
+
+    lines = [
+        "=" * 50,
+        "   DietSense Meal Plan",
+        f"   Date   : {date_str}",
+        f"   Status : {plan_status}",
+        "=" * 50,
+        "",
+    ]
+
+    total_cal = 0
+    total_protein = 0.0
+    total_carbs = 0.0
+    total_fat = 0.0
+
+    for item in items:
+        slot = item.get("slotName") or item.get("slot_name") or item.get("key", "Meal")
+        name = item.get("name", "Unknown Meal")
+        cal = item.get("calories", 0) or 0
+        protein = item.get("protein_g", 0.0) or 0.0
+        carbs = item.get("carbs_g", 0.0) or 0.0
+        fat = item.get("fat_g", 0.0) or 0.0
+
+        total_cal += cal
+        total_protein += protein
+        total_carbs += carbs
+        total_fat += fat
+
+        lines.append(f"[{slot}]")
+        lines.append(f"  Meal    : {name}")
+        lines.append(f"  Calories: {cal} kcal")
+        lines.append(f"  Protein : {protein:.1f}g")
+        lines.append(f"  Carbs   : {carbs:.1f}g")
+        lines.append(f"  Fat     : {fat:.1f}g")
+        lines.append("")
+
+    lines += [
+        "-" * 50,
+        "TOTALS",
+        f"  Calories: {total_cal} kcal",
+        f"  Protein : {total_protein:.1f}g",
+        f"  Carbs   : {total_carbs:.1f}g",
+        f"  Fat     : {total_fat:.1f}g",
+        "=" * 50,
+    ]
+
+    return "\n".join(lines)
+
+
+@router.get("/meal-plans/{plan_id}/export/whatsapp", response_class=PlainTextResponse)
+@router.get("/meal_plans/{plan_id}/export/whatsapp", response_class=PlainTextResponse)
+async def export_meal_plan_whatsapp(
+    plan_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Export a meal plan as WhatsApp-flavored markdown text."""
+    user_id = user["id"]
+    with get_db_cursor() as cur:
+        plan = _resolve_plan(plan_id, user_id, cur)
+
+    items: List[Dict[str, Any]] = plan.get("items", [])
+    date_str = plan.get("date", "N/A")
+
+    # Slot → emoji mapping (by common slot names)
+    SLOT_EMOJIS = {
+        "early morning": "☀️",
+        "breakfast": "🥣",
+        "lunch": "🍱",
+        "snack": "🍎",
+        "dinner": "🌙",
+        "mid morning": "🍎",
+        "pre-workout": "💪",
+        "post-workout": "🥤",
+    }
+
+    lines = [
+        f"*DietSense Meal Plan — {date_str}*",
+        "",
+    ]
+
+    total_cal = 0
+    total_protein = 0.0
+    total_carbs = 0.0
+    total_fat = 0.0
+
+    for item in items:
+        slot = item.get("slotName") or item.get("slot_name") or item.get("key", "Meal")
+        name = item.get("name", "Unknown Meal")
+        cal = item.get("calories", 0) or 0
+        protein = item.get("protein_g", 0.0) or 0.0
+        carbs = item.get("carbs_g", 0.0) or 0.0
+        fat = item.get("fat_g", 0.0) or 0.0
+
+        total_cal += cal
+        total_protein += protein
+        total_carbs += carbs
+        total_fat += fat
+
+        emoji = SLOT_EMOJIS.get(slot.lower(), "🍽️")
+        lines.append(f"{emoji} *{slot}*")
+        lines.append(f"• {name} — {cal} kcal")
+        lines.append(f"_P:{protein:.0f}g | C:{carbs:.0f}g | F:{fat:.0f}g_")
+        lines.append("")
+
+    lines.append(f"*Total: {total_cal} kcal*")
+    lines.append(f"_P:{total_protein:.0f}g | C:{total_carbs:.0f}g | F:{total_fat:.0f}g_")
+    lines.append("")
+    lines.append("_Sent via DietSense 🥗_")
+
+    return "\n".join(lines)
+
+
+@router.get("/meal-plans/{plan_id}/export/pdf")
+@router.get("/meal_plans/{plan_id}/export/pdf")
+async def export_meal_plan_pdf(
+    plan_id: str,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """Export a meal plan as a raw PDF binary (pure Python, no reportlab)."""
+    user_id = user["id"]
+    with get_db_cursor() as cur:
+        plan = _resolve_plan(plan_id, user_id, cur)
+
+    items: List[Dict[str, Any]] = plan.get("items", [])
+    date_str = plan.get("date", "N/A")
+
+    # Build text lines for the PDF stream
+    total_cal = 0
+    total_protein = 0.0
+    total_carbs = 0.0
+    total_fat = 0.0
+
+    text_lines = [
+        "DietSense Meal Plan",
+        f"Date: {date_str}",
+        f"Status: {plan.get('status', 'generated')}",
+        "",
+    ]
+
+    for item in items:
+        slot = item.get("slotName") or item.get("slot_name") or item.get("key", "Meal")
+        name = item.get("name", "Unknown Meal")
+        cal = item.get("calories", 0) or 0
+        protein = item.get("protein_g", 0.0) or 0.0
+        carbs = item.get("carbs_g", 0.0) or 0.0
+        fat = item.get("fat_g", 0.0) or 0.0
+
+        total_cal += cal
+        total_protein += protein
+        total_carbs += carbs
+        total_fat += fat
+
+        text_lines.append(f"[{slot}] {name}")
+        text_lines.append(f"  {cal} kcal | P:{protein:.0f}g C:{carbs:.0f}g F:{fat:.0f}g")
+
+    text_lines += [
+        "",
+        "--- TOTALS ---",
+        f"Total Calories: {total_cal} kcal",
+        f"Protein: {total_protein:.1f}g | Carbs: {total_carbs:.1f}g | Fat: {total_fat:.1f}g",
+    ]
+
+    # Build raw PDF using the same approach as create_mock_receipt_pdf
+    text_commands = []
+    y = 740
+    for line in text_lines:
+        clean = line.replace("(", "\\(").replace(")", "\\)")
+        text_commands.append(f"1 0 0 1 50 {y} Tm ({clean}) Tj")
+        y -= 20
+        if y < 50:
+            break  # Safety: don't overflow page
+
+    stream_content = "BT\n/F1 12 Tf\n" + "\n".join(text_commands) + "\nET"
+    stream_bytes = stream_content.encode("latin-1")
+    length = len(stream_bytes)
+
+    pdf_bytes = (
+        b"%PDF-1.4\n"
+        b"1 0 obj <</Type /Catalog /Pages 2 0 R>> endobj\n"
+        b"2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>> endobj\n"
+        b"3 0 obj <</Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj\n"
+        b"4 0 obj <</Length " + str(length).encode("latin-1") + b">> stream\n"
+        + stream_bytes
+        + b"\nendstream\nendobj\n"
+        b"5 0 obj <</Type /Font /Subtype /Type1 /BaseFont /Helvetica>> endobj\n"
+        b"xref\n0 6\n0000000000 65535 f \n"
+        b"trailer <</Size 6 /Root 1 0 R>>\nstartxref\n999\n%%EOF"
+    )
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=\"dietsense_meal_plan_{date_str}.pdf\""},
+    )
+
+
+# ─── Phase 8F: Cook Mode ──────────────────────────────────────────────────────
+
+@router.get("/meal-plans/recipes/{recipe_id}/cook")
+@router.get("/meal_plans/recipes/{recipe_id}/cook")
+async def get_cook_mode_recipe(
+    recipe_id: int,
+    user: Dict[str, Any] = Depends(get_current_user),
+):
+    """
+    Cook Mode — Returns a structured step-by-step cooking guide for a recipe.
+    Looks up the recipe in CANONICAL_RECIPES from pantry routes; falls back to defaults.
+    """
+    from backend.routes.pantry import CANONICAL_RECIPES
+
+    recipe = next((r for r in CANONICAL_RECIPES if r["id"] == recipe_id), None)
+
+    if recipe:
+        name = recipe["name"]
+        ingredients_raw = recipe.get("required_ingredients", [])
+        instructions_raw = recipe.get("instructions", "")
+
+        # Build ingredient list
+        ingredients = [
+            {"name": ing, "quantity": "as needed", "is_prepped": False}
+            for ing in ingredients_raw
+        ]
+
+        # Split instructions into steps (split on '. ' or ',' for simple parsing)
+        raw_steps = [s.strip() for s in instructions_raw.replace(". ", ".|").replace(", ", ",").split("|") if s.strip()]
+        if not raw_steps:
+            raw_steps = [instructions_raw] if instructions_raw else ["Prepare and cook as directed."]
+
+        steps = []
+        for i, instruction in enumerate(raw_steps, start=1):
+            steps.append({
+                "step_num": i,
+                "instruction": instruction,
+                "timer_recommended_seconds": 120 * i,
+                "ingredients_needed": ingredients_raw[:2] if i == 1 else ingredients_raw[i - 1:i],
+            })
+
+        return {
+            "id": recipe["id"],
+            "name": name,
+            "prep_time_mins": 5,
+            "cook_time_mins": 10,
+            "total_steps": len(steps),
+            "steps": steps,
+            "ingredients": ingredients,
+        }
+
+    # Fallback for unknown recipe_id
+    return {
+        "id": recipe_id,
+        "name": f"Recipe #{recipe_id}",
+        "prep_time_mins": 5,
+        "cook_time_mins": 10,
+        "total_steps": 3,
+        "steps": [
+            {
+                "step_num": 1,
+                "instruction": "Gather and prepare all ingredients.",
+                "timer_recommended_seconds": 120,
+                "ingredients_needed": ["water", "salt"],
+            },
+            {
+                "step_num": 2,
+                "instruction": "Cook over medium heat until done.",
+                "timer_recommended_seconds": 300,
+                "ingredients_needed": [],
+            },
+            {
+                "step_num": 3,
+                "instruction": "Plate and serve immediately.",
+                "timer_recommended_seconds": 60,
+                "ingredients_needed": [],
+            },
+        ],
+        "ingredients": [
+            {"name": "Water", "quantity": "as needed", "is_prepped": False},
+            {"name": "Salt", "quantity": "to taste", "is_prepped": False},
+        ],
+    }

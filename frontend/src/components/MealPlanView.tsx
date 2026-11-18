@@ -5,6 +5,7 @@ import { MealFrequency, RecipeData } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 import { SavedMealPlan, SavedMealPlanItem, WeeklyDayPlan, MealPlanStatus } from "@/hooks/useMealPlans";
 import { MealCard } from "./MealCard";
+import { CookModeModal } from "./CookModeModal";
 
 interface MealPlanViewProps {
   mealPlanDisplayItems: CalculatedMealItem[];
@@ -86,6 +87,16 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   const [weeklyModalOpen, setWeeklyModalOpen] = useState(false);
   const [inspectPlan, setInspectPlan] = useState<SavedMealPlan | null>(null);
   const [planToast, setPlanToast] = useState<string | null>(null);
+  const [cookModeItem, setCookModeItem] = useState<{
+    name: string;
+    id?: number;
+    steps?: string[];
+    ingredients?: { name: string; quantity: string; note?: string }[];
+    prepTimeMins?: number;
+    cookTimeMins?: number;
+  } | null>(null);
+  const [exportToast, setExportToast] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Calorie & macro calculations
   const consumedCals = Math.min(totalPlannedCals, 1240);
@@ -134,6 +145,80 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   };
 
   const currentPlanStatus: MealPlanStatus | "unsaved" = savedPlan?.status || "unsaved";
+
+  // Helper: get plan_id for export (use today's saved plan if available)
+  const exportPlanId = savedPlan?.id ?? null;
+
+  // Copy text to clipboard with toast
+  const handleCopyText = async () => {
+    if (!exportPlanId) {
+      setExportToast("Save a plan first to export it.");
+      setTimeout(() => setExportToast(null), 3000);
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const res = await fetch(`/api/meal-plans/${exportPlanId}/export/text`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("dietsense_token") || ""}` }
+      });
+      const text = await res.text();
+      await navigator.clipboard.writeText(text);
+      setExportToast("✅ Meal plan copied to clipboard!");
+    } catch {
+      setExportToast("❌ Failed to copy. Try again.");
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setExportToast(null), 3000);
+    }
+  };
+
+  // WhatsApp share
+  const handleWhatsAppShare = async () => {
+    if (!exportPlanId) {
+      setExportToast("Save a plan first to share it.");
+      setTimeout(() => setExportToast(null), 3000);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/meal-plans/${exportPlanId}/export/whatsapp`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("dietsense_token") || ""}` }
+      });
+      const text = await res.text();
+      const encoded = encodeURIComponent(text);
+      window.open(`https://wa.me/?text=${encoded}`, "_blank", "noopener");
+    } catch {
+      setExportToast("❌ Failed to generate share link.");
+      setTimeout(() => setExportToast(null), 3000);
+    }
+  };
+
+  // PDF Download
+  const handleDownloadPDF = async () => {
+    if (!exportPlanId) {
+      setExportToast("Save a plan first to download PDF.");
+      setTimeout(() => setExportToast(null), 3000);
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const res = await fetch(`/api/meal-plans/${exportPlanId}/export/pdf`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("dietsense_token") || ""}` }
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dietsense_meal_plan.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportToast("✅ PDF downloaded!");
+    } catch {
+      setExportToast("❌ PDF export failed.");
+    } finally {
+      setIsExporting(false);
+      setTimeout(() => setExportToast(null), 3000);
+    }
+  };
 
   return (
     <div className="space-y-space-lg pb-24">
@@ -525,6 +610,18 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
               onSkipSlot={(slotKey, mealName) => handleOpenSkipModal(slotKey, mealName)}
               onShuffleSlot={shuffleSlot}
               isShuffling={shufflingSlots.has(item.key)}
+              onStartCookMode={(item) => setCookModeItem({
+                name: item.backendName || item.recipe.name,
+                id: item.recipe.id,
+                steps: item.recipe.steps,
+                ingredients: item.recipe.ingredients?.map(ing => ({
+                  name: ing.name,
+                  quantity: ing.quantity,
+                  note: ing.note
+                })),
+                prepTimeMins: item.recipe.prepTimeMins,
+                cookTimeMins: item.recipe.cookTimeMins,
+              })}
             />
           ))}
 
@@ -697,6 +794,47 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           <span className="material-symbols-outlined text-[18px]">expand_less</span>
           <span className="hidden sm:inline">Top</span>
         </button>
+      </div>
+
+      {/* ─── Export & Share Bar ──────────────────────────────────────────────── */}
+      <div className="fixed bottom-0 left-0 right-0 z-30 bg-surface-container-lowest border-t border-surface-container px-space-md py-2 flex flex-wrap items-center gap-space-xs justify-center sm:justify-end shadow-lg">
+        <span className="font-label-sm text-label-sm text-on-surface-variant mr-auto hidden sm:inline">Export &amp; Share</span>
+
+        <button
+          type="button"
+          onClick={handleDownloadPDF}
+          disabled={isExporting || !exportPlanId}
+          className="flex items-center gap-1 px-3 py-2 rounded-full bg-primary text-on-primary font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm active:scale-95 disabled:opacity-50 text-xs"
+        >
+          <span className="material-symbols-outlined text-[16px]">picture_as_pdf</span>
+          <span>PDF</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleCopyText}
+          disabled={isExporting || !exportPlanId}
+          className="flex items-center gap-1 px-3 py-2 rounded-full bg-secondary text-on-secondary font-label-md text-label-md hover:opacity-80 transition-all shadow-sm active:scale-95 disabled:opacity-50 text-xs"
+        >
+          <span className="material-symbols-outlined text-[16px]">content_copy</span>
+          <span>Copy</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleWhatsAppShare}
+          disabled={!exportPlanId}
+          className="flex items-center gap-1 px-3 py-2 rounded-full bg-[#25D366] text-white font-label-md text-label-md hover:opacity-80 transition-all shadow-sm active:scale-95 disabled:opacity-50 text-xs"
+        >
+          <span className="text-[16px]">📲</span>
+          <span>WhatsApp</span>
+        </button>
+
+        {exportToast && (
+          <div className="absolute bottom-14 left-1/2 -translate-x-1/2 bg-surface-container-high text-on-surface px-4 py-2 rounded-full font-label-md text-label-md shadow-lg border border-surface-container animate-in fade-in text-xs whitespace-nowrap">
+            {exportToast}
+          </div>
+        )}
       </div>
 
       {/* ─── Historical Plans Modal ────────────────────────────────────────────── */}
@@ -1040,6 +1178,18 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Cook Mode Modal */}
+      <CookModeModal
+        isOpen={cookModeItem !== null}
+        onClose={() => setCookModeItem(null)}
+        recipeName={cookModeItem?.name ?? ""}
+        recipeId={cookModeItem?.id}
+        steps={cookModeItem?.steps}
+        ingredients={cookModeItem?.ingredients}
+        prepTimeMins={cookModeItem?.prepTimeMins}
+        cookTimeMins={cookModeItem?.cookTimeMins}
+      />
     </div>
   );
 };
