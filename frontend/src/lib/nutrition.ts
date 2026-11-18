@@ -80,6 +80,28 @@ export function checkPantryMatch(recipe: RecipeData, pantryItems: PantryItem[]) 
   };
 }
 
+export interface BackendSlotRecommendation {
+  item: {
+    id: number;
+    name: string;
+    tags: string[];
+    allergens: string[];
+    cuisine: string;
+    cost_estimate: number;
+    prep_time: number;
+    calories: number;
+    protein_g: number;
+    carbs_g: number;
+    fat_g: number;
+    fiber_g: number;
+    food_category: string;
+    data_source?: string;
+  };
+  score: number;
+  breakdown: Record<string, number>;
+  reason: string;
+}
+
 export interface CalculatedMealItem {
   key: keyof ActiveSlotsMap;
   recipe: RecipeData;
@@ -97,6 +119,13 @@ export interface CalculatedMealItem {
     matched: string[];
   };
   availableAlternatives?: RecipeData[];
+  backendName?: string;
+  backendReason?: string;
+  backendScore?: number;
+  backendBreakdown?: Record<string, number>;
+  backendAlternatives?: BackendSlotRecommendation[];
+  dataSource?: string;
+  fiber_g?: number;
 }
 
 export function calculateMealPlanItems(

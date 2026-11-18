@@ -25,6 +25,12 @@ interface MealPlanViewProps {
   inStockPantryNames?: string[];
   onGoToPantry?: () => void;
   onRegenerateDay?: () => void;
+  totalPlannedFiber?: number;
+  isLoadingRecommendations?: boolean;
+  recommendationError?: string | null;
+  onRetryRecommendations?: () => void;
+  shuffleSlot?: (slotId: string) => void;
+  shufflingSlots?: Set<string>;
 }
 
 export const MealPlanView: React.FC<MealPlanViewProps> = ({
@@ -47,6 +53,12 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   inStockPantryNames,
   onGoToPantry,
   onRegenerateDay,
+  totalPlannedFiber,
+  isLoadingRecommendations = false,
+  recommendationError = null,
+  onRetryRecommendations,
+  shuffleSlot,
+  shufflingSlots = new Set(),
 }) => {
   // Modal states
   const [skipModalOpen, setSkipModalOpen] = useState(false);
@@ -88,6 +100,24 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
 
   return (
     <div className="space-y-space-lg pb-24">
+      {/* Recommendation Error Banner */}
+      {recommendationError && (
+        <div className="flex items-center justify-between gap-3 px-space-md py-space-sm bg-error-container/20 border border-error/20 rounded-lg text-body-sm">
+          <div className="flex items-center gap-2 text-on-surface-variant">
+            <span className="material-symbols-outlined text-[16px] text-error">warning</span>
+            <span>Using local recommendations — backend unavailable</span>
+          </div>
+          {onRetryRecommendations && (
+            <button
+              type="button"
+              onClick={onRetryRecommendations}
+              className="px-3 py-1 bg-primary text-on-primary rounded font-label-sm text-label-sm hover:bg-primary-container shrink-0"
+            >
+              Retry
+            </button>
+          )}
+        </div>
+      )}
       {/* Top Editorial Header & Clinical Status Indicator */}
       <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-space-md pt-space-xs pb-space-sm border-b border-surface-container-highest">
         <div className="space-y-1">
@@ -340,6 +370,28 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
         {/* Primary 8-Column Meal Ledger */}
         <div className="lg:col-span-8 space-y-space-md">
+          {/* Loading skeleton while recommendations fetch (no items yet) */}
+          {isLoadingRecommendations && mealPlanDisplayItems.length === 0 && (
+            <div className="space-y-space-md">
+              {[0, 1, 2].map((i) => (
+                <div
+                  key={i}
+                  className="bg-surface-container-lowest rounded-xl p-space-md border border-surface-container animate-pulse"
+                >
+                  <div className="h-4 bg-surface-container rounded w-32 mb-3" />
+                  <div className="flex gap-space-md">
+                    <div className="w-32 h-32 rounded-lg bg-surface-container shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-5 bg-surface-container rounded w-3/4" />
+                      <div className="h-3 bg-surface-container rounded w-full" />
+                      <div className="h-3 bg-surface-container rounded w-1/2" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {mealPlanDisplayItems.map((item, index) => (
             <MealCard
               key={item.key || index}
@@ -351,8 +403,18 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
               onExplainWithAI={onExplainWithAI}
               onCookWithAI={onCookWithAI}
               onSkipSlot={(slotKey, mealName) => handleOpenSkipModal(slotKey, mealName)}
+              onShuffleSlot={shuffleSlot}
+              isShuffling={shufflingSlots.has(item.key)}
             />
           ))}
+
+          {/* Empty state: no items and not loading */}
+          {!isLoadingRecommendations && mealPlanDisplayItems.length === 0 && (
+            <div className="text-center py-12 text-on-surface-variant">
+              <span className="material-symbols-outlined text-[48px] block mb-3 opacity-40">restaurant</span>
+              <p className="font-body-md text-body-md">No meal slots active. Enable slots in your profile.</p>
+            </div>
+          )}
         </div>
 
         {/* Persistent 4-Column Clinical Rail & Fast Action Cards */}
@@ -426,7 +488,7 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
                   Dietary Fiber
                 </span>
                 <span className="font-label-md text-label-md text-on-surface font-semibold">
-                  28g / 35g
+                  {totalPlannedFiber !== undefined ? `${Math.round(totalPlannedFiber)}g` : "28g"} / 35g
                 </span>
               </div>
               <div className="flex items-center justify-between text-body-sm font-body-sm">

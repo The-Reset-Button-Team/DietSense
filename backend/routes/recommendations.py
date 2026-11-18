@@ -35,7 +35,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 8.5,
         "carbs_g": 55.0,
         "fat_g": 9.0,
+        "fiber_g": 3.5,
         "food_category": "Cereals and Millets",
+        "data_source": "ICMR_NIN",
     },
     {
         "id": 2,
@@ -49,7 +51,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 18.0,
         "carbs_g": 48.0,
         "fat_g": 7.0,
+        "fiber_g": 5.0,
         "food_category": "Grain Legumes and Pulses",
+        "data_source": "ICMR_NIN",
     },
     {
         "id": 3,
@@ -63,7 +67,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 22.0,
         "carbs_g": 78.0,
         "fat_g": 11.0,
+        "fiber_g": 7.2,
         "food_category": "Cereals and Millets",
+        "data_source": "ICMR_NIN",
     },
     {
         "id": 4,
@@ -77,7 +83,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 45.0,
         "carbs_g": 42.0,
         "fat_g": 12.0,
+        "fiber_g": 2.5,
         "food_category": "Poultry",
+        "data_source": "USDA",
     },
     {
         "id": 5,
@@ -91,7 +99,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 16.0,
         "carbs_g": 65.0,
         "fat_g": 8.0,
+        "fiber_g": 6.0,
         "food_category": "Cereals and Millets",
+        "data_source": "ICMR_NIN",
     },
     {
         "id": 6,
@@ -105,7 +115,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 4.5,
         "carbs_g": 24.0,
         "fat_g": 6.0,
+        "fiber_g": 4.0,
         "food_category": "Nuts and Oilseeds",
+        "data_source": "ICMR_NIN",
     },
     {
         "id": 7,
@@ -119,7 +131,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 22.0,
         "carbs_g": 38.0,
         "fat_g": 14.0,
+        "fiber_g": 2.8,
         "food_category": "Milk and Milk Products",
+        "data_source": "ICMR_NIN",
     },
     {
         "id": 8,
@@ -133,7 +147,9 @@ SAMPLE_CANDIDATES = [
         "protein_g": 24.0,
         "carbs_g": 52.0,
         "fat_g": 16.0,
+        "fiber_g": 6.5,
         "food_category": "Milk and Milk Products",
+        "data_source": "ICMR_NIN",
     },
 ]
 
@@ -158,14 +174,24 @@ _HEAVY_MEAT_CATEGORIES = ["poultry", "animal meat", "marine fish", "fresh water 
                            "crustacean", "mollusk"]
 
 
-def _build_slot_query(slot_id: str, limit: Optional[int] = None) -> tuple:
+SLOT_CALORIE_WEIGHTS: Dict[str, float] = {
+    "early_morning": 0.05,
+    "breakfast": 0.25,
+    "lunch": 0.35,
+    "evening_snack": 0.10,
+    "dinner": 0.25,
+}
+
+
+def _build_slot_query(slot_id: str, limit: Optional[int] = None, shuffle: bool = False) -> tuple:
     """
     Build a parameterised SQLite query string and params tuple for a given slot_id.
     Returns (query_string, params_tuple).
+    Supports optional ORDER BY RANDOM() when shuffle=True.
     """
     base_select = """
         SELECT id, name, food_category, calories_kcal, protein_g, carbohydrates_g, fat_g,
-               is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
+               fiber_g, is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
         FROM foods
         WHERE calories_kcal > 50
     """
@@ -206,6 +232,9 @@ def _build_slot_query(slot_id: str, limit: Optional[int] = None) -> tuple:
             params.append(f"%{kw}%")
         query = f"{base_select} AND ({include_clauses})"
 
+    if shuffle:
+        query += " ORDER BY RANDOM()"
+
     if limit:
         query += f" LIMIT {int(limit)}"
 
@@ -218,12 +247,23 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
     offset is added to the DB id to avoid collisions with SAMPLE_CANDIDATES ids.
     """
     cat = str(r["food_category"] or "").lower()
-    tags = [cat]
+    tags = [cat] + [w.strip() for w in cat.replace("&", " ").replace("and", " ").split() if len(w.strip()) > 2]
+    if "milk" in cat or "dairy" in cat:
+        tags.extend(["dairy", "milk"])
+    if "egg" in cat:
+        tags.extend(["egg", "eggs"])
+    if any(m in cat for m in ["meat", "poultry", "beef", "pork", "chicken"]):
+        tags.append("meat")
+    if any(f in cat for f in ["fish", "crustacean", "mollusk", "seafood"]):
+        tags.extend(["fish", "seafood"])
 
     if r["is_vegetarian"]:
         tags.append("veg")
     else:
         tags.append("non-veg")
+
+    if "is_vegan" in r.keys() and not r["is_vegan"]:
+        tags.append("non-vegan")
 
     if r["is_gluten_free"]:
         tags.append("gluten-free")
@@ -243,13 +283,24 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
     if cost > 100:
         tags.append("expensive")
 
-    allergens = [a.strip() for a in (r["allergen_flags"] or "").split(",") if a.strip()]
+    allergens = [a.strip().lower() for a in (r["allergen_flags"] or "").split(",") if a.strip()]
+    if "nuts" in allergens and "peanuts" not in allergens:
+        allergens.append("peanuts")
+    if "peanuts" in allergens and "nuts" not in allergens:
+        allergens.append("nuts")
+
+    fiber_val = 0.0
+    if "fiber_g" in r.keys() and r["fiber_g"] is not None:
+        try:
+            fiber_val = float(r["fiber_g"])
+        except (ValueError, TypeError):
+            fiber_val = 0.0
 
     return {
         "id": offset + r["id"],
         "name": r["name"],
-        "tags": tags,
-        "allergens": allergens,
+        "tags": list(set(tags)),
+        "allergens": list(set(allergens)),
         "cuisine": "indian" if "ICMR" in str(r["data_source"] or "") else "general",
         "cost_estimate": cost,
         "prep_time": prep,
@@ -257,11 +308,13 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
         "protein_g": float(r["protein_g"]),
         "carbs_g": float(r["carbohydrates_g"]),
         "fat_g": float(r["fat_g"]),
+        "fiber_g": fiber_val,
         "food_category": r["food_category"],
+        "data_source": str(r["data_source"]) if "data_source" in r.keys() and r["data_source"] else "USDA",
     }
 
 
-def load_candidate_foods(slot_id: Optional[str] = None) -> List[Dict[str, Any]]:
+def load_candidate_foods(slot_id: Optional[str] = None, shuffle: bool = False) -> List[Dict[str, Any]]:
     """
     Loads candidate items from the full local SQLite foods catalog (all records
     with calories_kcal > 50, up to 14,099 rows), falling back to SAMPLE_CANDIDATES
@@ -270,6 +323,7 @@ def load_candidate_foods(slot_id: Optional[str] = None) -> List[Dict[str, Any]]:
     When slot_id is provided the query is filtered to categories relevant to that
     meal slot (see SLOT_CATEGORY_KEYWORDS). When slot_id is None all non-trivial
     foods are returned (full-day planning).
+    When shuffle is True, candidates are sampled randomly from SQLite.
     """
     db_path = settings.sqlite_db_path
     if not os.path.exists(db_path):
@@ -282,7 +336,7 @@ def load_candidate_foods(slot_id: Optional[str] = None) -> List[Dict[str, Any]]:
         cur = conn.cursor()
 
         if slot_id is not None:
-            query, params = _build_slot_query(slot_id, limit=60)
+            query, params = _build_slot_query(slot_id, limit=60, shuffle=shuffle)
             if query is None:
                 # Unknown slot — return empty list; caller raises 400
                 conn.close()
@@ -290,11 +344,13 @@ def load_candidate_foods(slot_id: Optional[str] = None) -> List[Dict[str, Any]]:
             cur.execute(query, params)
         else:
             # Full catalog — balanced sample for full-day planning
-            cur.execute("""
+            order_clause = "ORDER BY RANDOM()" if shuffle else ""
+            cur.execute(f"""
                 SELECT id, name, food_category, calories_kcal, protein_g, carbohydrates_g, fat_g,
-                       is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
+                       fiber_g, is_vegetarian, is_vegan, is_gluten_free, allergen_flags, data_source
                 FROM foods
                 WHERE calories_kcal > 50
+                {order_clause}
                 LIMIT 40
             """)
 
@@ -333,6 +389,26 @@ def _get_pantry_items(user_id: str) -> List[str]:
     return pantry_items
 
 
+def _normalize_profile(user_profile: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize aliases (dietary_preference -> dietary_pref, calorie_target -> target_calories)."""
+    prof = dict(user_profile)
+    if "dietary_preference" in prof and "dietary_pref" not in prof:
+        prof["dietary_pref"] = prof["dietary_preference"]
+    if "calorie_target" in prof and "target_calories" not in prof:
+        prof["target_calories"] = prof["calorie_target"]
+    if "dietary_pref" not in prof:
+        prof["dietary_pref"] = "vegetarian"
+    if "target_calories" not in prof:
+        prof["target_calories"] = 2000
+    if "budget_per_meal" not in prof:
+        prof["budget_per_meal"] = 100
+    if "prep_time_limit" not in prof:
+        prof["prep_time_limit"] = 30
+    if "allergies" not in prof:
+        prof["allergies"] = []
+    return prof
+
+
 @router.post("/")
 async def generate_recommendations(
     user_profile: Dict[str, Any],
@@ -352,6 +428,7 @@ async def generate_recommendations(
     if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
         user_profile = user_profile["user_profile"]
 
+    user_profile = _normalize_profile(user_profile)
     user_id = current_user["id"]
     meal_logs = get_user_meal_logs(user_id)
 
@@ -376,10 +453,11 @@ async def generate_recommendations(
 async def generate_slot_recommendations(
     slot_id: str,
     user_profile: Dict[str, Any],
+    shuffle: bool = False,
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
-    Single-slot regeneration endpoint. Returns up to 5 alternative foods
+    Single-slot regeneration endpoint. Returns 3 to 5 alternative foods
     ranked by the full ML pipeline (safety gate → TF-IDF → scoring →
     adaptive penalties → pantry bonus → explainability).
 
@@ -387,21 +465,7 @@ async def generate_slot_recommendations(
         early_morning, breakfast, lunch, evening_snack, dinner
 
     Request body is the same ``user_profile`` dict as ``POST /recommendations/``.
-
-    Each result object has the shape::
-
-        {
-            "item": {
-                "id", "name", "tags", "allergens", "cuisine",
-                "cost_estimate", "prep_time", "calories",
-                "protein_g", "carbs_g", "fat_g", "food_category"
-            },
-            "score": float,
-            "breakdown": { ... },
-            "reason": string
-        }
-
-    Returns 400 if ``slot_id`` is not recognised.
+    Supports optional ``shuffle: bool`` in query or body to re-sample candidates from SQLite.
     user_id is derived exclusively from JWT for authorization and isolation.
     """
     # Validate slot_id against the known mapping
@@ -416,11 +480,20 @@ async def generate_slot_recommendations(
     if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
         user_profile = user_profile["user_profile"]
 
+    is_shuffle = shuffle or bool(user_profile.get("shuffle", False))
+    user_profile = _normalize_profile(user_profile)
+
+    top_n = int(user_profile.get("top_n", 5))
+    if top_n < 3:
+        top_n = 3
+    elif top_n > 5:
+        top_n = 5
+
     user_id = current_user["id"]
     meal_logs = get_user_meal_logs(user_id)
     pantry_items = _get_pantry_items(user_id)
 
-    candidates = load_candidate_foods(slot_id=slot_id)
+    candidates = load_candidate_foods(slot_id=slot_id, shuffle=is_shuffle)
     if not candidates:
         # Fallback: slot filtered everything — return empty list gracefully
         return []
@@ -429,7 +502,114 @@ async def generate_slot_recommendations(
         user_profile=user_profile,
         candidates=candidates,
         meal_logs=meal_logs,
-        top_n=5,
+        top_n=top_n,
         pantry_items=pantry_items,
     )
     return results
+
+
+@router.post("/daily")
+async def generate_daily_recommendations(
+    payload: Dict[str, Any],
+    shuffle: bool = False,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+):
+    """
+    Generate evidence-based daily meal plan recommendations from the SQLite food catalog.
+    Returns 3 to 5 alternative recommendations for each active meal slot,
+    filtered by safety gate (dietary restrictions & declared allergens),
+    scored with respect to calorie and macro targets, and calculated daily nutrition totals.
+    Supports per-slot shuffle or whole-plan shuffle.
+    """
+    user_profile = payload.get("user_profile", payload)
+    if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
+        user_profile = user_profile["user_profile"]
+
+    user_profile = _normalize_profile(user_profile)
+    user_id = current_user["id"]
+    meal_logs = get_user_meal_logs(user_id)
+    pantry_items = _get_pantry_items(user_id)
+
+    raw_active_slots = payload.get("active_slots", {
+        "early_morning": False,
+        "breakfast": True,
+        "lunch": True,
+        "evening_snack": False,
+        "dinner": True,
+    })
+    active_slots = {
+        s: bool(raw_active_slots.get(s, False))
+        for s in ["early_morning", "breakfast", "lunch", "evening_snack", "dinner"]
+    }
+    if not any(active_slots.values()):
+        active_slots["breakfast"] = True
+        active_slots["lunch"] = True
+        active_slots["dinner"] = True
+
+    is_shuffle = shuffle or bool(payload.get("shuffle", False))
+    shuffle_slot = payload.get("shuffle_slot")
+
+    top_n = int(payload.get("top_n", 5))
+    if top_n < 3:
+        top_n = 3
+    elif top_n > 5:
+        top_n = 5
+
+    total_target_cals = float(user_profile.get("target_calories", 2000.0))
+    if total_target_cals <= 0:
+        total_target_cals = 2000.0
+
+    total_active_weight = sum(SLOT_CALORIE_WEIGHTS[s] for s, active in active_slots.items() if active)
+    if total_active_weight <= 0:
+        total_active_weight = 1.0
+
+    slot_results: Dict[str, List[Dict[str, Any]]] = {}
+    total_cals = 0.0
+    total_prot = 0.0
+    total_carbs = 0.0
+    total_fat = 0.0
+    total_fiber = 0.0
+
+    for slot_id in ["early_morning", "breakfast", "lunch", "evening_snack", "dinner"]:
+        if not active_slots.get(slot_id):
+            continue
+
+        weight = SLOT_CALORIE_WEIGHTS.get(slot_id, 0.25)
+        norm_ratio = weight / total_active_weight
+        slot_target_cals = total_target_cals * norm_ratio
+
+        slot_profile = dict(user_profile)
+        slot_profile["target_calories"] = total_target_cals
+        slot_profile["slot_target_calories"] = slot_target_cals
+
+        slot_shuffle = is_shuffle or (shuffle_slot == slot_id)
+        candidates = load_candidate_foods(slot_id=slot_id, shuffle=slot_shuffle)
+
+        recs = recommend(
+            user_profile=slot_profile,
+            candidates=candidates,
+            meal_logs=meal_logs,
+            top_n=top_n,
+            pantry_items=pantry_items,
+        )
+
+        slot_results[slot_id] = recs
+
+        if recs:
+            first_item = recs[0]["item"]
+            total_cals += float(first_item.get("calories", 0))
+            total_prot += float(first_item.get("protein_g", 0))
+            total_carbs += float(first_item.get("carbs_g", 0))
+            total_fat += float(first_item.get("fat_g", 0))
+            total_fiber += float(first_item.get("fiber_g", 0))
+
+    return {
+        "slots": slot_results,
+        "totals": {
+            "calories": round(total_cals),
+            "protein_g": round(total_prot, 1),
+            "carbs_g": round(total_carbs, 1),
+            "fat_g": round(total_fat, 1),
+            "fiber_g": round(total_fiber, 1),
+        },
+    }

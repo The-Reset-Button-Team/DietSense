@@ -16,7 +16,7 @@ import {
 } from "@/lib/nutrition";
 import { useAuth } from "@/context/AuthContext";
 import { apiClient } from "@/lib/api-client";
-import { useRecommendations } from "@/hooks/useRecommendations";
+import { useDailyRecommendations } from "@/hooks/useDailyRecommendations";
 
 import { Header } from "@/components/Header";
 import { TabNav, TabType } from "@/components/TabNav";
@@ -252,8 +252,16 @@ function MainApp() {
     ]
   );
 
-  // ─── Backend Recommendations (authenticated users only) ────────────────────
-  const { recommendations } = useRecommendations({
+  // ─── Backend Daily Recommendations (authenticated users only) ─────────────
+  const {
+    slots: dailySlots,
+    totals: dailyTotals,
+    loading: recommendationsLoading,
+    error: recommendationsError,
+    refetch: refetchRecommendations,
+    shuffleSlot,
+    shufflingSlots,
+  } = useDailyRecommendations({
     profile: user,
     activeSlots,
     pantryItems,
@@ -261,39 +269,47 @@ function MainApp() {
   });
 
   /**
-   * Merge backend nutritional values into the static meal plan items.
-   * When authenticated and backend data is available, override macros with
-   * real values from the backend while preserving the existing recipe display
-   * info (name, icon, tagline, etc.).
-   * Falls back silently to mealPlanDisplayItems when no backend data.
+   * Merge backend per-slot recommendations into static meal plan items.
+   * For each active slot, slot[0] (top recommendation) overrides nutrition values.
+   * Passes all alternatives as backendAlternatives for the Swap modal.
+   * Falls back to mealPlanDisplayItems when no backend data available.
    */
   const activeMealItems = useMemo((): CalculatedMealItem[] => {
-    if (!recommendations || recommendations.length === 0) {
+    const hasBackendData = Object.keys(dailySlots).length > 0;
+    if (!hasBackendData) {
       return mealPlanDisplayItems;
     }
 
-    return mealPlanDisplayItems.map((item, idx) => {
-      const rec = recommendations[idx];
-      if (!rec) return item;
+    return mealPlanDisplayItems.map((item) => {
+      const slotRecs = dailySlots[item.key];
+      if (!slotRecs || slotRecs.length === 0) return item;
 
+      const topRec = slotRecs[0];
       return {
         ...item,
-        // Override nutritional numbers with real backend values (not percentage ratios)
-        calories: Math.round(rec.item.calories),
-        protein: Math.round(rec.item.protein_g),
-        carbs: Math.round(rec.item.carbs_g),
-        fat: Math.round(rec.item.fat_g),
-        // fibre not in backend response — keep existing static value
-        fibre: item.fibre,
+        // Override nutritional numbers with real backend values
+        calories: Math.round(topRec.item.calories),
+        protein: Math.round(topRec.item.protein_g),
+        carbs: Math.round(topRec.item.carbs_g),
+        fat: Math.round(topRec.item.fat_g),
+        fibre: topRec.item.fiber_g > 0 ? topRec.item.fiber_g : item.fibre,
+        // Enrich with backend metadata
+        backendName: topRec.item.name,
+        backendReason: topRec.reason,
+        backendScore: topRec.score,
+        backendBreakdown: topRec.breakdown,
+        backendAlternatives: slotRecs,
+        dataSource: topRec.item.data_source,
       };
     });
-  }, [mealPlanDisplayItems, recommendations]);
+  }, [mealPlanDisplayItems, dailySlots]);
 
-  // Recalculate totals from whichever items are active
-  const totalPlannedCals = activeMealItems.reduce((acc, item) => acc + item.calories, 0);
-  const totalPlannedProt = activeMealItems.reduce((acc, item) => acc + item.protein, 0);
-  const totalPlannedCarbs = activeMealItems.reduce((acc, item) => acc + item.carbs, 0);
-  const totalPlannedFat = activeMealItems.reduce((acc, item) => acc + item.fat, 0);
+  // Use backend daily totals when available, otherwise sum from activeMealItems
+  const totalPlannedCals = dailyTotals?.calories ?? activeMealItems.reduce((acc, item) => acc + item.calories, 0);
+  const totalPlannedProt = dailyTotals?.protein_g ?? activeMealItems.reduce((acc, item) => acc + item.protein, 0);
+  const totalPlannedCarbs = dailyTotals?.carbs_g ?? activeMealItems.reduce((acc, item) => acc + item.carbs, 0);
+  const totalPlannedFat = dailyTotals?.fat_g ?? activeMealItems.reduce((acc, item) => acc + item.fat, 0);
+  const totalPlannedFiber = dailyTotals?.fiber_g ?? activeMealItems.reduce((acc, item) => acc + (item.fibre || 0), 0);
 
   const inStockPantryNames = useMemo(
     () => pantryItems.filter((i) => i.inStock).map((i) => i.name),
@@ -329,12 +345,19 @@ function MainApp() {
             proteinGrams={macros.proteinGrams}
             carbsGrams={macros.carbsGrams}
             fatGrams={macros.fatGrams}
+            totalPlannedFiber={totalPlannedFiber}
             onOpenRecipe={(recipe) => setActiveRecipeModal(recipe)}
             onSelectAlternative={handleSelectAlternative}
             onExplainWithAI={(foodId, foodName) => setExplainModal({ foodId, foodName })}
             onCookWithAI={(foodId, foodName) => setCookingModal({ foodId, foodName })}
             inStockPantryNames={inStockPantryNames}
             onGoToPantry={() => setActiveTab("pantry")}
+            onRegenerateDay={refetchRecommendations}
+            isLoadingRecommendations={recommendationsLoading}
+            recommendationError={recommendationsError}
+            onRetryRecommendations={refetchRecommendations}
+            shuffleSlot={shuffleSlot}
+            shufflingSlots={shufflingSlots}
           />
         )}
 

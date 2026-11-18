@@ -15,6 +15,8 @@ interface MealCardProps {
   onCookWithAI?: (foodId: number, foodName: string) => void;
   onSkipSlot?: (slotKey: string, mealName: string) => void;
   reason?: string;
+  onShuffleSlot?: (slotId: string) => void;
+  isShuffling?: boolean;
 }
 
 export const MealCard: React.FC<MealCardProps> = ({
@@ -27,6 +29,8 @@ export const MealCard: React.FC<MealCardProps> = ({
   onCookWithAI,
   onSkipSlot,
   reason,
+  onShuffleSlot,
+  isShuffling = false,
 }) => {
   const [isEaten, setIsEaten] = useState(slotIndex === 0); // Slot 1 default eaten like Stitch mock
   const [showSwapModal, setShowSwapModal] = useState(false);
@@ -107,7 +111,7 @@ export const MealCard: React.FC<MealCardProps> = ({
         <div className="space-y-space-xs flex-1 min-w-0">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-headline-sm text-headline-sm text-primary font-serif">
-              {item.recipe.name}
+              {item.backendName || item.recipe.name}
             </h3>
             <span className="px-2 py-0.5 rounded font-label-sm text-label-sm bg-surface-container text-on-surface-variant shrink-0">
               {item.recipe.badge || "ICMR-NIN Validated"}
@@ -120,9 +124,37 @@ export const MealCard: React.FC<MealCardProps> = ({
               <span className="material-symbols-outlined text-[15px]">auto_awesome</span>
               Explainable Match:
             </span>
-            <span className="text-secondary font-semibold">+0.42 taste profile</span>
-            <span>•</span>
-            <span className="text-primary font-semibold">+0.30 macro fit</span>
+            {item.backendBreakdown ? (
+              <>
+                {item.backendBreakdown.similarity !== undefined && (
+                  <span className="text-secondary font-semibold">
+                    +{item.backendBreakdown.similarity.toFixed(2)} taste profile
+                  </span>
+                )}
+                {item.backendBreakdown.macro_fit !== undefined && (
+                  <>
+                    <span>•</span>
+                    <span className="text-primary font-semibold">
+                      +{item.backendBreakdown.macro_fit.toFixed(2)} macro fit
+                    </span>
+                  </>
+                )}
+                {item.backendBreakdown.budget_fit !== undefined && (
+                  <>
+                    <span>•</span>
+                    <span className="text-on-surface-variant font-semibold">
+                      +{item.backendBreakdown.budget_fit.toFixed(2)} budget fit
+                    </span>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <span className="text-secondary font-semibold">+0.42 taste profile</span>
+                <span>•</span>
+                <span className="text-primary font-semibold">+0.30 macro fit</span>
+              </>
+            )}
             <span>•</span>
             <span className="text-on-surface flex items-center gap-1 font-semibold">
               <span className="material-symbols-outlined text-[13px] text-secondary">
@@ -139,6 +171,13 @@ export const MealCard: React.FC<MealCardProps> = ({
           <p className="font-body-sm text-body-sm text-on-surface-variant pt-0.5">
             {item.recipe.tagline}
           </p>
+
+          {(item.backendReason || reason) && (
+            <p className="font-body-sm text-body-sm text-secondary italic pt-0.5">
+              <span className="material-symbols-outlined text-[14px] mr-1 align-middle">psychology</span>
+              {item.backendReason || reason}
+            </p>
+          )}
 
           {/* Macronutrient Chips */}
           <div className="flex flex-wrap items-center gap-space-xs pt-1">
@@ -258,33 +297,100 @@ export const MealCard: React.FC<MealCardProps> = ({
             </div>
 
             <div className="space-y-2 max-h-72 overflow-y-auto">
-              {(item.availableAlternatives || []).map((alt: RecipeData, idx: number) => (
-                <div
-                  key={idx}
-                  className="p-space-sm bg-surface-container-low rounded-lg border border-surface-container flex items-center justify-between gap-3 hover:border-primary transition-all"
+              {/* Shuffle button for backend alternatives */}
+              {onShuffleSlot && (
+                <button
+                  type="button"
+                  onClick={() => onShuffleSlot(item.key)}
+                  disabled={isShuffling}
+                  className="w-full py-2 mb-2 bg-surface-container hover:bg-surface-container-high text-primary font-label-md text-label-md rounded transition-colors flex items-center justify-center gap-2 border border-surface-container disabled:opacity-50"
                 >
-                  <div>
-                    <h5 className="font-headline-sm text-sm text-on-surface font-serif">
-                      {alt.name}
-                    </h5>
-                    <p className="text-body-sm text-on-surface-variant font-body-sm">
-                      {alt.prepTimeMins || 15}m prep • {alt.badge || "Verified"}
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onSelectAlternative) {
-                        onSelectAlternative(item.key, alt.name);
-                      }
-                      setShowSwapModal(false);
-                    }}
-                    className="px-3 py-1.5 bg-primary text-on-primary rounded font-label-sm text-label-sm hover:bg-primary-container"
+                  <span className={`material-symbols-outlined text-[16px] ${isShuffling ? "animate-spin" : ""}`}>
+                    refresh
+                  </span>
+                  {isShuffling ? "Finding new options..." : "Shuffle Alternatives"}
+                </button>
+              )}
+
+              {/* Backend alternatives take priority */}
+              {item.backendAlternatives && item.backendAlternatives.length > 0 ? (
+                item.backendAlternatives.map((alt, idx) => (
+                  <div
+                    key={alt.item.id || idx}
+                    className="p-space-sm bg-surface-container-low rounded-lg border border-surface-container flex items-start justify-between gap-3 hover:border-primary transition-all"
                   >
-                    Select
-                  </button>
-                </div>
-              ))}
+                    <div className="flex-1 min-w-0">
+                      <h5 className="font-headline-sm text-sm text-on-surface font-serif">{alt.item.name}</h5>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary text-[10px]">
+                          {Math.round(alt.item.calories)} kcal
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-primary/10 text-primary text-[10px]">
+                          {Math.round(alt.item.protein_g)}g P
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-amber-500/10 text-amber-700 text-[10px]">
+                          {Math.round(alt.item.carbs_g)}g C
+                        </span>
+                        <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-secondary/10 text-secondary text-[10px]">
+                          {Math.round(alt.item.fat_g)}g F
+                        </span>
+                        {alt.item.fiber_g > 0 && (
+                          <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant text-[10px]">
+                            {alt.item.fiber_g.toFixed(1)}g Fibre
+                          </span>
+                        )}
+                      </div>
+                      {alt.reason && (
+                        <p className="text-body-sm text-on-surface-variant font-body-sm mt-1 text-[11px] italic">
+                          {alt.reason}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSelectAlternative) {
+                          onSelectAlternative(item.key, alt.item.name);
+                        }
+                        setShowSwapModal(false);
+                      }}
+                      className="px-3 py-1.5 bg-primary text-on-primary rounded font-label-sm text-label-sm hover:bg-primary-container shrink-0"
+                    >
+                      Select
+                    </button>
+                  </div>
+                ))
+              ) : (item.availableAlternatives || []).length > 0 ? (
+                (item.availableAlternatives || []).map((alt: RecipeData, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-space-sm bg-surface-container-low rounded-lg border border-surface-container flex items-center justify-between gap-3 hover:border-primary transition-all"
+                  >
+                    <div>
+                      <h5 className="font-headline-sm text-sm text-on-surface font-serif">{alt.name}</h5>
+                      <p className="text-body-sm text-on-surface-variant font-body-sm">
+                        {alt.prepTimeMins || 15}m prep • {alt.badge || "Verified"}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSelectAlternative) {
+                          onSelectAlternative(item.key, alt.name);
+                        }
+                        setShowSwapModal(false);
+                      }}
+                      className="px-3 py-1.5 bg-primary text-on-primary rounded font-label-sm text-label-sm hover:bg-primary-container"
+                    >
+                      Select
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-body-sm text-on-surface-variant font-body-sm text-center py-4">
+                  No alternatives available. Try shuffling for new options.
+                </p>
+              )}
             </div>
           </div>
         </div>
