@@ -9,11 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any, List, Optional
 import os
 import sqlite3
+import json
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
 from routes.meal_logs import get_user_meal_logs
 from ml.recommendation.recommender import recommend
+from ml.scoring.safety_gate import audit_safe, filter_safe
 from db.database import get_db_cursor
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
@@ -643,4 +645,252 @@ async def generate_daily_recommendations(
             "fat_g": round(total_fat, 1),
             "fiber_g": round(total_fiber, 1),
         },
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# PHASE 8B ─ SWAP & SAFETY SHIELD ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+def _describe_active_rules(user_profile: Dict[str, Any]) -> List[Dict[str, str]]:
+    """Return human-readable list of active safety rules for the user."""
+    diet = str(user_profile.get("dietary_pref") or user_profile.get("dietary_preference") or "").strip().lower()
+    allergies: List[str] = [
+        str(a).strip().lower()
+        for a in (user_profile.get("allergies") or [])
+        if str(a).strip()
+    ]
+
+    rules: List[Dict[str, str]] = []
+
+    DIET_LABELS = {
+        "vegetarian": "Vegetarian — no meat, poultry, fish or seafood",
+        "lacto-vegetarian": "Lacto-vegetarian — no meat or eggs",
+        "vegan": "Vegan — no animal products whatsoever",
+        "eggetarian": "Eggetarian — eggs allowed; no meat or fish",
+        "ovo-vegetarian": "Ovo-vegetarian — eggs allowed; no dairy or meat",
+        "pescatarian": "Pescatarian — fish/seafood allowed; no red meat or poultry",
+    }
+    if diet in DIET_LABELS:
+        rules.append({"rule": "diet", "label": DIET_LABELS[diet], "value": diet})
+
+    for allergy in allergies:
+        rules.append({
+            "rule": "allergen",
+            "label": f"Allergen exclusion: {allergy.title()}",
+            "value": allergy,
+        })
+
+    if not rules:
+        rules.append({
+            "rule": "none",
+            "label": "No dietary restrictions configured — all foods eligible",
+            "value": "",
+        })
+
+    return rules
+
+
+def _macro_delta(current: Dict[str, Any], candidate: Dict[str, Any]) -> Dict[str, float]:
+    """Compute signed macro deltas: candidate − current."""
+    return {
+        "delta_calories": round(float(candidate.get("calories", 0)) - float(current.get("calories", 0)), 1),
+        "delta_protein_g": round(float(candidate.get("protein_g", 0)) - float(current.get("protein_g", 0)), 1),
+        "delta_carbs_g": round(float(candidate.get("carbs_g", 0)) - float(current.get("carbs_g", 0)), 1),
+        "delta_fat_g": round(float(candidate.get("fat_g", 0)) - float(current.get("fat_g", 0)), 1),
+        "delta_fiber_g": round(float(candidate.get("fiber_g", 0)) - float(current.get("fiber_g", 0)), 1),
+    }
+
+
+def _macro_match_pct(current: Dict[str, Any], candidate: Dict[str, Any]) -> int:
+    """Compute a 0–100 macro similarity score between two food items."""
+    cur_cal = float(current.get("calories", 1)) or 1
+    cand_cal = float(candidate.get("calories", 0))
+    cal_diff = abs(cur_cal - cand_cal) / cur_cal
+
+    cur_prot = float(current.get("protein_g", 1)) or 1
+    cand_prot = float(candidate.get("protein_g", 0))
+    prot_diff = abs(cur_prot - cand_prot) / cur_prot
+
+    # Weight calories 60%, protein 40%
+    score = max(0.0, 1.0 - (0.6 * cal_diff + 0.4 * prot_diff))
+    return round(score * 100)
+
+
+@router.post("/swap")
+async def generate_swap_alternatives(
+    payload: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Generate backend-scored swap alternatives for a specific meal slot.
+
+    Request body:
+        current_meal: { name, calories, protein_g, carbs_g, fat_g, fiber_g, ... }
+        slot_id: one of early_morning | breakfast | lunch | evening_snack | dinner
+        target_calories: int (optional, overrides profile)
+        top_n: 3–5 (optional)
+
+    Returns:
+        {
+          current_meal: {...},
+          swap_alternatives: [
+            { item: {...}, macro_match_pct: int, delta_calories, delta_protein_g,
+              delta_carbs_g, delta_fat_g, delta_fiber_g, reason, score }
+          ]
+        }
+
+    Safety gate is applied BEFORE scoring. Unsafe items are excluded and never
+    returned to the client regardless of macro similarity.
+    """
+    slot_id: Optional[str] = payload.get("slot_id")
+    if slot_id and slot_id not in SLOT_CATEGORY_KEYWORDS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown slot_id '{slot_id}'. Valid: {list(SLOT_CATEGORY_KEYWORDS.keys())}",
+        )
+
+    current_meal: Dict[str, Any] = payload.get("current_meal", {})
+    top_n = max(3, min(5, int(payload.get("top_n", 5))))
+    target_calories_override = payload.get("target_calories")
+
+    user_id = current_user["id"]
+    user_profile = _merge_with_db_profile(user_id, {})
+
+    if target_calories_override:
+        user_profile["target_calories"] = float(target_calories_override)
+
+    meal_logs = get_user_meal_logs(user_id)
+    pantry_items = _get_pantry_items(user_id)
+
+    # Load slot-specific candidates (shuffle=True for variety on swap)
+    candidates = load_candidate_foods(slot_id=slot_id, shuffle=True)
+    if not candidates:
+        return {"current_meal": current_meal, "swap_alternatives": []}
+
+    # Apply safety gate FIRST — non-negotiable before scoring
+    safe_candidates = filter_safe(candidates, user_profile)
+
+    # Exclude the current meal itself from alternatives
+    current_name = (current_meal.get("name") or "").strip().lower()
+    safe_candidates = [c for c in safe_candidates if c.get("name", "").strip().lower() != current_name]
+
+    if not safe_candidates:
+        return {"current_meal": current_meal, "swap_alternatives": []}
+
+    # Score with ML engine
+    ranked = recommend(
+        user_profile=user_profile,
+        candidates=safe_candidates,
+        meal_logs=meal_logs,
+        top_n=top_n,
+        pantry_items=pantry_items,
+    )
+
+    swap_alternatives = []
+    for rec in ranked:
+        item = rec.get("item", rec)
+        deltas = _macro_delta(current_meal, item)
+        swap_alternatives.append({
+            "item": item,
+            "macro_match_pct": _macro_match_pct(current_meal, item),
+            **deltas,
+            "reason": rec.get("reason", ""),
+            "score": rec.get("score", 0),
+        })
+
+    return {
+        "current_meal": current_meal,
+        "swap_alternatives": swap_alternatives,
+    }
+
+
+@router.post("/swap/validate")
+async def validate_swap_candidate(
+    payload: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Validate a single swap candidate against the user's safety profile.
+    Returns 200 { safe: true } if safe, or 400 with blocked reason if unsafe.
+
+    Request body:
+        candidate: { name, tags: [...], allergens: [...], ... }
+    """
+    candidate = payload.get("candidate")
+    if not candidate:
+        raise HTTPException(status_code=422, detail="'candidate' field is required")
+
+    user_id = current_user["id"]
+    user_profile = _merge_with_db_profile(user_id, {})
+
+    audit = audit_safe([candidate], user_profile)
+
+    if audit["blocked"]:
+        block = audit["blocked"][0]
+        raise HTTPException(
+            status_code=400,
+            detail={
+                "safe": False,
+                "reason": block["reason"],
+                "rule": block["rule"],
+                "conflict": block["conflict"],
+            },
+        )
+
+    return {"safe": True, "candidate": candidate}
+
+
+@router.get("/safety-shield")
+async def get_safety_shield(
+    current_user: Dict[str, Any] = Depends(get_current_user),
+) -> Dict[str, Any]:
+    """
+    Audit the food catalog against the authenticated user's dietary rules and allergens.
+
+    Returns:
+        {
+          active_rules: [ { rule, label, value } ],
+          safe_count: int,
+          blocked_count: int,
+          total_audited: int,
+          blocked_candidates: [ { item: {...}, reason, rule, conflict } ]
+        }
+
+    Safety logic is sourced exclusively from ml.scoring.safety_gate.audit_safe.
+    Gemini AI is never involved in safety decisions.
+    """
+    user_id = current_user["id"]
+    user_profile = _merge_with_db_profile(user_id, {})
+
+    # Load a representative 100-item sample from the full catalog
+    candidates = load_candidate_foods(slot_id=None, shuffle=False)
+    # Cap at 100 for performance; ensure stable ordering for reproducible counts
+    candidates = candidates[:100]
+
+    audit = audit_safe(candidates, user_profile)
+
+    blocked_summary = [
+        {
+            "item": {
+                "id": b["item"].get("id"),
+                "name": b["item"].get("name"),
+                "calories": b["item"].get("calories"),
+                "tags": b["item"].get("tags", []),
+                "allergens": b["item"].get("allergens", []),
+            },
+            "reason": b["reason"],
+            "rule": b["rule"],
+            "conflict": b["conflict"],
+        }
+        for b in audit["blocked"]
+    ]
+
+    return {
+        "active_rules": _describe_active_rules(user_profile),
+        "safe_count": len(audit["safe"]),
+        "blocked_count": len(audit["blocked"]),
+        "total_audited": len(candidates),
+        "blocked_candidates": blocked_summary,
     }

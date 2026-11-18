@@ -36,21 +36,18 @@ export const Header: React.FC<HeaderProps> = ({ goal, targetCalories, onOpenAuth
           <div className="flex items-center gap-space-md">
             <a
               href="#"
-              className="flex items-center gap-space-sm focus:outline-none focus:ring-1 focus:ring-primary rounded"
+              className="flex items-center focus:outline-none focus:ring-1 focus:ring-primary rounded py-0.5"
             >
-              <div className="relative h-8 w-8 shrink-0">
+              <div className="relative h-9 w-auto shrink-0 flex items-center">
                 <Image
-                  src="/stitch/assets/stitch_asset_15.png"
-                  alt="DietSense Brand Logo"
-                  width={32}
-                  height={32}
-                  className="h-8 w-auto object-contain"
+                  src="/images/dietsense-logo.jpg"
+                  alt="DietSense"
+                  width={145}
+                  height={42}
+                  className="h-9 w-auto object-contain"
                   priority
                 />
               </div>
-              <span className="font-headline-sm text-headline-sm text-primary tracking-tight font-serif font-bold">
-                DietSense
-              </span>
             </a>
 
             <div className="hidden sm:flex items-center pl-space-md bg-surface-container-low px-space-md py-1 rounded-full shadow-[0_1px_4px_rgba(0,0,0,0.02)]">

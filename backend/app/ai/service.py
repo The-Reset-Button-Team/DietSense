@@ -161,6 +161,50 @@ class GeminiService:
         except Exception:
             return []
 
+    def _is_recipe_safe(self, recipe_data: Dict[str, Any], user_profile: Dict[str, Any]) -> bool:
+        """
+        Non-negotiable post-generation safety gate.
+        Ensures Gemini suggestions never bypass dietary rules or allergen exclusions.
+        """
+        diet = str(user_profile.get("dietary_pref") or "").strip().lower()
+        allergies = [str(a).strip().lower() for a in (user_profile.get("allergies") or []) if str(a).strip()]
+
+        ingredients = recipe_data.get("ingredients") or []
+        if isinstance(ingredients, list):
+            ing_str = " ".join(str(i) for i in ingredients)
+        else:
+            ing_str = str(ingredients)
+
+        text_to_check = f"{recipe_data.get('name', '')} {recipe_data.get('description', '')} {ing_str}".lower()
+
+        # Vegetarian / Vegan / Eggetarian meat block
+        if diet in ("vegetarian", "vegan", "eggetarian", "lacto-vegetarian"):
+            meat_keywords = ["chicken", "mutton", "beef", "pork", "fish", "prawn", "shrimp", "seafood", "meat", "bacon", "turkey", "salmon"]
+            if any(m in text_to_check for m in meat_keywords):
+                return False
+
+        # Vegan dairy & egg block
+        if diet == "vegan":
+            vegan_blocked = ["dairy", "milk", "cheese", "paneer", "ghee", "butter", "egg", "curd", "yogurt", "honey"]
+            if any(b in text_to_check for b in vegan_blocked):
+                return False
+
+        # Allergen verification
+        for a in allergies:
+            terms = [a]
+            if a in ("peanuts", "nuts"): terms.extend(["peanut", "groundnut"])
+            elif a == "dairy": terms.extend(["milk", "cheese", "butter", "paneer", "ghee", "curd", "lactose"])
+            elif a == "gluten": terms.extend(["wheat", "flour", "maida", "gluten"])
+            elif a in ("eggs", "egg"): terms.extend(["egg", "eggs", "omelet"])
+            elif a == "tree_nuts": terms.extend(["almond", "cashew", "walnut", "pistachio", "hazelnut"])
+            elif a in ("fish", "shellfish"): terms.extend(["fish", "prawn", "shrimp", "crab"])
+            elif a == "soy": terms.extend(["soy", "soya", "tofu", "edamame"])
+
+            if any(t in text_to_check for t in terms):
+                return False
+
+        return True
+
     def get_safe_candidate_foods(self, user_profile: Dict[str, Any], limit: int = 20) -> List[Dict[str, Any]]:
         """Retrieves catalog foods and runs them through the non-negotiable hard safety gate."""
         try:
@@ -377,7 +421,9 @@ class GeminiService:
                 data = json.loads(cleaned)
                 items = []
                 for item in data.get("suggestions", []):
-                    items.append(RecipeSuggestionItem(**item))
+                    # Strict Safety Gate enforcement on AI generated output
+                    if self._is_recipe_safe(item, user_profile):
+                        items.append(RecipeSuggestionItem(**item))
                 if items:
                     return RecipeSuggestionResponse(
                         suggestions=items,

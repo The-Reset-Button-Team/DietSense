@@ -457,7 +457,15 @@ function MainApp() {
         )}
 
         {/* Tab 5: Mindful Swap Generator */}
-        {activeTab === "swap" && <SwapView targetCalories={targetCalories} />}
+        {activeTab === "swap" && (
+          <SwapView
+            targetCalories={targetCalories}
+            activeMealItems={activeMealItems}
+            onApplySwap={(slotKey, newMealName) => {
+              handleSelectAlternative(slotKey, newMealName);
+            }}
+          />
+        )}
 
         {/* Tab 6: Active Safety Shield */}
         {activeTab === "safety" && <SafetyShield />}
