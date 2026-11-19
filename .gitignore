@@ -96,3 +96,8 @@ logs/
 .coverage
 htmlcov/
 coverage.xml
+
+# ---------- Generated PDF Artifacts ----------
+execution_steps.pdf
+how_to_start.pdf
+plan.pdf
