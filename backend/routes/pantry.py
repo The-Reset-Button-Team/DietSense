@@ -749,9 +749,63 @@ async def toggle_pantry_item(item_id: str, user: Dict[str, Any] = Depends(get_cu
     return {"status": "success", "id": item_id, "inStock": bool(new_status)}
 
 
+@router.delete("/clear")
+@router.delete("/")
+@router.delete("")
+async def clear_pantry(user: Dict[str, Any] = Depends(get_current_user)):
+    """
+    Clears all pantry items for the authenticated user.
+    - Delete only the authenticated user's pantry items.
+    - Never affect another user's inventory.
+    - Idempotently handles already-empty pantries (returns 0 deleted items).
+    - Preserves user accounts, meal plans, logs, and food catalog.
+    - Enqueues cloud sync operation for Supabase PostgreSQL synchronization.
+    """
+    user_id = user["id"]
+    try:
+        with get_db_cursor() as cur:
+            # Query existing count for this user
+            cur.execute("SELECT id FROM pantry_items WHERE user_id = ?", (user_id,))
+            rows = cur.fetchall()
+            deleted_count = len(rows)
+
+            # Clear pantry items for authenticated user only
+            cur.execute("DELETE FROM pantry_items WHERE user_id = ?", (user_id,))
+
+            # Clean up pending pantry mutations for this user from sync_queue to avoid stale upserts
+            cur.execute(
+                "DELETE FROM sync_queue WHERE user_id = ? AND entity_type = 'pantry_item' AND status = 'pending'",
+                (user_id,),
+            )
+
+            # Enqueue CLEAR_ALL sync mutation
+            enqueue_sync_operation(
+                user_id=user_id,
+                entity_type="pantry_item",
+                entity_id="all",
+                operation="CLEAR_ALL",
+                payload={"user_id": user_id, "deleted_count": deleted_count},
+                cur=cur,
+            )
+
+        return {
+            "status": "success",
+            "message": f"Pantry cleared successfully. {deleted_count} item(s) removed.",
+            "deleted_count": deleted_count,
+        }
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to clear pantry: {str(exc)}",
+        )
+
+
 @router.delete("/{item_id}")
 async def delete_pantry_item(item_id: str, user: Dict[str, Any] = Depends(get_current_user)):
     """Remove a pantry item from SQLite."""
+    if item_id == "clear":
+        return await clear_pantry(user=user)
+
     user_id = user["id"]
     with get_db_cursor() as cur:
         cur.execute("DELETE FROM pantry_items WHERE id = ? AND user_id = ?", (item_id, user_id))

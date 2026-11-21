@@ -379,12 +379,16 @@ def _sync_feedback(pg_cur, cloud_uuid: str, item: dict, cur_sqlite) -> None:
 
 
 def _sync_pantry_item(pg_cur, cloud_uuid: str, item: dict, cur_sqlite) -> None:
-    """Synchronizes pantry items (UPSERT and DELETE operations)."""
+    """Synchronizes pantry items (UPSERT, DELETE, and CLEAR_ALL operations)."""
     operation = item["operation"]
     sqlite_id = item["entity_id"]
 
     if operation == "DELETE":
         pg_cur.execute("DELETE FROM public.pantry_items WHERE sqlite_id = %s;", (sqlite_id,))
+        return
+
+    if operation == "CLEAR_ALL":
+        pg_cur.execute("DELETE FROM public.pantry_items WHERE user_id = %s;", (cloud_uuid,))
         return
 
     payload = json.loads(item["payload"])

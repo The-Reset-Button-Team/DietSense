@@ -60,6 +60,7 @@ interface PantryScannerProps {
   onAddManualItem: (name: string) => void;
   onAddBatchItems?: (items: Array<{ name: string; category?: string; quantity?: string; expiry_date?: string }>) => void;
   onApplyToMealPlan?: () => void;
+  onClearPantry?: () => Promise<void> | void;
 }
 
 export const PantryScanner: React.FC<PantryScannerProps> = ({
@@ -68,6 +69,7 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
   onAddManualItem,
   onAddBatchItems,
   onApplyToMealPlan,
+  onClearPantry,
 }) => {
   const [pantryInputText, setPantryInputText] = useState<string>("");
   const [pantryInputExpiry, setPantryInputExpiry] = useState<string>("");
@@ -76,6 +78,12 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Clear Pantry Modal & Notification State
+  const [isClearModalOpen, setIsClearModalOpen] = useState<boolean>(false);
+  const [isClearing, setIsClearing] = useState<boolean>(false);
+  const [clearSuccessToast, setClearSuccessToast] = useState<string | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
 
   // Active view tab: "inventory" | "shopping_list" | "cook_now"
   const [activeSubTab, setActiveSubTab] = useState<"inventory" | "shopping_list" | "cook_now">("inventory");
@@ -176,6 +184,41 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
       fetchPantryRecipes();
     }
   }, [activeSubTab, inStockCount]);
+
+  useEffect(() => {
+    if (clearSuccessToast) {
+      const timer = setTimeout(() => {
+        setClearSuccessToast(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [clearSuccessToast]);
+
+  const handleConfirmClear = async () => {
+    setIsClearing(true);
+    setClearError(null);
+    try {
+      if (onClearPantry) {
+        await onClearPantry();
+      } else {
+        await apiClient("/api/pantry/clear", { method: "DELETE" });
+      }
+
+      setIsClearModalOpen(false);
+      setClearSuccessToast("Pantry cleared successfully.");
+
+      // Automatically refresh shopping list and recipe recommendations
+      if (activeSubTab === "shopping_list") {
+        fetchShoppingList();
+      } else if (activeSubTab === "cook_now") {
+        fetchPantryRecipes();
+      }
+    } catch (err: any) {
+      setClearError(err?.message || "Failed to clear pantry. Please try again.");
+    } finally {
+      setIsClearing(false);
+    }
+  };
 
   const handleAddManual = () => {
     if (!pantryInputText.trim()) return;
@@ -826,57 +869,86 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
                   Toggle items in/out of stock. Freshness indicators alert you before items expire.
                 </p>
               </div>
-              {onApplyToMealPlan && (
+              <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
                 <button
                   type="button"
-                  onClick={onApplyToMealPlan}
-                  className="px-space-md py-2 bg-secondary text-on-secondary rounded font-label-md text-label-md hover:bg-secondary/90 transition-all flex items-center gap-1.5 shadow-sm self-start sm:self-auto"
+                  id="clear-pantry-btn"
+                  onClick={() => {
+                    setClearError(null);
+                    setIsClearModalOpen(true);
+                  }}
+                  className="px-space-md py-2 border border-red-200 bg-red-50 hover:bg-red-100 text-red-700 dark:border-red-800 dark:bg-red-950/40 dark:text-red-300 rounded font-label-md text-label-md transition-all flex items-center gap-1.5 shadow-sm"
+                  title="Clear all items from your pantry"
                 >
-                  <span className="material-symbols-outlined text-[18px]">sync</span>
-                  Apply to Meal Plan
+                  <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                  Clear Pantry
                 </button>
-              )}
+                {onApplyToMealPlan && (
+                  <button
+                    type="button"
+                    onClick={onApplyToMealPlan}
+                    className="px-space-md py-2 bg-secondary text-on-secondary rounded font-label-md text-label-md hover:bg-secondary/90 transition-all flex items-center gap-1.5 shadow-sm"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">sync</span>
+                    Apply to Meal Plan
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-space-sm">
-              {pantryItems.map((item) => (
-                <div
-                  key={item.id}
-                  className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 ${
-                    item.inStock
-                      ? "bg-surface-container-low border-surface-container text-on-surface"
-                      : "bg-surface-container-lowest border-dashed border-outline-variant text-on-surface-variant opacity-60"
-                  }`}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h4 className="font-label-lg text-label-lg font-bold">{item.name}</h4>
-                      <span className="text-[11px] font-label-sm text-on-surface-variant block">
-                        {item.category} • {item.quantity}
-                      </span>
+            {pantryItems.length === 0 ? (
+              <div className="text-center py-12 px-4 bg-surface-container-low/50 rounded-xl border border-dashed border-outline-variant/60">
+                <span className="material-symbols-outlined text-[42px] text-on-surface-variant/40 block mb-2">
+                  inventory_2
+                </span>
+                <p className="font-label-lg text-label-lg font-bold text-on-surface">
+                  Your pantry is empty
+                </p>
+                <p className="font-body-sm text-body-sm text-on-surface-variant max-w-sm mx-auto mt-1">
+                  Add items using the quick adder above or scan a grocery receipt/fridge photo to populate your inventory.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-space-sm">
+                {pantryItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className={`p-3 rounded-xl border transition-all flex flex-col justify-between gap-2 ${
+                      item.inStock
+                        ? "bg-surface-container-low border-surface-container text-on-surface"
+                        : "bg-surface-container-lowest border-dashed border-outline-variant text-on-surface-variant opacity-60"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h4 className="font-label-lg text-label-lg font-bold">{item.name}</h4>
+                        <span className="text-[11px] font-label-sm text-on-surface-variant block">
+                          {item.category} • {item.quantity}
+                        </span>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => togglePantryItem(item.id)}
+                        className={`p-1.5 rounded-full transition-colors shrink-0 ${
+                          item.inStock
+                            ? "bg-secondary/15 text-secondary hover:bg-secondary/25"
+                            : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
+                        }`}
+                      >
+                        <span className="material-symbols-outlined text-[18px]">
+                          {item.inStock ? "check" : "add"}
+                        </span>
+                      </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => togglePantryItem(item.id)}
-                      className={`p-1.5 rounded-full transition-colors shrink-0 ${
-                        item.inStock
-                          ? "bg-secondary/15 text-secondary hover:bg-secondary/25"
-                          : "bg-surface-container text-on-surface-variant hover:bg-surface-container-high"
-                      }`}
-                    >
-                      <span className="material-symbols-outlined text-[18px]">
-                        {item.inStock ? "check" : "add"}
-                      </span>
-                    </button>
+                    <div className="pt-2 border-t border-surface-container/60 flex items-center justify-between">
+                      {renderFreshnessBadge(item)}
+                    </div>
                   </div>
-
-                  <div className="pt-2 border-t border-surface-container/60 flex items-center justify-between">
-                    {renderFreshnessBadge(item)}
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -1056,6 +1128,110 @@ export const PantryScanner: React.FC<PantryScannerProps> = ({
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ─── Clear Pantry Confirmation Modal ────────────────────────────────────── */}
+      {isClearModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="clear-pantry-title"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-space-md animate-in fade-in"
+        >
+          <div className="bg-[#FFFFFF] dark:bg-[#142D4E] text-on-surface max-w-md w-full rounded-2xl p-space-lg shadow-2xl border border-surface-container space-y-space-md animate-in zoom-in-95 duration-150">
+            <div className="flex items-start gap-3">
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-[28px]">warning</span>
+              </div>
+              <div className="space-y-1">
+                <h3 id="clear-pantry-title" className="font-headline-sm text-headline-sm font-bold text-[#142D4E] dark:text-[#FFFFFF] font-serif">
+                  Clear Pantry
+                </h3>
+                <p className="font-body-md text-body-md text-on-surface font-semibold text-red-600 dark:text-red-400">
+                  Are you sure you want to clear all items from your pantry?
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 bg-surface-container-low rounded-xl border border-surface-container text-body-sm text-on-surface-variant">
+              <p className="text-xs text-on-surface-variant leading-relaxed">
+                This will permanently remove all <strong className="text-on-surface">{pantryItems.length} item{pantryItems.length === 1 ? "" : "s"}</strong> from your inventory. Your food catalog, saved meal plans, and nutritional history will remain safe.
+              </p>
+            </div>
+
+            {clearError && (
+              <div className="p-2.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-300 text-xs">
+                {clearError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-surface-container/60">
+              <button
+                type="button"
+                id="cancel-clear-pantry-btn"
+                onClick={() => {
+                  if (!isClearing) {
+                    setIsClearModalOpen(false);
+                    setClearError(null);
+                  }
+                }}
+                disabled={isClearing}
+                className="px-4 py-2 rounded-lg border border-surface-container text-body-sm font-medium text-on-surface hover:bg-surface-container transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                id="confirm-clear-pantry-btn"
+                onClick={handleConfirmClear}
+                disabled={isClearing}
+                className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-[#FFFFFF] text-body-sm font-semibold transition-colors flex items-center gap-2 shadow-sm disabled:opacity-50"
+              >
+                {isClearing ? (
+                  <>
+                    <span className="material-symbols-outlined animate-spin text-[18px]">progress_activity</span>
+                    <span>Clearing Pantry...</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="material-symbols-outlined text-[18px]">delete_sweep</span>
+                    <span>Clear Pantry</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── Clear Pantry Success Notification ─────────────────────────────────── */}
+      {clearSuccessToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed top-20 right-6 z-50 bg-[#FFFFFF] dark:bg-[#142D4E] p-4 rounded-xl shadow-xl border-2 border-[#16A66A] text-body-sm animate-in slide-in-from-top-4 flex items-center gap-3 max-w-sm"
+        >
+          <span className="w-8 h-8 rounded-full bg-[#DDF5E8] flex items-center justify-center text-[#16A66A] shrink-0">
+            <span className="material-symbols-outlined text-[20px]">check_circle</span>
+          </span>
+          <div className="flex-1">
+            <h5 className="font-label-md text-label-md text-[#142D4E] dark:text-[#FFFFFF] font-bold">
+              Pantry Cleared
+            </h5>
+            <p className="text-body-sm text-on-surface-variant">
+              {clearSuccessToast}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setClearSuccessToast(null)}
+            className="text-on-surface-variant hover:text-on-surface p-1"
+            aria-label="Dismiss notification"
+          >
+            <span className="material-symbols-outlined text-[18px]">close</span>
+          </button>
         </div>
       )}
     </div>
