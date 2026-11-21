@@ -66,6 +66,141 @@ export interface Food {
   is_gluten_free: boolean;
 }
 
+export interface CatalogFood {
+  id: number;
+  name: string;
+  name_local?: string | null;
+  data_source: DataSource | string;
+  external_id?: string | null;
+  food_category: string;
+  calories_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  fat_g: number;
+  fiber_g?: number | null;
+  is_vegetarian: boolean;
+  is_vegan: boolean;
+  is_gluten_free: boolean;
+  allergen_flags: string[];
+  in_pantry: boolean;
+  pantry_item_id?: string | null;
+  pantry_quantity?: string | null;
+  pantry_in_stock?: boolean | null;
+  pantry_expiry_date?: string | null;
+  // Pricing
+  price?: number | null;
+  price_formatted?: string;
+  price_unit?: string | null;
+  price_region?: string | null;
+  price_source?: string | null;
+  price_type?: "verified" | "estimated" | null;
+  price_last_updated?: string | null;
+}
+
+export interface FoodCatalogResponse {
+  items: CatalogFood[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+  view: "all" | "in_pantry" | "not_in_pantry";
+}
+
+// ─── Food of the Day ──────────────────────────────────────────────────────────
+
+export interface FoodOfTheDayMicronutrients {
+  calcium_mg?: number | null;
+  iron_mg?: number | null;
+  zinc_mg?: number | null;
+  vitamin_c_mg?: number | null;
+  vitamin_a_mcg?: number | null;
+  vitamin_d_mcg?: number | null;
+  potassium_mg?: number | null;
+  sodium_mg?: number | null;
+}
+
+export interface FoodOfTheDayPricing {
+  available: boolean;
+  price?: number | null;
+  formatted_price: string;
+  currency: string;
+  unit?: string | null;
+  region?: string | null;
+  source?: string | null;
+  price_type?: "verified" | "estimated" | null;
+  last_updated?: string | null;
+  regional_options?: Array<{
+    price_id: string;
+    region: string;
+    price: number;
+    currency: string;
+    unit: string;
+    source: string;
+    price_type: string;
+    last_updated: string;
+    formatted_price: string;
+  }>;
+}
+
+export interface FoodOfTheDayEditorial {
+  short_intro: string;
+  description: string;
+  common_usage: string;
+  preparation_methods: string;
+  image_url?: string | null;
+}
+
+export interface FoodOfTheDayPantry {
+  in_pantry: boolean;
+  pantry_item_id?: string | null;
+  pantry_quantity?: string | null;
+  pantry_in_stock?: boolean | null;
+  pantry_expiry_date?: string | null;
+}
+
+export interface SimilarFoodItem {
+  id: number;
+  name: string;
+  name_local?: string | null;
+  food_category: string;
+  calories_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  fat_g: number;
+  fiber_g?: number | null;
+  is_vegetarian: boolean;
+  price_formatted: string;
+  price_type?: string | null;
+}
+
+export interface FoodOfTheDayItem {
+  id: number;
+  name: string;
+  name_local?: string | null;
+  food_category: string;
+  data_source: string;
+  external_id?: string | null;
+  calories_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  fat_g: number;
+  fiber_g?: number | null;
+  micronutrients: FoodOfTheDayMicronutrients;
+  is_vegetarian: boolean;
+  is_vegan: boolean;
+  is_gluten_free: boolean;
+  allergen_flags: string[];
+  pricing: FoodOfTheDayPricing;
+  pantry: FoodOfTheDayPantry;
+  editorial: FoodOfTheDayEditorial;
+}
+
+export interface FoodOfTheDayResponse {
+  date: string;
+  food: FoodOfTheDayItem;
+  similar_foods: SimilarFoodItem[];
+}
+
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
 export type CuisineType =

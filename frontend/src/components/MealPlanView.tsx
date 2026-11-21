@@ -6,6 +6,7 @@ import { CalculatedMealItem } from "@/lib/nutrition";
 import { SavedMealPlan, SavedMealPlanItem, WeeklyDayPlan, MealPlanStatus } from "@/hooks/useMealPlans";
 import { MealCard } from "./MealCard";
 import { CookModeModal } from "./CookModeModal";
+import { FoodOfTheDayCard } from "./FoodOfTheDayCard";
 
 interface MealPlanViewProps {
   mealPlanDisplayItems: CalculatedMealItem[];
@@ -41,6 +42,8 @@ interface MealPlanViewProps {
   onSaveTodayPlan?: (status?: MealPlanStatus) => Promise<SavedMealPlan | null>;
   onUpdatePlanStatus?: (planId: string, status: MealPlanStatus) => Promise<SavedMealPlan | null>;
   onDeletePlan?: (planId: string) => Promise<boolean>;
+  onGoToFoods?: (category?: string) => void;
+  onPantryUpdated?: () => void;
 }
 
 export const MealPlanView: React.FC<MealPlanViewProps> = ({
@@ -76,6 +79,8 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   onSaveTodayPlan,
   onUpdatePlanStatus,
   onDeletePlan,
+  onGoToFoods,
+  onPantryUpdated,
 }) => {
   // Modal states
   const [skipModalOpen, setSkipModalOpen] = useState(false);
@@ -570,6 +575,21 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
           })}
         </div>
       </section>
+
+      {/* Featured: Food of the Day */}
+      <FoodOfTheDayCard
+        onPantryUpdated={onPantryUpdated}
+        onExploreSimilar={(category) => {
+          if (onGoToFoods) {
+            onGoToFoods(category);
+          }
+        }}
+        onOpenCatalogFood={(foodId) => {
+          if (onGoToFoods) {
+            onGoToFoods();
+          }
+        }}
+      />
 
       {/* 3. Daily Meal Slot Cards & Main Journal Grid (8:4 Desktop Ratio) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">

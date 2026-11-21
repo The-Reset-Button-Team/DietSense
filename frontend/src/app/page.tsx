@@ -34,6 +34,7 @@ import { AIExplanationModal } from "@/components/ai/AIExplanationModal";
 import { CookingInstructionsModal } from "@/components/ai/CookingInstructionsModal";
 import { PantryCookAssistant } from "@/components/ai/PantryCookAssistant";
 import { RecipeSuggestionView } from "@/components/ai/RecipeSuggestionView";
+import { FoodCatalog } from "@/components/FoodCatalog";
 
 function MainApp() {
   const { user, updateProfile, isAuthenticated } = useAuth();
@@ -44,7 +45,7 @@ function MainApp() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
-    if (queryTab && ["today", "pantry", "profile", "swap", "safety", "progress", "ai"].includes(queryTab)) {
+    if (queryTab && ["today", "pantry", "foods", "profile", "swap", "safety", "progress", "ai"].includes(queryTab)) {
       setActiveTab(queryTab);
     }
   }, [queryTab]);
@@ -220,6 +221,13 @@ function MainApp() {
     }
   };
 
+  const handleClearPantry = async () => {
+    if (user) {
+      await apiClient("/api/pantry/clear", { method: "DELETE" });
+    }
+    setPantryItems([]);
+  };
+
   // Selected custom recipe per slot (overrides auto-selection if user manually swaps)
   const [customSelectedRecipes, setCustomSelectedRecipes] = useState<Record<string, string>>({});
 
@@ -391,6 +399,25 @@ function MainApp() {
             onSaveTodayPlan={handleSaveTodayPlan}
             onUpdatePlanStatus={updatePlanStatus}
             onDeletePlan={deletePlan}
+            onGoToFoods={() => setActiveTab("foods")}
+            onPantryUpdated={() => {
+              if (user) {
+                apiClient<
+                  Array<{ id: number | string; name: string; category: string; quantity: string; inStock: boolean }>
+                >("/api/pantry/")
+                  .then((backendItems) => {
+                    const mapped: PantryItem[] = backendItems.map((item) => ({
+                      id: String(item.id),
+                      name: item.name,
+                      category: item.category,
+                      quantity: item.quantity,
+                      inStock: item.inStock,
+                    }));
+                    setPantryItems(mapped);
+                  })
+                  .catch(() => {});
+              }
+            }}
           />
         )}
 
@@ -406,9 +433,35 @@ function MainApp() {
               onAddManualItem={handleAddManualPantryItem}
               onAddBatchItems={handleAddBatchPantryItems}
               onApplyToMealPlan={handleApplyPantryToMealPlan}
+              onClearPantry={handleClearPantry}
             />
             <PantryCookAssistant inStockPantryNames={inStockPantryNames} />
           </div>
+        )}
+
+        {/* Tab: Food Catalog (All Foods, In My Pantry, Not in My Pantry) */}
+        {activeTab === "foods" && (
+          <FoodCatalog
+            onPantryUpdated={() => {
+              if (user) {
+                apiClient<
+                  Array<{ id: number | string; name: string; category: string; quantity: string; inStock: boolean }>
+                >("/api/pantry/")
+                  .then((backendItems) => {
+                    const mapped: PantryItem[] = backendItems.map((item) => ({
+                      id: String(item.id),
+                      name: item.name,
+                      category: item.category,
+                      quantity: item.quantity,
+                      inStock: item.inStock,
+                    }));
+                    setPantryItems(mapped);
+                  })
+                  .catch(() => {});
+              }
+            }}
+            onGoToPantryScanner={() => setActiveTab("pantry")}
+          />
         )}
 
         {/* Tab 4: Profile Studio, Routine & Biometrics */}
