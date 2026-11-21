@@ -2,7 +2,7 @@
 
 import React from "react";
 
-export type TabType = "today" | "pantry" | "progress" | "profile" | "swap" | "safety" | "ai";
+export type TabType = "today" | "pantry" | "foods" | "progress" | "profile" | "swap" | "safety" | "ai";
 
 interface TabNavProps {
   activeTab: TabType;
@@ -13,6 +13,7 @@ export const TabNav: React.FC<TabNavProps> = ({ activeTab, setActiveTab }) => {
   const primaryTabs: { id: TabType; label: string; icon: string }[] = [
     { id: "today", label: "Today's Plan", icon: "calendar_today" },
     { id: "pantry", label: "AI Pantry & Scanner", icon: "inventory_2" },
+    { id: "foods", label: "Food Catalog", icon: "restaurant_menu" },
     { id: "progress", label: "Progress & Analytics", icon: "monitoring" },
     { id: "profile", label: "Profile Studio", icon: "tune" },
   ];
