@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { apiClient } from "@/lib/api-client";
 import { UserProfileData } from "@/context/AuthContext";
 import { ActiveSlotsMap, BackendSlotRecommendation } from "@/lib/nutrition";
-import { PantryItem } from "@/types";
+import { PantryItem, BudgetType, BudgetFilteringMode, DailyBudgetSummary } from "@/types";
 
 // ─── Re-export so other files can import from here ───────────────────────────
 export type { BackendSlotRecommendation };
@@ -31,8 +31,9 @@ export interface DailyNutritionTotals {
 interface DailyRecommendationsResponse {
   slots: Record<string, BackendSlotRecommendation[]>;
   totals: DailyNutritionTotals;
-  active_slots: string[];
-  generated_at: string;
+  active_slots?: string[];
+  generated_at?: string;
+  budget_summary?: DailyBudgetSummary;
 }
 
 // ─── Hook Input ───────────────────────────────────────────────────────────────
@@ -55,6 +56,15 @@ export interface UseDailyRecommendationsReturn {
   refetch: () => void;
   shuffleSlot: (slotId: string) => Promise<void>;
   shufflingSlots: Set<string>;
+  // Budget state (Batch 5)
+  budgetAmount: number | null;
+  budgetType: BudgetType;
+  budgetMode: BudgetFilteringMode;
+  budgetSummary: DailyBudgetSummary | null;
+  setBudgetAmount: (amount: number | null) => void;
+  setBudgetType: (type: BudgetType) => void;
+  setBudgetMode: (mode: BudgetFilteringMode) => void;
+  clearBudget: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -67,7 +77,10 @@ function buildRequestBody(
   profile: UserProfileData,
   activeSlots: ActiveSlotsMap,
   pantryItems: PantryItem[],
-  targetCalories: number
+  targetCalories: number,
+  budgetAmount: number | null,
+  budgetType: BudgetType,
+  budgetMode: BudgetFilteringMode
 ) {
   const inStockNames = pantryItems.filter((p) => p.inStock).map((p) => p.name);
 
@@ -77,13 +90,16 @@ function buildRequestBody(
       dietary_preference: profile.dietary_preference || profile.dietary_pref || "vegetarian",
       allergies: profile.allergies || [],
       calorie_target: targetCalories,
-      budget_per_meal: profile.budget_per_meal || 100,
+      budget_per_meal: budgetAmount || profile.budget_per_meal || 100,
       prep_time_limit: profile.prep_time_limit || 30,
     },
     active_slots: activeSlots,
     pantry_items: inStockNames,
     top_n: 5,
     shuffle: false,
+    budget_amount: budgetAmount,
+    budget_type: budgetType,
+    budget_mode: budgetMode,
   };
 }
 
@@ -102,10 +118,21 @@ export function useDailyRecommendations({
   const [fetchTrigger, setFetchTrigger] = useState<number>(0);
   const [shufflingSlots, setShufflingSlots] = useState<Set<string>>(new Set());
 
+  // Budget Filter State
+  const [budgetAmount, setBudgetAmount] = useState<number | null>(null);
+  const [budgetType, setBudgetType] = useState<BudgetType>("per_meal");
+  const [budgetMode, setBudgetMode] = useState<BudgetFilteringMode>("within_budget");
+  const [budgetSummary, setBudgetSummary] = useState<DailyBudgetSummary | null>(null);
+
   const abortRef = useRef<AbortController | null>(null);
 
   const refetch = useCallback(() => {
     setFetchTrigger((n) => n + 1);
+  }, []);
+
+  const clearBudget = useCallback(() => {
+    setBudgetAmount(null);
+    setBudgetMode("within_budget");
   }, []);
 
   // Main fetch effect
@@ -115,6 +142,7 @@ export function useDailyRecommendations({
     if (!enabled || !profile) {
       setSlots({});
       setTotals(null);
+      setBudgetSummary(null);
       setLoading(false);
       setError(null);
       return;
@@ -134,7 +162,15 @@ export function useDailyRecommendations({
 
       try {
         const targetCalories = calculateProfileCalories(profile);
-        const body = buildRequestBody(profile, activeSlots, pantryItems, targetCalories);
+        const body = buildRequestBody(
+          profile,
+          activeSlots,
+          pantryItems,
+          targetCalories,
+          budgetAmount,
+          budgetType,
+          budgetMode
+        );
 
         const data = await apiClient<DailyRecommendationsResponse>(
           "/api/recommendations/daily",
@@ -148,12 +184,14 @@ export function useDailyRecommendations({
         if (!cancelled) {
           setSlots(data.slots || {});
           setTotals(data.totals || null);
+          setBudgetSummary(data.budget_summary || null);
           setError(null);
         }
       } catch (err: any) {
         if (!cancelled && err?.name !== "AbortError") {
           setSlots({});
           setTotals(null);
+          setBudgetSummary(null);
           setError(err?.message || "Failed to fetch daily recommendations");
         }
       } finally {
@@ -179,6 +217,9 @@ export function useDailyRecommendations({
     profile?.goal,
     profile?.daily_calorie_target,
     fetchTrigger,
+    budgetAmount,
+    budgetType,
+    budgetMode,
   ]);
 
   // Per-slot shuffle
@@ -196,10 +237,13 @@ export function useDailyRecommendations({
             dietary_preference: profile.dietary_preference || profile.dietary_pref || "vegetarian",
             allergies: profile.allergies || [],
             calorie_target: targetCalories,
-            budget_per_meal: profile.budget_per_meal || 100,
+            budget_per_meal: budgetAmount || profile.budget_per_meal || 100,
             prep_time_limit: profile.prep_time_limit || 30,
           },
           pantry_items: pantryItems.filter((p) => p.inStock).map((p) => p.name),
+          budget_amount: budgetAmount,
+          budget_type: budgetType,
+          budget_mode: budgetMode,
         };
 
         const results = await apiClient<BackendSlotRecommendation[]>(
@@ -224,8 +268,24 @@ export function useDailyRecommendations({
         });
       }
     },
-    [enabled, profile, pantryItems]
+    [enabled, profile, pantryItems, budgetAmount, budgetType, budgetMode]
   );
 
-  return { slots, totals, loading, error, refetch, shuffleSlot, shufflingSlots };
+  return {
+    slots,
+    totals,
+    loading,
+    error,
+    refetch,
+    shuffleSlot,
+    shufflingSlots,
+    budgetAmount,
+    budgetType,
+    budgetMode,
+    budgetSummary,
+    setBudgetAmount,
+    setBudgetType,
+    setBudgetMode,
+    clearBudget,
+  };
 }

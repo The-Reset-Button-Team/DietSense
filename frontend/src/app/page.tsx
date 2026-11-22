@@ -278,6 +278,14 @@ function MainApp() {
     refetch: refetchRecommendations,
     shuffleSlot,
     shufflingSlots,
+    budgetAmount,
+    budgetType,
+    budgetMode,
+    budgetSummary,
+    setBudgetAmount,
+    setBudgetType,
+    setBudgetMode,
+    clearBudget,
   } = useDailyRecommendations({
     profile: user,
     activeSlots,
@@ -317,6 +325,22 @@ function MainApp() {
         backendBreakdown: topRec.breakdown,
         backendAlternatives: slotRecs,
         dataSource: topRec.item.data_source,
+        // Pricing & Affordability fields (Batch 5)
+        estimatedCost: topRec.estimated_cost ?? topRec.item.cost_estimate,
+        costPerServing: topRec.cost_per_serving ?? topRec.item.cost_breakdown?.cost_per_serving,
+        costFormatted: topRec.cost_formatted ?? topRec.item.cost_breakdown?.total_cost_formatted,
+        costPerServingFormatted: topRec.cost_per_serving_formatted ?? topRec.item.cost_breakdown?.cost_per_serving_formatted,
+        budgetStatus: topRec.budget_status ?? topRec.item.budget_status,
+        budgetStatusLabel: topRec.budget_status_label ?? topRec.item.budget_status_label,
+        costDifference: topRec.cost_difference ?? topRec.item.cost_difference,
+        costDifferenceFormatted: topRec.cost_difference_formatted ?? topRec.item.cost_difference_formatted,
+        isAffordable: topRec.is_affordable ?? topRec.item.is_affordable,
+        priceType: topRec.price_type ?? topRec.item.cost_breakdown?.price_type,
+        costBreakdown: topRec.cost_breakdown ?? topRec.item.cost_breakdown,
+        pantryMatchedIngredients: topRec.pantry_matched_ingredients ?? topRec.item.pantry_matched_ingredients,
+        pantryMissingIngredients: topRec.pantry_missing_ingredients ?? topRec.item.pantry_missing_ingredients,
+        missingIngredientsCost: topRec.missing_ingredients_cost ?? topRec.item.missing_ingredients_cost,
+        missingIngredientsCostFormatted: topRec.missing_ingredients_cost_formatted ?? topRec.item.missing_ingredients_cost_formatted,
       };
     });
   }, [mealPlanDisplayItems, dailySlots]);
@@ -400,6 +424,14 @@ function MainApp() {
             onUpdatePlanStatus={updatePlanStatus}
             onDeletePlan={deletePlan}
             onGoToFoods={() => setActiveTab("foods")}
+            budgetAmount={budgetAmount}
+            budgetType={budgetType}
+            budgetMode={budgetMode}
+            budgetSummary={budgetSummary}
+            onBudgetChange={setBudgetAmount}
+            onBudgetTypeChange={setBudgetType}
+            onBudgetModeChange={setBudgetMode}
+            onClearBudget={clearBudget}
             onPantryUpdated={() => {
               if (user) {
                 apiClient<

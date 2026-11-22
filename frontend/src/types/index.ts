@@ -370,6 +370,70 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
+// ─── Budget & Affordability Types (Batch 5) ────────────────────────────────
+
+export type BudgetType = "per_meal" | "per_day";
+export type BudgetFilteringMode = "within_budget" | "slightly_above" | "show_all";
+export type BudgetStatus = "within_budget" | "slightly_above" | "above_budget" | "cost_unavailable" | "incomplete_cost";
+
+export interface MealCostIngredient {
+  food_id: number;
+  food_name: string;
+  quantity: number;
+  unit: string;
+  available: boolean;
+  cost?: number | null;
+  cost_formatted: string;
+  unit_price?: number | null;
+  price_unit?: string | null;
+  region?: string;
+  source?: string;
+  price_type?: string | null;
+  in_pantry?: boolean;
+}
+
+export interface MealCostBreakdown {
+  recipe_name: string;
+  servings: number;
+  region: string;
+  currency: string;
+  is_complete: boolean;
+  total_cost?: number | null;
+  total_cost_formatted: string;
+  cost_per_serving?: number | null;
+  cost_per_serving_formatted: string;
+  partial_cost: number;
+  partial_cost_formatted: string;
+  price_type?: "verified" | "estimated" | "mixed" | null;
+  missing_count: number;
+  missing_ingredients: string[];
+  ingredients: MealCostIngredient[];
+  pantry_matched_ingredients?: string[];
+  pantry_missing_ingredients?: string[];
+  missing_ingredients_cost?: number | null;
+  missing_ingredients_cost_formatted?: string;
+  pantry_coverage_pct?: number;
+}
+
+export interface DailyBudgetSummary {
+  budget_type: BudgetType;
+  budget_amount?: number | null;
+  budget_mode: BudgetFilteringMode;
+  region?: string;
+  slot_costs: Record<string, number | null>;
+  slot_budget_allocations?: Record<string, number | null>;
+  daily_total_cost?: number | null;
+  daily_total_formatted: string;
+  partial_cost?: number;
+  partial_cost_formatted?: string;
+  is_complete: boolean;
+  remaining_budget?: number | null;
+  remaining_budget_formatted?: string;
+  is_over_budget: boolean;
+  overage_amount: number;
+  incomplete_slots: string[];
+}
+
 // ─── AI & Gemini Types ───────────────────────────────────────────────────────
 export * from "./ai";
 

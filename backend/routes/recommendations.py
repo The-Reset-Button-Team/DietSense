@@ -5,11 +5,12 @@ Enforces that user_id is derived exclusively from verified JWT, never from reque
 Integrates directly with local SQLite food catalog and meal logs.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from typing import Dict, Any, List, Optional
 import os
 import sqlite3
 import json
+import math
 
 from app.core.config import settings
 from app.core.dependencies import get_current_user
@@ -17,12 +18,14 @@ from routes.meal_logs import get_user_meal_logs
 from ml.recommendation.recommender import recommend
 from ml.scoring.safety_gate import audit_safe, filter_safe
 from db.database import get_db_cursor
+from app.services.pricing_service import calculate_recipe_cost, evaluate_meal_budget_status
 
 router = APIRouter(prefix="/recommendations", tags=["Recommendations"])
 
 # ---------------------------------------------------------------------------
 # SAMPLE_CANDIDATES — kept as emergency fallback if the SQLite DB is missing
 # or unreadable. The primary source is the full foods catalog (load_candidate_foods).
+# Enriched with realistic recipe ingredients linking to verified Indian food prices.
 # ---------------------------------------------------------------------------
 SAMPLE_CANDIDATES = [
     {
@@ -43,6 +46,12 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 2.1,
         "food_category": "Cereals and Millets",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 12, "food_name": "Rice (Poha)", "quantity": 80.0, "unit": "g"},
+            {"food_id": 263, "food_name": "Peanuts", "quantity": 25.0, "unit": "g"},
+            {"food_id": 205, "food_name": "Potato", "quantity": 50.0, "unit": "g"},
+            {"food_id": 235, "food_name": "Onion", "quantity": 40.0, "unit": "g"},
+        ],
     },
     {
         "id": 2,
@@ -62,6 +71,12 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 3.4,
         "food_category": "Grain Legumes and Pulses",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 31, "food_name": "Green Gram (Moong Dal)", "quantity": 60.0, "unit": "g"},
+            {"food_id": 16, "food_name": "Wheat Flour / Oats", "quantity": 30.0, "unit": "g"},
+            {"food_id": 282, "food_name": "Cow Milk / Curd", "quantity": 100.0, "unit": "ml"},
+            {"food_id": 235, "food_name": "Onion", "quantity": 30.0, "unit": "g"},
+        ],
     },
     {
         "id": 3,
@@ -81,6 +96,13 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 4.8,
         "food_category": "Cereals and Millets",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 10, "food_name": "Brown Rice", "quantity": 90.0, "unit": "g"},
+            {"food_id": 69, "food_name": "Spinach (Palak)", "quantity": 120.0, "unit": "g"},
+            {"food_id": 34, "food_name": "Lentil Dal", "quantity": 50.0, "unit": "g"},
+            {"food_id": 131, "food_name": "Tomato", "quantity": 50.0, "unit": "g"},
+            {"food_id": 235, "food_name": "Onion", "quantity": 40.0, "unit": "g"},
+        ],
     },
     {
         "id": 4,
@@ -100,6 +122,11 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 2.6,
         "food_category": "Poultry",
         "data_source": "USDA",
+        "ingredients": [
+            {"food_id": 301, "food_name": "Chicken Breast", "quantity": 180.0, "unit": "g"},
+            {"food_id": 3, "food_name": "Barley Grain", "quantity": 60.0, "unit": "g"},
+            {"food_id": 94, "food_name": "Cauliflower & Veggies", "quantity": 100.0, "unit": "g"},
+        ],
     },
     {
         "id": 5,
@@ -119,6 +146,11 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 3.8,
         "food_category": "Cereals and Millets",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 2, "food_name": "Bajra / Millet", "quantity": 80.0, "unit": "g"},
+            {"food_id": 31, "food_name": "Green Gram (Moong Dal)", "quantity": 50.0, "unit": "g"},
+            {"food_id": 131, "food_name": "Tomato", "quantity": 40.0, "unit": "g"},
+        ],
     },
     {
         "id": 6,
@@ -138,6 +170,10 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 1.4,
         "food_category": "Nuts and Oilseeds",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 99991, "food_name": "Foxnuts (Makhana)", "quantity": 40.0, "unit": "g"},
+            {"food_id": 251, "food_name": "Turmeric Powder", "quantity": 5.0, "unit": "g"},
+        ],
     },
     {
         "id": 7,
@@ -157,6 +193,12 @@ SAMPLE_CANDIDATES = [
         "iron_mg": 2.2,
         "food_category": "Milk and Milk Products",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 283, "food_name": "Paneer", "quantity": 120.0, "unit": "g"},
+            {"food_id": 16, "food_name": "Wheat Flour / Toast", "quantity": 60.0, "unit": "g"},
+            {"food_id": 131, "food_name": "Tomato", "quantity": 40.0, "unit": "g"},
+            {"food_id": 235, "food_name": "Onion", "quantity": 40.0, "unit": "g"},
+        ],
     },
     {
         "id": 8,
@@ -173,6 +215,12 @@ SAMPLE_CANDIDATES = [
         "fiber_g": 6.5,
         "food_category": "Milk and Milk Products",
         "data_source": "ICMR_NIN",
+        "ingredients": [
+            {"food_id": 283, "food_name": "Paneer", "quantity": 100.0, "unit": "g"},
+            {"food_id": 69, "food_name": "Spinach", "quantity": 120.0, "unit": "g"},
+            {"food_id": 10, "food_name": "Brown Rice", "quantity": 80.0, "unit": "g"},
+            {"food_id": 282, "food_name": "Cow Milk / Curd", "quantity": 100.0, "unit": "ml"},
+        ],
     },
 ]
 
@@ -329,6 +377,21 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
     calcium_val = _extract_nutrient("calcium_mg")
     iron_val = _extract_nutrient("iron_mg")
 
+    is_egg = "egg" in cat
+    is_banana = "banana" in str(r["name"] or "").lower()
+    is_liquid = "milk" in cat or "beverage" in cat
+    unit = "piece" if (is_egg or is_banana) else ("ml" if is_liquid else "g")
+    quantity = 1.0 if (is_egg or is_banana) else 100.0
+
+    ingredients = [
+        {
+            "food_id": r["id"],
+            "food_name": r["name"],
+            "quantity": quantity,
+            "unit": unit,
+        }
+    ]
+
     return {
         "id": offset + r["id"],
         "name": r["name"],
@@ -353,6 +416,7 @@ def _row_to_candidate(r: sqlite3.Row, offset: int = 1000) -> Dict[str, Any]:
         },
         "food_category": r["food_category"],
         "data_source": str(r["data_source"]) if "data_source" in r.keys() and r["data_source"] else "USDA",
+        "ingredients": ingredients,
     }
 
 
@@ -483,44 +547,233 @@ def _merge_with_db_profile(user_id: str, user_profile: Dict[str, Any]) -> Dict[s
     return _normalize_profile(prof)
 
 
+def enrich_and_filter_candidates(
+    candidates: List[Dict[str, Any]],
+    user_profile: Dict[str, Any],
+    pantry_items: Optional[List[str]] = None,
+    budget_amount: Optional[float] = None,
+    budget_mode: str = "within_budget",
+    tolerance_pct: float = 0.20,
+    region: str = "National",
+) -> List[Dict[str, Any]]:
+    """
+    Enriches candidates with Indian Food Pricing calculations from SQLite food_prices,
+    identifies pantry match and missing ingredient costs, attaches structured budget status,
+    and filters candidates according to the active budget mode:
+    - 'within_budget': requires complete pricing AND cost <= budget_amount
+    - 'slightly_above': requires complete pricing AND cost <= budget_amount * (1 + tolerance_pct)
+    - 'show_all': unrestricted; displays all safe candidates with visible cost & status
+    If budget_amount is None or <= 0, no budget filtering is applied.
+    """
+    clean_mode = (budget_mode or "within_budget").strip().lower()
+    if clean_mode not in ("within_budget", "slightly_above", "show_all"):
+        clean_mode = "within_budget"
+
+    clean_region = (region or "National").strip()
+
+    try:
+        with get_db_cursor() as cur:
+            for c in candidates:
+                ings = c.get("ingredients")
+                if not ings:
+                    f_id = c.get("id", 1)
+                    actual_food_id = f_id if f_id < 1000 else (f_id - 1000)
+                    ings = [{
+                        "food_id": actual_food_id,
+                        "food_name": c.get("name"),
+                        "quantity": 100.0,
+                        "unit": "g",
+                    }]
+                    c["ingredients"] = ings
+
+                cost_res = calculate_recipe_cost(
+                    cur=cur,
+                    ingredients=ings,
+                    servings=1,
+                    region=clean_region,
+                    recipe_name=c.get("name"),
+                    pantry_item_names=pantry_items,
+                )
+
+                if cost_res["is_complete"] and cost_res["total_cost"] is not None:
+                    c["cost_estimate"] = cost_res["total_cost"]
+                    c["cost_per_serving"] = cost_res["cost_per_serving"]
+                else:
+                    c["cost_estimate"] = None
+                    c["cost_per_serving"] = None
+
+                status_info = evaluate_meal_budget_status(
+                    cost=c["cost_estimate"],
+                    is_complete=cost_res["is_complete"],
+                    budget=budget_amount,
+                    tolerance_pct=tolerance_pct,
+                )
+
+                c["cost_breakdown"] = cost_res
+                c["budget_status"] = status_info["status"]
+                c["budget_status_label"] = status_info["status_label"]
+                c["cost_difference"] = status_info["cost_difference"]
+                c["cost_difference_formatted"] = status_info["cost_difference_formatted"]
+                c["is_affordable"] = status_info["is_affordable"]
+                c["fits_within_budget"] = status_info["fits_within_budget"]
+                c["fits_slightly_above"] = status_info["fits_slightly_above"]
+                c["pantry_coverage_pct"] = cost_res.get("pantry_coverage_pct", 0)
+                c["pantry_matched_ingredients"] = cost_res.get("pantry_matched_ingredients", [])
+                c["pantry_missing_ingredients"] = cost_res.get("pantry_missing_ingredients", [])
+                c["missing_ingredients_cost"] = cost_res.get("missing_ingredients_cost")
+                c["missing_ingredients_cost_formatted"] = cost_res.get("missing_ingredients_cost_formatted")
+    except Exception:
+        for c in candidates:
+            if "cost_breakdown" not in c:
+                c["budget_status"] = "cost_unavailable"
+                c["budget_status_label"] = "Cost Unavailable"
+                c["cost_difference"] = 0.0
+                c["cost_difference_formatted"] = ""
+                c["is_affordable"] = False
+                c["fits_within_budget"] = False
+                c["fits_slightly_above"] = False
+
+    # Apply budget filtering mode if budget_amount is specified and > 0
+    if budget_amount is not None and budget_amount > 0:
+        if clean_mode == "within_budget":
+            filtered = [c for c in candidates if c.get("fits_within_budget")]
+        elif clean_mode == "slightly_above":
+            filtered = [c for c in candidates if c.get("fits_slightly_above")]
+        else:  # show_all
+            filtered = candidates
+        return filtered
+
+    return candidates
+
+
+def attach_recommendation_pricing(
+    recs: List[Dict[str, Any]],
+    budget_amount: Optional[float] = None,
+) -> List[Dict[str, Any]]:
+    """Enriches the top-level recommendation result objects with pricing & budget fields."""
+    for rec in recs:
+        item = rec.get("item", {})
+        cost_bd = item.get("cost_breakdown", {})
+        total_cost = item.get("cost_estimate")
+        rec["estimated_cost"] = total_cost
+        rec["cost_per_serving"] = item.get("cost_per_serving")
+        rec["cost_formatted"] = (
+            cost_bd.get("total_cost_formatted")
+            if cost_bd
+            else ("Price unavailable" if total_cost is None else f"₹{total_cost:.2f}")
+        )
+        rec["cost_per_serving_formatted"] = cost_bd.get("cost_per_serving_formatted")
+        rec["budget_status"] = item.get("budget_status", "cost_unavailable")
+        rec["budget_status_label"] = item.get("budget_status_label", "Cost Unavailable")
+        rec["cost_difference"] = item.get("cost_difference", 0.0)
+        rec["cost_difference_formatted"] = item.get("cost_difference_formatted", "")
+        rec["is_affordable"] = item.get("is_affordable", False)
+        rec["price_type"] = cost_bd.get("price_type")
+        rec["cost_breakdown"] = cost_bd
+        rec["pantry_matched_ingredients"] = item.get("pantry_matched_ingredients", [])
+        rec["pantry_missing_ingredients"] = item.get("pantry_missing_ingredients", [])
+        rec["missing_ingredients_cost"] = item.get("missing_ingredients_cost")
+        rec["missing_ingredients_cost_formatted"] = item.get("missing_ingredients_cost_formatted")
+
+        # Clinical explainability augmentation
+        if budget_amount is not None and item.get("budget_status") == "within_budget":
+            if "budget" not in rec.get("reason", "").lower():
+                rec["reason"] = (rec.get("reason", "").rstrip(".") + ", and fits your selected budget.")
+    return recs
+
+
 @router.post("/")
 async def generate_recommendations(
     user_profile: Dict[str, Any],
+    budget_amount: Optional[float] = Query(None, description="Active session budget in INR"),
+    budget_type: Optional[str] = Query(None, description="per_meal or per_day"),
+    budget_mode: Optional[str] = Query(None, description="within_budget, slightly_above, show_all"),
+    tolerance_pct: Optional[float] = Query(None, description="Tolerance for slightly_above mode"),
+    region: Optional[str] = Query(None, description="Indian pricing region"),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
-    Run candidate meals through safety gate, TF-IDF scoring, and return ranked recommendations.
+    Run candidate meals through safety gate, Indian food pricing calculations,
+    user-controlled budget filtering, TF-IDF scoring, and return ranked recommendations.
     Uses authenticated user's real meal logs from SQLite for adaptive penalties.
     user_id is derived exclusively from JWT for authorization and isolation.
-
-    Accepts an optional ``meal_slot`` field in ``user_profile``. When present,
-    candidate foods are pre-filtered to the categories relevant to that slot
-    (see SLOT_CATEGORY_KEYWORDS). When absent, the full catalog is used for a
-    complete day plan (top 5 overall, as today).
     """
     # Support both flat payloads and nested { user_profile: { ... } } payloads
-    if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
-        user_profile = user_profile["user_profile"]
+    payload = user_profile if isinstance(user_profile, dict) else {}
+    if "user_profile" in payload and isinstance(payload["user_profile"], dict):
+        body_profile = payload["user_profile"]
+    else:
+        body_profile = payload
+
+    # Extract budget params from query or body
+    eff_budget = budget_amount if budget_amount is not None else payload.get("budget_amount")
+    if eff_budget is None and "budget_amount" in body_profile:
+        eff_budget = body_profile["budget_amount"]
+    if eff_budget is not None:
+        try:
+            eff_budget = float(eff_budget)
+            if eff_budget <= 0:
+                raise HTTPException(status_code=400, detail="Budget amount must be a positive number greater than 0.")
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Budget amount must be a valid positive number.")
+
+    eff_type = str(
+        budget_type or payload.get("budget_type") or body_profile.get("budget_type") or "per_meal"
+    ).strip().lower()
+    if eff_type not in ("per_meal", "per_day"):
+        raise HTTPException(status_code=400, detail="Invalid budget_type. Must be 'per_meal' or 'per_day'.")
+
+    eff_mode = str(
+        budget_mode or payload.get("budget_mode") or body_profile.get("budget_mode") or "within_budget"
+    ).strip().lower()
+    if eff_mode not in ("within_budget", "slightly_above", "show_all"):
+        raise HTTPException(status_code=400, detail="Invalid budget_mode. Must be 'within_budget', 'slightly_above', or 'show_all'.")
+
+    eff_tolerance_raw = tolerance_pct if tolerance_pct is not None else (
+        payload.get("tolerance_pct") if payload.get("tolerance_pct") is not None else body_profile.get("tolerance_pct", 0.20)
+    )
+    eff_tolerance = float(eff_tolerance_raw)
+    eff_region = str(region or payload.get("region") or body_profile.get("region") or "National").strip()
 
     user_id = current_user["id"]
-    user_profile = _merge_with_db_profile(user_id, user_profile)
-    meal_logs = get_user_meal_logs(user_id)
+    merged_profile = _merge_with_db_profile(user_id, body_profile)
+    if eff_budget is not None:
+        merged_profile["budget_per_meal"] = eff_budget
 
-    # Load user's in-stock pantry items for ingredient-aware recommendations
+    meal_logs = get_user_meal_logs(user_id)
     pantry_items = _get_pantry_items(user_id)
 
     # Optional slot-level pre-filter
-    meal_slot: Optional[str] = user_profile.get("meal_slot")
+    meal_slot: Optional[str] = merged_profile.get("meal_slot")
     candidates = load_candidate_foods(slot_id=meal_slot)
 
+    # 1. Safety Gate executed FIRST
+    safe_candidates = filter_safe(candidates, merged_profile)
+    if not safe_candidates:
+        return []
+
+    # 2. Pricing Enrichment & Budget Filtering
+    budget_filtered = enrich_and_filter_candidates(
+        candidates=safe_candidates,
+        user_profile=merged_profile,
+        pantry_items=pantry_items,
+        budget_amount=eff_budget,
+        budget_mode=eff_mode,
+        tolerance_pct=eff_tolerance,
+        region=eff_region,
+    )
+    if not budget_filtered:
+        return []
+
     results = recommend(
-        user_profile=user_profile,
-        candidates=candidates,
+        user_profile=merged_profile,
+        candidates=budget_filtered,
         meal_logs=meal_logs,
-        top_n=user_profile.get("top_n", 6),
+        top_n=merged_profile.get("top_n", 6),
         pantry_items=pantry_items,
     )
-    return results
+
+    return attach_recommendation_pricing(results, budget_amount=eff_budget)
 
 
 @router.post("/slot/{slot_id}")
@@ -528,76 +781,156 @@ async def generate_slot_recommendations(
     slot_id: str,
     user_profile: Dict[str, Any],
     shuffle: bool = False,
+    budget_amount: Optional[float] = Query(None),
+    budget_type: Optional[str] = Query(None),
+    budget_mode: Optional[str] = Query(None),
+    tolerance_pct: Optional[float] = Query(None),
+    region: Optional[str] = Query(None),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
-    Single-slot regeneration endpoint. Returns 3 to 5 alternative foods
-    ranked by the full ML pipeline (safety gate → TF-IDF → scoring →
-    adaptive penalties → pantry bonus → explainability).
-
-    Path parameter ``slot_id`` must be one of:
-        early_morning, breakfast, lunch, evening_snack, dinner
-
-    Request body is the same ``user_profile`` dict as ``POST /recommendations/``.
-    Supports optional ``shuffle: bool`` in query or body to re-sample candidates from SQLite.
-    user_id is derived exclusively from JWT for authorization and isolation.
+    Single-slot regeneration endpoint with budget-aware filtering and Indian food pricing.
+    Returns 3 to 5 alternative foods ranked by the full ML pipeline.
     """
-    # Validate slot_id against the known mapping
     if slot_id not in SLOT_CATEGORY_KEYWORDS:
         raise HTTPException(
             status_code=400,
-            detail=f"Unknown slot_id '{slot_id}'. "
-                   f"Valid values: {list(SLOT_CATEGORY_KEYWORDS.keys())}",
+            detail=f"Unknown slot_id '{slot_id}'. Valid values: {list(SLOT_CATEGORY_KEYWORDS.keys())}",
         )
 
-    # Support both flat payloads and nested { user_profile: { ... } } payloads
-    if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
-        user_profile = user_profile["user_profile"]
+    payload = user_profile if isinstance(user_profile, dict) else {}
+    if "user_profile" in payload and isinstance(payload["user_profile"], dict):
+        body_profile = payload["user_profile"]
+    else:
+        body_profile = payload
 
-    is_shuffle = shuffle or bool(user_profile.get("shuffle", False))
+    eff_budget = budget_amount if budget_amount is not None else payload.get("budget_amount")
+    if eff_budget is None and "budget_amount" in body_profile:
+        eff_budget = body_profile["budget_amount"]
+    if eff_budget is not None:
+        try:
+            eff_budget = float(eff_budget)
+            if eff_budget <= 0:
+                raise HTTPException(status_code=400, detail="Budget amount must be a positive number greater than 0.")
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Budget amount must be a valid positive number.")
+
+    eff_type = str(
+        budget_type or payload.get("budget_type") or body_profile.get("budget_type") or "per_meal"
+    ).strip().lower()
+    if eff_type not in ("per_meal", "per_day"):
+        raise HTTPException(status_code=400, detail="Invalid budget_type. Must be 'per_meal' or 'per_day'.")
+
+    eff_mode = str(
+        budget_mode or payload.get("budget_mode") or body_profile.get("budget_mode") or "within_budget"
+    ).strip().lower()
+    if eff_mode not in ("within_budget", "slightly_above", "show_all"):
+        raise HTTPException(status_code=400, detail="Invalid budget_mode. Must be 'within_budget', 'slightly_above', or 'show_all'.")
+
+    eff_tolerance_raw = tolerance_pct if tolerance_pct is not None else (
+        payload.get("tolerance_pct") if payload.get("tolerance_pct") is not None else body_profile.get("tolerance_pct", 0.20)
+    )
+    eff_tolerance = float(eff_tolerance_raw)
+    eff_region = str(region or payload.get("region") or body_profile.get("region") or "National").strip()
+
+    is_shuffle = shuffle or bool(body_profile.get("shuffle", False))
     user_id = current_user["id"]
-    user_profile = _merge_with_db_profile(user_id, user_profile)
+    merged_profile = _merge_with_db_profile(user_id, body_profile)
 
-    top_n = int(user_profile.get("top_n", 5))
-    if top_n < 3:
-        top_n = 3
-    elif top_n > 5:
-        top_n = 5
+    # For per_day budget, allocate slot budget based on slot calorie weight
+    slot_budget = eff_budget
+    if eff_budget is not None and eff_type == "per_day":
+        w = SLOT_CALORIE_WEIGHTS.get(slot_id, 0.25)
+        # standard 3 main meals total active weight ~0.85
+        slot_budget = round(eff_budget * (w / 0.85), 2)
+
+    if slot_budget is not None:
+        merged_profile["budget_per_meal"] = slot_budget
+
+    top_n = int(body_profile.get("top_n", 5))
+    top_n = max(3, min(5, top_n))
 
     meal_logs = get_user_meal_logs(user_id)
     pantry_items = _get_pantry_items(user_id)
 
     candidates = load_candidate_foods(slot_id=slot_id, shuffle=is_shuffle)
     if not candidates:
-        # Fallback: slot filtered everything — return empty list gracefully
+        return []
+
+    # 1. Safety Gate FIRST
+    safe_candidates = filter_safe(candidates, merged_profile)
+    if not safe_candidates:
+        return []
+
+    # 2. Pricing & Budget Filtering
+    budget_filtered = enrich_and_filter_candidates(
+        candidates=safe_candidates,
+        user_profile=merged_profile,
+        pantry_items=pantry_items,
+        budget_amount=slot_budget,
+        budget_mode=eff_mode,
+        tolerance_pct=eff_tolerance,
+        region=eff_region,
+    )
+    if not budget_filtered:
         return []
 
     results = recommend(
-        user_profile=user_profile,
-        candidates=candidates,
+        user_profile=merged_profile,
+        candidates=budget_filtered,
         meal_logs=meal_logs,
         top_n=top_n,
         pantry_items=pantry_items,
     )
-    return results
+
+    return attach_recommendation_pricing(results, budget_amount=slot_budget)
 
 
 @router.post("/daily")
 async def generate_daily_recommendations(
     payload: Dict[str, Any],
     shuffle: bool = False,
+    budget_amount: Optional[float] = Query(None),
+    budget_type: Optional[str] = Query(None),
+    budget_mode: Optional[str] = Query(None),
+    tolerance_pct: Optional[float] = Query(None),
+    region: Optional[str] = Query(None),
     current_user: Dict[str, Any] = Depends(get_current_user),
 ):
     """
-    Generate evidence-based daily meal plan recommendations from the SQLite food catalog.
-    Returns 3 to 5 alternative recommendations for each active meal slot,
-    filtered by safety gate (dietary restrictions & declared allergens),
-    scored with respect to calorie and macro targets, and calculated daily nutrition totals.
-    Supports per-slot shuffle or whole-plan shuffle.
+    Generate evidence-based daily meal plan recommendations with Indian Food Pricing,
+    user-controlled budget filtering (Per Meal vs Per Day, Within Budget vs Slightly Above vs Show All),
+    and comprehensive Daily Meal Plan Budget Summary.
     """
     user_profile = payload.get("user_profile", payload)
     if "user_profile" in user_profile and isinstance(user_profile["user_profile"], dict):
         user_profile = user_profile["user_profile"]
+
+    eff_budget = budget_amount if budget_amount is not None else payload.get("budget_amount")
+    if eff_budget is None and "budget_amount" in user_profile:
+        eff_budget = user_profile["budget_amount"]
+    if eff_budget is not None:
+        try:
+            eff_budget = float(eff_budget)
+            if eff_budget <= 0:
+                raise HTTPException(status_code=400, detail="Budget amount must be a positive number greater than 0.")
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Budget amount must be a valid positive number.")
+
+    eff_type = str(budget_type or payload.get("budget_type") or user_profile.get("budget_type") or "per_meal").strip().lower()
+    if eff_type not in ("per_meal", "per_day"):
+        raise HTTPException(status_code=400, detail="Invalid budget_type. Must be 'per_meal' or 'per_day'.")
+
+    eff_mode = str(budget_mode or payload.get("budget_mode") or user_profile.get("budget_mode") or "within_budget").strip().lower()
+    if eff_mode not in ("within_budget", "slightly_above", "show_all"):
+        raise HTTPException(status_code=400, detail="Invalid budget_mode. Must be 'within_budget', 'slightly_above', or 'show_all'.")
+
+    eff_tolerance = float(
+        tolerance_pct
+        if tolerance_pct is not None
+        else payload.get("tolerance_pct", user_profile.get("tolerance_pct", 0.20))
+    )
+    eff_region = str(region or payload.get("region") or user_profile.get("region") or "National").strip()
 
     user_id = current_user["id"]
     user_profile = _merge_with_db_profile(user_id, user_profile)
@@ -624,10 +957,7 @@ async def generate_daily_recommendations(
     shuffle_slot = payload.get("shuffle_slot")
 
     top_n = int(payload.get("top_n", 5))
-    if top_n < 3:
-        top_n = 3
-    elif top_n > 5:
-        top_n = 5
+    top_n = max(3, min(5, top_n))
 
     total_target_cals = float(user_profile.get("target_calories", 2000.0))
     if total_target_cals <= 0:
@@ -651,6 +981,12 @@ async def generate_daily_recommendations(
     has_calcium = False
     has_iron = False
 
+    slot_costs: Dict[str, Optional[float]] = {}
+    slot_budget_allocations: Dict[str, Optional[float]] = {}
+    daily_cost_sum = 0.0
+    daily_is_complete = True
+    incomplete_slots: List[str] = []
+
     for slot_id in ["early_morning", "breakfast", "lunch", "evening_snack", "dinner"]:
         if not active_slots.get(slot_id):
             continue
@@ -659,21 +995,48 @@ async def generate_daily_recommendations(
         norm_ratio = weight / total_active_weight
         slot_target_cals = total_target_cals * norm_ratio
 
+        # Determine slot budget
+        if eff_budget is not None:
+            if eff_type == "per_day":
+                slot_budget = round(eff_budget * norm_ratio, 2)
+            else:
+                slot_budget = eff_budget
+            slot_budget_allocations[slot_id] = slot_budget
+        else:
+            slot_budget = None
+            slot_budget_allocations[slot_id] = None
+
         slot_profile = dict(user_profile)
         slot_profile["target_calories"] = total_target_cals
         slot_profile["slot_target_calories"] = slot_target_cals
+        if slot_budget is not None:
+            slot_profile["budget_per_meal"] = slot_budget
 
         slot_shuffle = is_shuffle or (shuffle_slot == slot_id)
         candidates = load_candidate_foods(slot_id=slot_id, shuffle=slot_shuffle)
 
+        # 1. Safety Gate FIRST
+        safe_candidates = filter_safe(candidates, slot_profile)
+
+        # 2. Pricing & Budget Filtering
+        budget_filtered = enrich_and_filter_candidates(
+            candidates=safe_candidates,
+            user_profile=slot_profile,
+            pantry_items=pantry_items,
+            budget_amount=slot_budget,
+            budget_mode=eff_mode,
+            tolerance_pct=eff_tolerance,
+            region=eff_region,
+        )
+
         recs = recommend(
             user_profile=slot_profile,
-            candidates=candidates,
+            candidates=budget_filtered,
             meal_logs=meal_logs,
             top_n=top_n,
             pantry_items=pantry_items,
         )
-
+        recs = attach_recommendation_pricing(recs, budget_amount=slot_budget)
         slot_results[slot_id] = recs
 
         if recs:
@@ -684,30 +1047,84 @@ async def generate_daily_recommendations(
             total_fat += float(first_item.get("fat_g", 0))
 
             micros = first_item.get("micronutrients") or {}
-
-            # Fiber
             fib = micros.get("fiber_g") if micros.get("fiber_g") is not None else first_item.get("fiber_g")
             if fib is not None:
                 total_fiber += float(fib)
                 has_fiber = True
 
-            # Sodium
             sod = micros.get("sodium_mg") if micros.get("sodium_mg") is not None else first_item.get("sodium_mg")
             if sod is not None:
                 total_sodium += float(sod)
                 has_sodium = True
 
-            # Calcium
             cal = micros.get("calcium_mg") if micros.get("calcium_mg") is not None else first_item.get("calcium_mg")
             if cal is not None:
                 total_calcium += float(cal)
                 has_calcium = True
 
-            # Iron
             irn = micros.get("iron_mg") if micros.get("iron_mg") is not None else first_item.get("iron_mg")
             if irn is not None:
                 total_iron += float(irn)
                 has_iron = True
+
+            # Track slot costs
+            cost_val = recs[0].get("estimated_cost")
+            if cost_val is not None:
+                slot_costs[slot_id] = round(float(cost_val), 2)
+                daily_cost_sum += float(cost_val)
+            else:
+                slot_costs[slot_id] = None
+                daily_is_complete = False
+                incomplete_slots.append(slot_id)
+        else:
+            slot_costs[slot_id] = None
+
+    # Calculate Budget Summary
+    if daily_is_complete and any(active_slots.values()) and all(slot_costs.get(s) is not None for s in active_slots if active_slots[s]):
+        daily_total_cost = round(daily_cost_sum, 2)
+        daily_total_formatted = f"₹{daily_total_cost:.2f}"
+        if eff_budget is not None and eff_type == "per_day":
+            rem = round(eff_budget - daily_total_cost, 2)
+            is_over = daily_total_cost > eff_budget
+            overage = round(daily_total_cost - eff_budget, 2) if is_over else 0.0
+            remaining_budget = rem
+            remaining_budget_formatted = f"+₹{overage:.2f} over budget" if is_over else f"₹{rem:.2f} remaining"
+        elif eff_budget is not None and eff_type == "per_meal":
+            remaining_budget = None
+            is_over = False
+            overage = 0.0
+            remaining_budget_formatted = "Per-meal budget active"
+        else:
+            remaining_budget = None
+            is_over = False
+            overage = 0.0
+            remaining_budget_formatted = "No budget configured"
+    else:
+        daily_total_cost = None
+        daily_total_formatted = "Estimate incomplete (missing ingredient prices)"
+        remaining_budget = None
+        remaining_budget_formatted = "Cannot calculate (incomplete meal pricing)"
+        is_over = False
+        overage = 0.0
+
+    budget_summary = {
+        "budget_type": eff_type,
+        "budget_amount": eff_budget,
+        "budget_mode": eff_mode,
+        "region": eff_region,
+        "slot_costs": slot_costs,
+        "slot_budget_allocations": slot_budget_allocations,
+        "daily_total_cost": daily_total_cost,
+        "daily_total_formatted": daily_total_formatted,
+        "partial_cost": round(daily_cost_sum, 2),
+        "partial_cost_formatted": f"₹{round(daily_cost_sum, 2):.2f}",
+        "is_complete": daily_is_complete and len(incomplete_slots) == 0,
+        "remaining_budget": remaining_budget,
+        "remaining_budget_formatted": remaining_budget_formatted,
+        "is_over_budget": is_over,
+        "overage_amount": overage,
+        "incomplete_slots": incomplete_slots,
+    }
 
     return {
         "slots": slot_results,
@@ -733,6 +1150,7 @@ async def generate_daily_recommendations(
                 "iron_tracked": has_iron,
             },
         },
+        "budget_summary": budget_summary,
     }
 
 
@@ -884,14 +1302,33 @@ async def generate_swap_alternatives(
     if not safe_candidates:
         return {"current_meal": current_meal, "swap_alternatives": []}
 
+    # Enrich candidates with pricing & budget status
+    budget_amount = payload.get("budget_amount")
+    budget_mode = payload.get("budget_mode", "within_budget")
+    tolerance_pct = float(payload.get("tolerance_pct", 0.20))
+    region = payload.get("region", "National")
+
+    enriched_candidates = enrich_and_filter_candidates(
+        candidates=safe_candidates,
+        user_profile=user_profile,
+        pantry_items=pantry_items,
+        budget_amount=budget_amount,
+        budget_mode=budget_mode,
+        tolerance_pct=tolerance_pct,
+        region=region,
+    )
+    if not enriched_candidates:
+        return {"current_meal": current_meal, "swap_alternatives": []}
+
     # Score with ML engine
     ranked = recommend(
         user_profile=user_profile,
-        candidates=safe_candidates,
+        candidates=enriched_candidates,
         meal_logs=meal_logs,
         top_n=top_n,
         pantry_items=pantry_items,
     )
+    ranked = attach_recommendation_pricing(ranked, budget_amount=budget_amount)
 
     swap_alternatives = []
     for rec in ranked:
@@ -903,6 +1340,15 @@ async def generate_swap_alternatives(
             **deltas,
             "reason": rec.get("reason", ""),
             "score": rec.get("score", 0),
+            "estimated_cost": rec.get("estimated_cost"),
+            "cost_formatted": rec.get("cost_formatted"),
+            "budget_status": rec.get("budget_status"),
+            "budget_status_label": rec.get("budget_status_label"),
+            "cost_difference": rec.get("cost_difference"),
+            "cost_difference_formatted": rec.get("cost_difference_formatted"),
+            "price_type": rec.get("price_type"),
+            "missing_ingredients_cost": rec.get("missing_ingredients_cost"),
+            "missing_ingredients_cost_formatted": rec.get("missing_ingredients_cost_formatted"),
         })
 
     return {

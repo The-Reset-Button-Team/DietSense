@@ -60,13 +60,18 @@ def budget_fit_score(item: dict, user_profile: dict) -> float:
     """
     Evaluates if item cost estimate fits within user's per-meal budget.
     Output strictly bounded [0.0, 1.0].
+    Never treats missing or incomplete prices as perfectly within budget.
     """
     raw_budget = user_profile.get("budget_per_meal", 100.0)
     budget = _safe_float(raw_budget, default=100.0)
     if budget <= 0.0:
         budget = 100.0
 
-    raw_cost = item.get("cost_estimate", budget)
+    raw_cost = item.get("cost_estimate")
+    if raw_cost is None:
+        # Incomplete or missing price: do NOT treat as free or assume within budget
+        return 0.5
+
     cost = _safe_float(raw_cost, default=budget)
     if cost <= budget:
         return 1.0

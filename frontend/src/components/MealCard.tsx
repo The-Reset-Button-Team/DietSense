@@ -174,6 +174,101 @@ export const MealCard: React.FC<MealCardProps> = ({
             {item.recipe.tagline}
           </p>
 
+          {/* Pricing & Budget Status Strip (Batch 5) */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 pb-0.5">
+            {/* Cost & Serving Pill */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-container font-label-sm text-label-sm">
+              <span className="font-sans font-bold text-primary">₹</span>
+              <span className="font-bold text-primary">
+                {item.costFormatted || (item.estimatedCost !== undefined && item.estimatedCost !== null
+                  ? `₹${item.estimatedCost.toFixed(2)}`
+                  : "Price unavailable")}
+              </span>
+              {item.costPerServing !== undefined && item.costPerServing !== null && (
+                <span className="text-[11px] text-on-surface-variant">
+                  ({item.costPerServingFormatted || `₹${item.costPerServing.toFixed(2)} / serving`})
+                </span>
+              )}
+            </div>
+
+            {/* Price Type (Verified vs Estimated) */}
+            {item.priceType && (
+              <span
+                className={`px-2 py-0.5 rounded text-[11px] font-label-sm font-semibold uppercase tracking-wider ${
+                  item.priceType === "verified"
+                    ? "bg-secondary/15 text-secondary border border-secondary/20"
+                    : "bg-surface-container-high text-on-surface-variant"
+                }`}
+              >
+                {item.priceType === "verified" ? "Verified Price" : "Estimated Price"}
+              </span>
+            )}
+
+            {/* Budget Status Badge */}
+            {item.budgetStatus && (
+              <span
+                className={`px-2 py-0.5 rounded-full text-[11px] font-label-sm font-bold flex items-center gap-1 ${
+                  item.budgetStatus === "within_budget"
+                    ? "bg-secondary/15 text-secondary"
+                    : item.budgetStatus === "slightly_above"
+                    ? "bg-amber-500/15 text-amber-700"
+                    : item.budgetStatus === "above_budget"
+                    ? "bg-error/10 text-error"
+                    : item.budgetStatus === "incomplete_cost"
+                    ? "bg-amber-500/10 text-amber-700 border border-amber-500/30"
+                    : "bg-surface-container text-on-surface-variant"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[13px]">
+                  {item.budgetStatus === "within_budget"
+                    ? "check_circle"
+                    : item.budgetStatus === "slightly_above"
+                    ? "trending_up"
+                    : item.budgetStatus === "above_budget"
+                    ? "warning"
+                    : "help"}
+                </span>
+                <span>
+                  {item.budgetStatusLabel ||
+                    (item.budgetStatus === "within_budget"
+                      ? "Within Budget"
+                      : item.budgetStatus === "slightly_above"
+                      ? `Slightly Above (${item.costDifferenceFormatted || ""})`
+                      : item.budgetStatus === "above_budget"
+                      ? `Above Budget (${item.costDifferenceFormatted || ""})`
+                      : item.budgetStatus === "incomplete_cost"
+                      ? "Incomplete Cost Estimate"
+                      : "Cost Unavailable")}
+                </span>
+              </span>
+            )}
+          </div>
+
+          {/* Pantry Coverage & Missing Ingredients Cost */}
+          {(item.pantryMatchedIngredients?.length || item.pantryMissingIngredients?.length) ? (
+            <div className="p-2 rounded bg-surface-container-low text-[11px] space-y-0.5 border border-surface-container">
+              {item.pantryMatchedIngredients && item.pantryMatchedIngredients.length > 0 && (
+                <div className="flex items-center gap-1 text-secondary font-medium">
+                  <span className="material-symbols-outlined text-[14px]">inventory</span>
+                  <span>In Pantry: {item.pantryMatchedIngredients.join(", ")}</span>
+                </div>
+              )}
+              {item.pantryMissingIngredients && item.pantryMissingIngredients.length > 0 && (
+                <div className="flex items-center gap-1 text-on-surface-variant">
+                  <span className="material-symbols-outlined text-[14px] text-amber-700">shopping_cart</span>
+                  <span>
+                    Missing: {item.pantryMissingIngredients.join(", ")}
+                    {item.missingIngredientsCostFormatted && (
+                      <strong className="text-primary ml-1">
+                        (Addtl cost: {item.missingIngredientsCostFormatted})
+                      </strong>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+          ) : null}
+
           {(item.backendReason || reason) && (
             <p className="font-body-sm text-body-sm text-secondary italic pt-0.5">
               <span className="material-symbols-outlined text-[14px] mr-1 align-middle">psychology</span>
@@ -350,6 +445,24 @@ export const MealCard: React.FC<MealCardProps> = ({
                         {alt.item.fiber_g > 0 && (
                           <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-on-surface-variant text-[10px]">
                             {alt.item.fiber_g.toFixed(1)}g Fibre
+                          </span>
+                        )}
+                        {(alt.cost_formatted || alt.estimated_cost !== undefined) && (
+                          <span className="px-1.5 py-0.5 rounded-full font-label-sm text-label-sm bg-surface-container text-primary font-bold text-[10px]">
+                            {alt.cost_formatted || (alt.estimated_cost !== null && alt.estimated_cost !== undefined ? `₹${alt.estimated_cost.toFixed(2)}` : "Price unavailable")}
+                          </span>
+                        )}
+                        {alt.budget_status_label && (
+                          <span
+                            className={`px-1.5 py-0.5 rounded-full font-label-sm text-[10px] font-semibold ${
+                              alt.budget_status === "within_budget"
+                                ? "bg-secondary/15 text-secondary"
+                                : alt.budget_status === "slightly_above"
+                                ? "bg-amber-500/15 text-amber-700"
+                                : "bg-surface-container text-on-surface-variant"
+                            }`}
+                          >
+                            {alt.budget_status_label}
                           </span>
                         )}
                       </div>

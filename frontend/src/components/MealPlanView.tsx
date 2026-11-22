@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { MealFrequency, RecipeData } from "@/types";
+import { MealFrequency, RecipeData, BudgetType, BudgetFilteringMode, DailyBudgetSummary as DailyBudgetSummaryType } from "@/types";
 import { CalculatedMealItem } from "@/lib/nutrition";
 import { SavedMealPlan, SavedMealPlanItem, WeeklyDayPlan, MealPlanStatus } from "@/hooks/useMealPlans";
 import { MealCard } from "./MealCard";
 import { CookModeModal } from "./CookModeModal";
 import { FoodOfTheDayCard } from "./FoodOfTheDayCard";
+import { BudgetFilter } from "./BudgetFilter";
+import { DailyBudgetSummary } from "./DailyBudgetSummary";
 
 interface MealPlanViewProps {
   mealPlanDisplayItems: CalculatedMealItem[];
@@ -44,6 +46,15 @@ interface MealPlanViewProps {
   onDeletePlan?: (planId: string) => Promise<boolean>;
   onGoToFoods?: (category?: string) => void;
   onPantryUpdated?: () => void;
+  // Budget props (Batch 5)
+  budgetAmount?: number | null;
+  budgetType?: BudgetType;
+  budgetMode?: BudgetFilteringMode;
+  budgetSummary?: DailyBudgetSummaryType | null;
+  onBudgetChange?: (amount: number | null) => void;
+  onBudgetTypeChange?: (type: BudgetType) => void;
+  onBudgetModeChange?: (mode: BudgetFilteringMode) => void;
+  onClearBudget?: () => void;
 }
 
 export const MealPlanView: React.FC<MealPlanViewProps> = ({
@@ -81,6 +92,14 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
   onDeletePlan,
   onGoToFoods,
   onPantryUpdated,
+  budgetAmount = null,
+  budgetType = "per_meal",
+  budgetMode = "within_budget",
+  budgetSummary = null,
+  onBudgetChange,
+  onBudgetTypeChange,
+  onBudgetModeChange,
+  onClearBudget,
 }) => {
   // Modal states
   const [skipModalOpen, setSkipModalOpen] = useState(false);
@@ -591,7 +610,30 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
         }}
       />
 
-      {/* 3. Daily Meal Slot Cards & Main Journal Grid (8:4 Desktop Ratio) */}
+      {/* 3. Budget & Affordability Filter (Batch 5) */}
+      {onBudgetChange && onBudgetTypeChange && onBudgetModeChange && onClearBudget && (
+        <BudgetFilter
+          budgetAmount={budgetAmount}
+          budgetType={budgetType}
+          budgetMode={budgetMode}
+          onBudgetChange={onBudgetChange}
+          onBudgetTypeChange={onBudgetTypeChange}
+          onBudgetModeChange={onBudgetModeChange}
+          onClearBudget={onClearBudget}
+          isLoading={isLoadingRecommendations}
+        />
+      )}
+
+      {/* Daily Meal Plan Budget Summary (Batch 5) */}
+      {budgetSummary && (
+        <DailyBudgetSummary
+          summary={budgetSummary}
+          budgetType={budgetType}
+          budgetAmount={budgetAmount}
+        />
+      )}
+
+      {/* 4. Daily Meal Slot Cards & Main Journal Grid (8:4 Desktop Ratio) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
         {/* Primary 8-Column Meal Ledger */}
         <div className="lg:col-span-8 space-y-space-md">
@@ -647,9 +689,38 @@ export const MealPlanView: React.FC<MealPlanViewProps> = ({
 
           {/* Empty state: no items and not loading */}
           {!isLoadingRecommendations && mealPlanDisplayItems.length === 0 && (
-            <div className="text-center py-12 text-on-surface-variant">
-              <span className="material-symbols-outlined text-[48px] block mb-3 opacity-40">restaurant</span>
-              <p className="font-body-md text-body-md">No meal slots active. Enable slots in your profile.</p>
+            <div className="text-center py-12 px-6 bg-surface-container-lowest rounded-xl border border-surface-container space-y-3">
+              <span className="material-symbols-outlined text-[48px] block text-on-surface-variant/40">
+                currency_rupee
+              </span>
+              <h3 className="font-headline-sm text-base text-primary font-serif">
+                {budgetAmount !== null
+                  ? "No Meals Found Within Selected Budget"
+                  : "No Active Meal Recommendations"}
+              </h3>
+              <p className="font-body-sm text-body-sm text-on-surface-variant max-w-md mx-auto">
+                {budgetAmount !== null ? (
+                  <>
+                    No meals matched your budget of{" "}
+                    <span className="font-bold text-primary">₹{budgetAmount}</span> in{" "}
+                    <span className="font-semibold text-secondary">
+                      {budgetMode === "within_budget" ? "Within Budget" : "Slightly Above"}
+                    </span>{" "}
+                    mode. Try increasing your budget, switching to &ldquo;Slightly Above Budget&rdquo;, or viewing &ldquo;Show All&rdquo;.
+                  </>
+                ) : (
+                  "No meal slots active or available. Adjust your dietary restrictions or preferences."
+                )}
+              </p>
+              {budgetAmount !== null && onClearBudget && (
+                <button
+                  type="button"
+                  onClick={onClearBudget}
+                  className="px-4 py-2 bg-primary text-on-primary rounded-lg font-label-md text-label-md hover:bg-primary-container transition-all shadow-sm"
+                >
+                  Clear Budget Filter
+                </button>
+              )}
             </div>
           )}
         </div>

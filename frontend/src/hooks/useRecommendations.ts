@@ -21,17 +21,42 @@ export interface BackendRecommendation {
     tags: string[];
     allergens: string[];
     cuisine: string;
-    cost_estimate: number;
+    cost_estimate?: number | null;
     prep_time: number;
     calories: number;
     protein_g: number;
     carbs_g: number;
     fat_g: number;
     food_category: string;
+    budget_status?: string;
+    budget_status_label?: string;
+    cost_difference?: number;
+    cost_difference_formatted?: string;
+    is_affordable?: boolean;
+    cost_breakdown?: any;
+    pantry_matched_ingredients?: string[];
+    pantry_missing_ingredients?: string[];
+    missing_ingredients_cost?: number | null;
+    missing_ingredients_cost_formatted?: string;
   };
   score: number;
   breakdown: Record<string, number>;
   reason: string;
+  estimated_cost?: number | null;
+  cost_per_serving?: number | null;
+  cost_formatted?: string;
+  cost_per_serving_formatted?: string;
+  budget_status?: string;
+  budget_status_label?: string;
+  cost_difference?: number;
+  cost_difference_formatted?: string;
+  is_affordable?: boolean;
+  price_type?: string | null;
+  cost_breakdown?: any;
+  pantry_matched_ingredients?: string[];
+  pantry_missing_ingredients?: string[];
+  missing_ingredients_cost?: number | null;
+  missing_ingredients_cost_formatted?: string;
 }
 
 // ─── Hook Input ───────────────────────────────────────────────────────────────

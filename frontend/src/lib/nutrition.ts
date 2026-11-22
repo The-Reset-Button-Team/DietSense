@@ -87,7 +87,8 @@ export interface BackendSlotRecommendation {
     tags: string[];
     allergens: string[];
     cuisine: string;
-    cost_estimate: number;
+    cost_estimate?: number | null;
+    cost_per_serving?: number | null;
     prep_time: number;
     calories: number;
     protein_g: number;
@@ -96,10 +97,36 @@ export interface BackendSlotRecommendation {
     fiber_g: number;
     food_category: string;
     data_source?: string;
+    cost_breakdown?: any;
+    budget_status?: string;
+    budget_status_label?: string;
+    cost_difference?: number;
+    cost_difference_formatted?: string;
+    is_affordable?: boolean;
+    pantry_matched_ingredients?: string[];
+    pantry_missing_ingredients?: string[];
+    missing_ingredients_cost?: number | null;
+    missing_ingredients_cost_formatted?: string;
   };
   score: number;
   breakdown: Record<string, number>;
   reason: string;
+  explanation?: any;
+  estimated_cost?: number | null;
+  cost_per_serving?: number | null;
+  cost_formatted?: string;
+  cost_per_serving_formatted?: string;
+  budget_status?: string;
+  budget_status_label?: string;
+  cost_difference?: number;
+  cost_difference_formatted?: string;
+  is_affordable?: boolean;
+  price_type?: string | null;
+  cost_breakdown?: any;
+  pantry_matched_ingredients?: string[];
+  pantry_missing_ingredients?: string[];
+  missing_ingredients_cost?: number | null;
+  missing_ingredients_cost_formatted?: string;
 }
 
 export interface CalculatedMealItem {
@@ -126,6 +153,22 @@ export interface CalculatedMealItem {
   backendAlternatives?: BackendSlotRecommendation[];
   dataSource?: string;
   fiber_g?: number;
+  // Affordability & Pricing attributes (Batch 5)
+  estimatedCost?: number | null;
+  costPerServing?: number | null;
+  costFormatted?: string;
+  costPerServingFormatted?: string;
+  budgetStatus?: string;
+  budgetStatusLabel?: string;
+  costDifference?: number;
+  costDifferenceFormatted?: string;
+  isAffordable?: boolean;
+  priceType?: string | null;
+  costBreakdown?: any;
+  pantryMatchedIngredients?: string[];
+  pantryMissingIngredients?: string[];
+  missingIngredientsCost?: number | null;
+  missingIngredientsCostFormatted?: string;
 }
 
 export function calculateMealPlanItems(

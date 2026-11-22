@@ -337,6 +337,7 @@ def calculate_recipe_cost(
     servings: int = 1,
     region: Optional[str] = "National",
     recipe_name: Optional[str] = None,
+    pantry_item_names: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Calculates the total cost and per-serving cost for a recipe.
@@ -344,10 +345,19 @@ def calculate_recipe_cost(
     - If ANY ingredient price is missing: is_complete=False, total_cost=None,
       partial_cost=sum(available), missing_ingredients list provided.
       NEVER outputs a misleading total when items are missing.
+    - If pantry_item_names is provided, tracks pantry availability and calculates
+      the additional purchase cost for missing ingredients.
     """
     ingredient_results = []
     missing_items = []
     available_costs = []
+    price_types = set()
+
+    pantry_set = {p.strip().lower() for p in (pantry_item_names or []) if p.strip()}
+    pantry_matched = []
+    pantry_missing = []
+    missing_ing_costs = []
+    missing_ing_incomplete = False
 
     for ing in ingredients:
         food_id = int(ing.get("food_id") or 0)
@@ -358,12 +368,36 @@ def calculate_recipe_cost(
         res = calculate_ingredient_cost(
             cur, food_id=food_id, quantity=quantity, unit=unit, region=region, food_name=name
         )
+        display_name = res["food_name"]
+
+        # Check pantry availability
+        in_stock = False
+        if pantry_set:
+            norm_name = display_name.lower()
+            name_words = {w for w in norm_name.replace(",", " ").replace("(", " ").replace(")", " ").split() if len(w) > 2}
+            in_stock = any(
+                p in norm_name or norm_name in p or bool(name_words & {w for w in p.split() if len(w) > 2})
+                for p in pantry_set
+            )
+
+        res["in_pantry"] = in_stock
+        if in_stock:
+            pantry_matched.append(display_name)
+        else:
+            pantry_missing.append(display_name)
+            if res["available"] and res["cost"] is not None:
+                missing_ing_costs.append(res["cost"])
+            else:
+                missing_ing_incomplete = True
+
         ingredient_results.append(res)
 
         if res["available"] and res["cost"] is not None:
             available_costs.append(res["cost"])
+            if res.get("price_type"):
+                price_types.add(res["price_type"])
         else:
-            missing_items.append(res["food_name"])
+            missing_items.append(display_name)
 
     partial_sum = round(sum(available_costs), 2)
     is_complete = len(missing_items) == 0 and len(ingredient_results) > 0
@@ -379,6 +413,29 @@ def calculate_recipe_cost(
         total_formatted = "Estimate incomplete (missing ingredient prices)"
         serving_formatted = "Estimate incomplete"
 
+    # Consolidated price type
+    if not price_types:
+        overall_price_type = None
+    elif len(price_types) == 1:
+        overall_price_type = next(iter(price_types))
+    else:
+        overall_price_type = "mixed"
+
+    # Additional purchase cost for ingredients not in pantry
+    if pantry_item_names is not None:
+        if len(pantry_missing) == 0:
+            additional_cost = 0.0
+            additional_cost_formatted = "₹0.00 (all in pantry)"
+        elif missing_ing_incomplete:
+            additional_cost = None
+            additional_cost_formatted = "Incomplete cost (missing prices)"
+        else:
+            additional_cost = round(sum(missing_ing_costs), 2)
+            additional_cost_formatted = f"₹{additional_cost:.2f}"
+    else:
+        additional_cost = total_cost
+        additional_cost_formatted = total_formatted
+
     return {
         "recipe_name": recipe_name or "Custom Recipe",
         "servings": max(1, servings),
@@ -391,7 +448,93 @@ def calculate_recipe_cost(
         "cost_per_serving_formatted": serving_formatted,
         "partial_cost": partial_sum,
         "partial_cost_formatted": f"₹{partial_sum:.2f}",
+        "price_type": overall_price_type,
         "missing_count": len(missing_items),
         "missing_ingredients": missing_items,
         "ingredients": ingredient_results,
+        "pantry_matched_ingredients": pantry_matched,
+        "pantry_missing_ingredients": pantry_missing,
+        "missing_ingredients_cost": additional_cost,
+        "missing_ingredients_cost_formatted": additional_cost_formatted,
+        "pantry_coverage_pct": round(len(pantry_matched) / max(1, len(ingredient_results)) * 100) if ingredient_results else 0,
     }
+
+
+def evaluate_meal_budget_status(
+    cost: Optional[float],
+    is_complete: bool,
+    budget: Optional[float],
+    tolerance_pct: float = 0.20,
+) -> Dict[str, Any]:
+    """
+    Evaluates budget compatibility for a meal against a given budget threshold.
+    Returns structured status, label, excess difference, and affordability flag.
+    Never treats incomplete costs or missing prices as within budget.
+    """
+    if cost is None or not is_complete:
+        if cost is None and not is_complete:
+            return {
+                "status": "incomplete_cost",
+                "status_label": "Incomplete Cost Estimate",
+                "cost_difference": 0.0,
+                "cost_difference_formatted": "",
+                "is_affordable": False,
+                "fits_within_budget": False,
+                "fits_slightly_above": False,
+            }
+        return {
+            "status": "cost_unavailable",
+            "status_label": "Cost Unavailable",
+            "cost_difference": 0.0,
+            "cost_difference_formatted": "",
+            "is_affordable": False,
+            "fits_within_budget": False,
+            "fits_slightly_above": False,
+        }
+
+    # If no budget specified, default to unrestricted
+    if budget is None or budget <= 0:
+        return {
+            "status": "within_budget",
+            "status_label": "Within Budget",
+            "cost_difference": 0.0,
+            "cost_difference_formatted": "",
+            "is_affordable": True,
+            "fits_within_budget": True,
+            "fits_slightly_above": True,
+        }
+
+    max_tolerance_budget = round(budget * (1.0 + tolerance_pct), 2)
+
+    if cost <= budget:
+        return {
+            "status": "within_budget",
+            "status_label": "Within Budget",
+            "cost_difference": 0.0,
+            "cost_difference_formatted": "",
+            "is_affordable": True,
+            "fits_within_budget": True,
+            "fits_slightly_above": True,
+        }
+    elif cost <= max_tolerance_budget:
+        diff = round(cost - budget, 2)
+        return {
+            "status": "slightly_above",
+            "status_label": f"Slightly Above Budget (+₹{diff:.2f})",
+            "cost_difference": diff,
+            "cost_difference_formatted": f"+₹{diff:.2f}",
+            "is_affordable": True,
+            "fits_within_budget": False,
+            "fits_slightly_above": True,
+        }
+    else:
+        diff = round(cost - budget, 2)
+        return {
+            "status": "above_budget",
+            "status_label": f"Above Budget (+₹{diff:.2f})",
+            "cost_difference": diff,
+            "cost_difference_formatted": f"+₹{diff:.2f}",
+            "is_affordable": False,
+            "fits_within_budget": False,
+            "fits_slightly_above": False,
+        }
