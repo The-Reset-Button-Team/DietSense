@@ -144,16 +144,17 @@ class GeminiClientManager:
         last_error = None
         for current_model in models_to_try:
             try:
-                from google.genai import types
-
-                config_args = {}
-                if system_instruction:
-                    config_args["system_instruction"] = system_instruction
-                if response_schema:
-                    config_args["response_mime_type"] = "application/json"
-                    config_args["response_schema"] = response_schema
-
-                config = types.GenerateContentConfig(**config_args) if config_args else None
+                try:
+                    from google.genai import types
+                    config_args = {}
+                    if system_instruction:
+                        config_args["system_instruction"] = system_instruction
+                    if response_schema:
+                        config_args["response_mime_type"] = "application/json"
+                        config_args["response_schema"] = response_schema
+                    config = types.GenerateContentConfig(**config_args) if config_args else None
+                except (ImportError, ModuleNotFoundError):
+                    config = None
 
                 coro = client.aio.models.generate_content(
                     model=current_model,
